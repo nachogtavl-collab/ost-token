@@ -28,13 +28,64 @@
     var u; try { u = new URL(url, location.href); } catch (_) { return false; }
     if ((u.origin + '') !== new URL(API).origin) return false;
     var p = u.pathname;
+    // SRV-3: the worker requires wallet auth on POST /positions (ticket sync).
     return /^\/play\//.test(p) || /^\/loans\//.test(p) || /^\/faucet\/v1\/(reserve|commit|cancel)$/.test(p) ||
-      p === '/wallet/payout' || p === '/wallet/ata-rent' || /^\/wallet\/cosign/.test(p) || p === '/wallet/events';
+      p === '/wallet/payout' || p === '/wallet/ata-rent' || /^\/wallet\/cosign/.test(p) || p === '/wallet/events' ||
+      p === '/positions';
   }
   function hex(bytes) { return Array.from(bytes).map(function (b) { return b.toString(16).padStart(2, '0'); }).join(''); }
   function b64(bytes) { var s = ''; for (var i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]); return btoa(s); }
   function nonce() { return hex(crypto.getRandomValues(new Uint8Array(12))); }
   async function sha256Hex(text) { return hex(new Uint8Array(await crypto.subtle.digest('SHA-256', enc.encode(String(text || ''))))); }
+
+  // ── C11 / AUTH-1: device clock offset ──
+  // The server accepts a signature only within ±5 min of ITS clock. A phone whose
+  // clock is off by more than that failed every signed rail, and the app called it
+  // "service offline". We learn offset = serverTime − deviceTime (from a 401 body's
+  // serverTime, a readable Date header, or /health's ts), sign with the corrected
+  // time, and retry a stale_timestamp refusal once.
+  var OFFSET_KEY = 'ost.auth.clockOffset.v1';
+  var clockOffset = 0;
+  try { var _o = JSON.parse(localStorage.getItem(OFFSET_KEY) || 'null'); if (_o && Date.now() - _o.at < 6 * 3600000 && isFinite(_o.ms)) clockOffset = Number(_o.ms); } catch (_) {}
+  function nowMs() { return Date.now() + clockOffset; }
+  function setOffset(serverMs, sentAt, recvAt) {
+    if (!isFinite(serverMs) || serverMs <= 0) return false;
+    var mid = sentAt && recvAt ? (sentAt + recvAt) / 2 : Date.now();
+    var next = Math.round(serverMs - mid);
+    // Ignore sub-2s jitter; it never trips the ±5 min window.
+    clockOffset = Math.abs(next) < 2000 ? 0 : next;
+    try { localStorage.setItem(OFFSET_KEY, JSON.stringify({ ms: clockOffset, at: Date.now() })); } catch (_) {}
+    try { window.dispatchEvent(new CustomEvent('ost:clock-offset', { detail: { offsetMs: clockOffset } })); } catch (_) {}
+    return true;
+  }
+  function serverMsFrom(body, res) {
+    var t = body && (body.serverTime || body.server_time || body.now);
+    if (t != null) { var n = typeof t === 'number' ? t : Date.parse(t); if (isFinite(n) && n > 0) return n; }
+    try { var x = res && res.headers && res.headers.get('x-ost-server-time'); if (x) { var xn = Number(x); if (isFinite(xn) && xn > 0) return xn; } } catch (_) {}
+    try { var d = res && res.headers && res.headers.get('date'); if (d) { var dn = Date.parse(d); if (isFinite(dn)) return dn; } } catch (_) {}
+    return NaN;
+  }
+  // Passive learning (C11): every API response carries x-ost-server-time (and a
+  // Date header). Adopt a new offset only when it differs from the current one
+  // by more than 30 s, so a skewed device is corrected before its FIRST signed
+  // call fails, and jitter never rewrites storage. Header-only (no body read).
+  function learnFromResponse(res, sentAt, recvAt) {
+    try {
+      if (!res || !res.headers) return false;
+      var ms = serverMsFrom(null, res);
+      if (!isFinite(ms)) return false;
+      var mid = sentAt && recvAt ? (sentAt + recvAt) / 2 : Date.now();
+      var next = Math.round(ms - mid);
+      if (Math.abs(next - clockOffset) <= 30000) return false;
+      return setOffset(ms, sentAt, recvAt);
+    } catch (_) { return false; }
+  }
+  function learnOffsetFromHealth() {
+    var sent = Date.now();
+    return nativeFetch.call(window, API + '/health', { cache: 'no-store' })
+      .then(function (r) { var recv = Date.now(); return r.json().then(function (j) { var ms = serverMsFrom({ serverTime: j && (j.serverTime || j.ts) }, r); return setOffset(ms, sent, recv); }); })
+      .catch(function () { return false; });
+  }
 
   function session() { try { return window.OST_WALLET && window.OST_WALLET.session; } catch (_) { return null; } }
   function walletStr() { var s = session(); try { return s && s.publicKey ? s.publicKey.toBase58() : ''; } catch (_) { return ''; } }
@@ -80,11 +131,19 @@
     var cached = loadSession(w); if (cached) return cached;
     if (sessionInflight) return sessionInflight;
     sessionInflight = (async function () {
-      var ts = Date.now(), n = nonce();
-      var sig = await signWithProvider('OST-SESSION|v1|' + w + '|' + ts + '|' + n);
-      var r = await fetch(API + '/auth/session', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ wallet: w, ts: ts, nonce: n, sig: b64(sig) }) });
-      var j = await r.json().catch(function () { return null; });
-      if (!j || !j.ok || !j.token) throw new Error((j && j.error) || 'session_failed');
+      var j = null, r = null;
+      for (var attempt = 0; attempt < 2; attempt++) {
+        var ts = nowMs(), n = nonce();
+        var sig = await signWithProvider('OST-SESSION|v1|' + w + '|' + ts + '|' + n);
+        var sentAt = Date.now();
+        r = await fetch(API + '/auth/session', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ wallet: w, ts: ts, nonce: n, sig: b64(sig) }) });
+        j = await r.json().catch(function () { return null; });
+        // C11: a skewed device clock — learn the server's time and sign once more.
+        var stale = j && !j.ok && (j.reason === 'stale_timestamp' || j.error === 'stale_timestamp');
+        if (!stale || attempt > 0) break;
+        if (!setOffset(serverMsFrom(j, r), sentAt, Date.now()) && !(await learnOffsetFromHealth())) break;
+      }
+      if (!j || !j.ok || !j.token) throw new Error((j && (j.message || j.error)) || 'session_failed');
       try { localStorage.setItem(SESSION_KEY, JSON.stringify({ wallet: w, token: j.token, exp: j.exp })); } catch (_) {}
       return j.token;
     })().finally(function () { sessionInflight = null; });
@@ -95,7 +154,7 @@
   async function authHeaders(method, url, bodyText) {
     var w = walletStr(); if (!w) return null;
     var path = new URL(url, location.href).pathname;
-    var ts = Date.now(), n = nonce();
+    var ts = nowMs(), n = nonce();
     var h = { 'x-ost-wallet': w, 'x-ost-ts': String(ts), 'x-ost-nonce': n };
     var secret = localSecret();
     if (secret) {
@@ -134,22 +193,48 @@
           } else T.push('shared ' + url.slice(-32));
           return hit.p.then(function (r) { return r.clone(); });
         }
+        if (url && url.indexOf(API) === 0) {
+          var sentP = Date.now();
+          return nativeFetch.apply(this, arguments).then(function (r) { learnFromResponse(r, sentP, Date.now()); return r; });
+        }
         return nativeFetch.apply(this, arguments);
       }
       var self = this, args = arguments;
       var bodyText = (init && typeof init.body === 'string') ? init.body : '';
-      return authHeaders(method, url, bodyText).catch(function (e) {
-        // Could not SIGN (no key, wallet refused): send unsigned; the server decides.
-        T.push('sign failed: ' + (e && e.message)); return null;
-      }).then(function (h) {
-        if (!h) { T.push('no wallet -> unsigned'); return nativeFetch.apply(self, args); }
-        T.push('signed ' + Object.keys(h).join(','));
+      var sendSigned = function (h) {
         var headers = new Headers((init && init.headers) || (input && input.headers) || {});
         Object.keys(h).forEach(function (k) { headers.set(k, h[k]); });
         var next = Object.assign({}, init || {}, { headers: headers });
         // A failed SIGNED request must surface as-is — never silently re-sent unsigned
         // (that masked a CORS preflight rejection and would guarantee a 401 under enforce).
         return nativeFetch.call(self, typeof input === 'string' ? input : input.url, next);
+      };
+      return authHeaders(method, url, bodyText).catch(function (e) {
+        // Could not SIGN (no key, wallet refused): send unsigned; the server decides.
+        T.push('sign failed: ' + (e && e.message)); return null;
+      }).then(function (h) {
+        if (!h) { T.push('no wallet -> unsigned'); return nativeFetch.apply(self, args); }
+        T.push('signed ' + Object.keys(h).join(','));
+        var sentAt = Date.now();
+        return sendSigned(h).then(function (res) {
+          if (res && res.status !== 401) learnFromResponse(res, sentAt, Date.now());
+          if (!res || res.status !== 401) return res;
+          // C11: a stale_timestamp refusal means THIS device's clock is off. Learn the
+          // server's time, re-sign with the corrected clock and retry ONCE (new nonce,
+          // so it is not a replay). Anything else surfaces unchanged.
+          var recvAt = Date.now();
+          return res.clone().json().catch(function () { return null; }).then(function (body) {
+            var reason = body && (body.reason || (body.error === 'stale_timestamp' ? 'stale_timestamp' : ''));
+            if (reason !== 'stale_timestamp') return res;
+            var learned = setOffset(serverMsFrom(body, res), sentAt, recvAt);
+            var ready = learned ? Promise.resolve(true) : learnOffsetFromHealth();
+            return ready.then(function (ok) {
+              T.push('stale_timestamp -> offset ' + clockOffset + 'ms, retry=' + !!ok);
+              if (!ok) return res;
+              return authHeaders(method, url, bodyText).then(sendSigned, function () { return res; });
+            });
+          });
+        });
       });
     } catch (_) { return nativeFetch.apply(this, arguments); }
   };
@@ -161,5 +246,15 @@
   // Sign arbitrary text with the connected wallet (ed25519): local browser wallet
   // signs silently, extension wallets show their signMessage prompt. Returns base64.
   async function signText(msg) { var secret = localSecret(); var sig = secret ? await signLocal(String(msg), secret) : await signWithProvider(String(msg)); return b64(sig); }
-  window.OST_AUTH = { headers: authHeaders, isProtected: isProtected, sessionToken: getSessionToken, signText: signText, wallet: walletStr, forget: function () { try { localStorage.removeItem(SESSION_KEY); } catch (_) {} } };
+  window.OST_AUTH = {
+    headers: authHeaders, isProtected: isProtected, sessionToken: getSessionToken, signText: signText, wallet: walletStr,
+    forget: function () { try { localStorage.removeItem(SESSION_KEY); } catch (_) {} },
+    // C11: corrected clock + what we learned (ms; + means the device is BEHIND the server).
+    now: nowMs,
+    clockOffset: function () { return clockOffset; },
+    learnClock: learnOffsetFromHealth,
+    // Mesh / other signers: learn from a refused response's headers (true when
+    // the offset changed, so a retry with OST_AUTH.now() can succeed).
+    learnFrom: learnFromResponse
+  };
 })();

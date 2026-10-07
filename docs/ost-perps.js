@@ -234,7 +234,7 @@
         '<div class="big"><span>You pay now</span><b>' + ostg(k.cost) + ' OSTG</b></div>' +
       '</div>' +
       '<div class="opx-status' + (reason ? ' warn' : '') + '" id="opxStatus">' + esc(reason || ('Max loss ' + ostg(k.margin) + ' OSTG (your margin). A ' + (100 / k.lev).toFixed(1) + '% move against you ≈ liquidation.')) + '</div>' +
-      '<button type="button" class="opx-go ' + (S.side === 'long' ? 'l' : 's') + '" id="opxGo"' + (reason ? ' disabled' : '') + '>' + (reason && !w ? 'Connect wallet' : 'Open ' + sideLab + ' ' + k.lev + '× · ' + ostg(k.margin, 0) + ' OSTG') + '</button>' +
+      '<button type="button" class="opx-go ' + (S.side === 'long' ? 'l' : 's') + '" id="opxGo"' + (reason && w ? ' disabled' : '') + '>' + (!w ? 'Create free wallet / Connect' : 'Open ' + sideLab + ' ' + k.lev + '× · ' + ostg(k.margin, 0) + ' OSTG') + '</button>' +
       '<div class="opx-fine">Fees: ' + (RULES.fee * 100).toFixed(2) + '% to open and close · ' + Math.round(RULES.edge * 100) + '% of profit house edge · funding accrues pro-rata.</div>';
   }
   function marked(p) { var m = market(p.symbol); var mk = num(p.mark) !== undefined ? p.mark : (m && num(m.mark)); if (mk === undefined || mk === null) return { pnl: 0, payout: p.margin, roe: 0, funding: 0, liq: false, mark: undefined }; var r = markPos(p, mk); r.mark = mk; return r; }
@@ -280,7 +280,7 @@
     var go = $('opxGo'), st = $('opxStatus'), bal = playBal(), w = walletAddr();
     var reason = !w ? 'Connect a wallet to trade perps.' : !m.open ? 'Market closed right now.' : !(k.margin >= RULES.minMargin) ? ('Minimum margin is ' + RULES.minMargin + ' OSTG.') : (bal !== undefined && bal + 1e-9 < k.cost) ? ('Not enough play OSTG (need ' + ostg(k.cost) + ', have ' + ostg(bal) + ').') : '';
     if (st) { st.textContent = reason || ('Max loss ' + ostg(k.margin) + ' OSTG (your margin). A ' + (100 / k.lev).toFixed(1) + '% move against you ≈ liquidation.'); st.classList.toggle('warn', !!reason); }
-    if (go) { go.disabled = !!reason; go.textContent = (reason && !w) ? 'Connect wallet' : 'Open ' + (S.side === 'long' ? 'Long' : 'Short') + ' ' + k.lev + '× · ' + ostg(k.margin, 0) + ' OSTG'; go.className = 'opx-go ' + (S.side === 'long' ? 'l' : 's'); }
+    if (go) { go.disabled = !!reason && !!w; go.textContent = !w ? 'Create free wallet / Connect' : 'Open ' + (S.side === 'long' ? 'Long' : 'Short') + ' ' + k.lev + '× · ' + ostg(k.margin, 0) + ' OSTG'; go.className = 'opx-go ' + (S.side === 'long' ? 'l' : 's'); }
   }
   function onClick(e) {
     var t = e.target;
@@ -295,7 +295,19 @@
   }
   function balanceBump(delta) { try { if (window.OST_PLAY && OST_PLAY.refresh) setTimeout(function () { OST_PLAY.refresh(); }, 400); } catch (_) {} try { window.dispatchEvent(new CustomEvent('ost:money:change', { detail: { source: 'perps', delta: delta } })); } catch (_) {} }
   function openPosition() {
-    var m = selected(), w = walletAddr(); if (!m || !w) { if (!w) try { if (typeof window.connectWallet === 'function') window.connectWallet(); } catch (_) {} return; }
+    var m = selected(), w = walletAddr();
+    // WAL-8 / C9: no wallet -> the real create/connect path; come back to this ticket.
+    if (!w) {
+      try {
+        if (window.OST_WALLET && typeof OST_WALLET.requireWallet === 'function') {
+          OST_WALLET.requireWallet({ reason: 'perps', label: 'open a perps position', resume: function () { setTimeout(function () { try { if (window.OST_PERPS) OST_PERPS.open(S.sel); renderTicket(); var tk = $('opxTicket'); if (tk && tk.scrollIntoView) tk.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (_) {} }, 300); } });
+          return;
+        }
+      } catch (_) {}
+      toast('Wallet is still loading — try again in a second.');
+      return;
+    }
+    if (!m) return;
     var k = ticketCalc(m); if (!(k.margin >= RULES.minMargin)) return;
     var go = $('opxGo'); if (go) { go.disabled = true; go.textContent = 'Opening…'; }
     // OPTIMISTIC: the position shows the instant they tap; the server fill replaces it.

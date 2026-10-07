@@ -1,5 +1,20 @@
 # Persistent OST market crank
 
+> **STATUS (2026-10-06): NOT RUNNING.** No crank host is live. The on-chain
+> BTC 5-min markets have not been opened, locked or resolved since
+> **2026-07-26**, and the `OST-Crank` Windows scheduled task described below
+> does **not** exist on this machine any more. Until a host is deployed (ops
+> action **OPS-7** in the money-rails plan), the on-chain betting rail and
+> 1-tap are **offline**: the app labels them offline / hides them (product
+> decision D4), and BTC 5-min positions are settled by the OST server
+> (PredictionLedger / PlayLedger) from the BTC close price — **not** on-chain.
+>
+> The crank authority `6LvGarqaiQfaaZ8RsCd3NQE96UAhDYCz8MXvarw6bsfF` already
+> holds devnet SOL; no funding is needed. To bring the rail back, follow
+> "Exact cloud steps" below (Fly.io is the simplest), then confirm new rounds
+> appear on chain **before** anyone re-enables the on-chain / 1-tap UI.
+> Update this banner when it is running.
+
 The crank pushes the on-chain BTC 5-min markets forward every minute:
 `initialize_market` → `lock_open_price` → `resolve_with_pyth`. Lock/resolve are
 **permissionless** (the program decides the winner from Pyth; there is no
@@ -23,10 +38,13 @@ is never in the loop.
 
 ## Run modes
 
-### 1. Local persistent (already set up on this machine)
-A Windows Scheduled Task **`OST-Crank`** runs `ost-crank-run.cmd` (one-shot
-`node crank.mjs`) every minute. Survives reboots while the machine is on + the
-user is logged in. Log: `%TEMP%\ost-crank.log`.
+### 1. Local persistent (NOT currently set up — see the status banner)
+A Windows Scheduled Task **`OST-Crank`** can run `ost-crank-run.cmd` (one-shot
+`node crank.mjs`) every minute. It survives reboots while the machine is on +
+the user is logged in. Log: `%TEMP%\ost-crank.log`. As of 2026-10-06 this task
+is missing; recreate it with e.g.
+`schtasks /Create /TN OST-Crank /SC MINUTE /MO 1 /TR "<repo>\scripts\pyth-crank\ost-crank-run.cmd"`
+and check the log before calling the rail live.
 - Remove: `schtasks /Delete /TN OST-Crank /F`
 - This is an **interim** — it only runs while this machine is on.
 

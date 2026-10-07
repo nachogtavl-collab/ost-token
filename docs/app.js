@@ -74,7 +74,7 @@
       'features.f1.title': 'Confidential Transfers', 'features.f1.text': 'Zero-knowledge proofs hide your balance and every transaction.',
       'features.f2.title': 'Sub-Second Settlement', 'features.f2.text': '400ms on Solana. Faster than tapping your card.',
       'features.f3.title': 'Any-to-OST Bridge', 'features.f3.text': 'Bitcoin, Ethereum, USDC, bank transfers - everything converts.',
-      'features.f4.title': 'Forever Free', 'features.f4.text': 'Zero transaction fees. Funded by donations & investors. On-chain transparency.',
+      'features.f4.title': 'Free to Try', 'features.f4.text': 'Devnet test network: OST pays every network fee, so trying it costs you nothing. No real money. On-chain transparency.',
       'features.f5.title': 'Offline Payments', 'features.f5.text': 'NFC, QR, Bluetooth. Pay without internet.',
       'features.f6.title': 'ZK Tax Compliance', 'features.f6.text': 'Prove taxes without revealing your balance.',
       'pay.title': 'Curated Shop - Live Listings', 'pay.sub': 'Build a cart from real products, then send it to the interchange desk for a live OST request.',
@@ -147,9 +147,11 @@
       'wallet.title': 'Connect or Create Wallet', 'wallet.sub': 'Choose an existing wallet or generate a local OST wallet in this browser.',
       'footer.mission': 'Every transaction helps fund satellite infrastructure for universal internet access. <strong>A gift we build together.</strong>',
       'footer.copy': 'Open source. Built with love for every human on Earth.',
-      'hero.free': '&#128176; FREE FOREVER',
-      'hero.freetext': 'Zero transaction fees. No hidden costs. Funded by donations &amp; investors.',
-      'hero.createwallet': 'Create Wallet',
+      'hero.free': '&#128176; FREE TO TRY',
+      'hero.freetext': 'Devnet test network: OST pays every network fee, so trying it costs you nothing. No real money.',
+      'hero.createwallet': 'Start free',
+      'hero.trynote': 'Try OST free — devnet wallet in 2 taps',
+      'hero.havewallet': 'I already have Phantom / Solflare / Backpack',
       'hero.stat.unbanked': 'Unbanked adults worldwide',
       'hero.stat.remittance': '$ lost to remittance fees/year',
       'hero.stat.nointernet': 'People without internet',
@@ -169,11 +171,11 @@
       'gv.sub': 'Create a Grow Vault plan for your child now, even before wallet sign-in works. Link a wallet later and keep the milestone drops organized.',
       'gv.disclaimer': 'Educational use only. Parents/guardians are responsible for all tax, custody, and local laws regarding gifts to minors.',
       'depin.title': 'DePIN Data-Center Faucet',
-      'depin.sub': 'Share bandwidth, GPU, CPU, or satellite capacity &mdash; earn OST for building the decentralized data centers and satellite internet. Big rewards for real contributions.',
+      'depin.sub': 'Research preview of a future program that would reward shared bandwidth, GPU, CPU or satellite capacity. It is not live: nothing is verified and no OST is paid.',
       'demos.title': '&#128717;&#65039; OST Commerce', 'demos.sub': 'Curated shopping, live merchant browsing, and real on-chain request routing with OST.',
       'wallet.getTitle': 'Get Your Personal OST Wallet', 'wallet.getSub': 'Choose how to create or connect your wallet. Build one in this browser or connect an existing Solana wallet.',
       'wallet.commandKicker': 'Wallet + conversion rail',
-      'wallet.commandTitle': 'Open a wallet, read the OST market, and move from fiat or crypto into confidential OST.',
+      'wallet.commandTitle': 'Open a wallet, read the OST market, and turn devnet SOL or USDC into devnet OST (test network, no cash value).',
       'wallet.commandSub': 'The wallet page now behaves like a command center for access, market watch, conversion, and portal routing.',
       'wallet.tabs.aria': 'Wallet command panels',
       'wallet.market.velocity': 'Route speed',
@@ -211,14 +213,14 @@
       'wallet.secure.point3': 'Keep one address across swap, payment, and launchpad rails to reduce confusion.',
       'wallet.secure.point4': 'The connected view surfaces balances, receive QR, and direct links without leaving the page.',
       'wallet.market.note2': 'The calculator below reads the same OST quote as the convert rail, so the preview and execution surface stay aligned.',
-      'wallet.convert.lead': 'Institutional-grade currency conversion, redesigned for regular users who need a clean entry rail into confidential OST.',
+      'wallet.convert.lead': 'Convert devnet SOL or USDC into devnet OST through the treasury test rail. Fiat and other chains show quotes only — those rails are R&D until mainnet. No real money.',
       'wallet.convert.from': 'From',
       'wallet.convert.bridge': 'Bridge',
       'wallet.convert.swap': 'Swap',
       'wallet.convert.encrypt': 'Encrypt',
       'wallet.convert.to': 'To',
       'wallet.convert.providers': 'Direct fiat on-ramps for the selected currency:',
-      'wallet.convert.note': 'Currently powered by Jupiter + Wormhole on Solana while the OST native interchange engine is under construction.',
+      'wallet.convert.note': 'Devnet test rail. Jupiter and Wormhole are external mainnet tools for SOL assets; they never trade or deliver OST.',
       'wallet.convert.received': 'Received',
       'wallet.convert.done': 'Done - private and instant',
       'wallet.sell.stable': 'Swap to stablecoins',
@@ -227,13 +229,13 @@
       'wallet.sell.cashoutDesc': 'Use Onramper or Transak sell rails after the OST to SOL or OST to USDC swap completes.',
       'wallet.sell.p2p': 'P2P market',
       'wallet.sell.p2pDesc': 'Direct wallet-to-wallet trading stays on the roadmap for people who want a simpler off-ramp.',
-      'wallet.portal.wormholeDesc': 'Move liquidity from major chains into Solana before the OST swap rail takes over.',
-      'wallet.portal.onramperDesc': 'Aggregator entry rail with card, bank, Apple Pay, and local fiat routing.',
-      'wallet.portal.moonpayDesc': 'Fast card-based SOL entry for users who want the cleanest first purchase flow.',
-      'wallet.portal.transakDesc': 'Regional payment coverage with PIX, UPI, SEPA, Faster Payments, and card rails.',
-      'wallet.portal.onramperSellDesc': 'Cash out SOL or USDC into bank accounts and mobile money rails after conversion.',
-      'wallet.portal.transakSellDesc': 'Regional fiat exits for users who want local banking rails instead of stablecoin custody.',
-      'wallet.portal.jupiterDesc': 'Best-route aggregator for OST conversions, stable exits, and spot rotations.',
+      'wallet.portal.wormholeDesc': 'External mainnet bridge: moves assets from other chains into Solana. It does not deliver OST.',
+      'wallet.portal.onramperDesc': 'External mainnet on-ramp: buys real SOL with card, bank or Apple Pay. It does not deliver OST.',
+      'wallet.portal.moonpayDesc': 'External mainnet on-ramp: buys real SOL by card. It does not deliver OST.',
+      'wallet.portal.transakDesc': 'External mainnet on-ramp with PIX, UPI, SEPA, Faster Payments and cards. It does not deliver OST.',
+      'wallet.portal.onramperSellDesc': 'External mainnet off-ramp: sells real SOL or USDC to bank and mobile-money rails. Devnet OST cannot be cashed out.',
+      'wallet.portal.transakSellDesc': 'External mainnet off-ramp to local banking rails. Devnet OST cannot be cashed out.',
+      'wallet.portal.jupiterDesc': 'External mainnet swap aggregator for SOL and other Solana tokens. It does not trade OST.',
       'wallet.portal.raydiumDesc': 'Liquidity and swap venue for users who want direct pool access on Solana.',
       'wallet.portal.orcaDesc': 'Cleaner swap route for concentrated liquidity users who want a simpler interface.',
       'wallet.portal.meteoraDesc': 'Dynamic liquidity venue for newer assets and launchpad-native routing.',
@@ -374,7 +376,7 @@
       'features.f1.title': 'Transferencias Confidenciales', 'features.f1.text': 'Pruebas de conocimiento cero ocultan tu saldo y cada transaccion.',
       'features.f2.title': 'Liquidacion Sub-Segundo', 'features.f2.text': '400ms en Solana. Mas rapido que tocar tu tarjeta.',
       'features.f3.title': 'Puente Universal a OST', 'features.f3.text': 'Bitcoin, Ethereum, USDC, transferencias bancarias - todo se convierte.',
-      'features.f4.title': 'Gratis Para Siempre', 'features.f4.text': 'Cero comisiones. Financiado por donaciones e inversores. Transparencia on-chain.',
+      'features.f4.title': 'Gratis Para Probar', 'features.f4.text': 'Red de pruebas devnet: OST paga cada comisión de red. Sin dinero real. Transparencia on-chain.',
       'features.f5.title': 'Pagos Sin Internet', 'features.f5.text': 'NFC, QR, Bluetooth. Paga sin internet.',
       'features.f6.title': 'Cumplimiento Fiscal ZK', 'features.f6.text': 'Demuestra tus impuestos sin revelar tu saldo.',
       'pay.title': 'Tienda Curada - Listados Reales', 'pay.sub': 'Arma un carrito con productos reales y luego envialo al desk OST para una solicitud en vivo.',
@@ -446,9 +448,11 @@
       'wallet.title': 'Conectar Tu Billetera', 'wallet.sub': 'Elige una billetera para conectar a OST.',
       'footer.mission': 'Cada transaccion ayuda a financiar infraestructura satelital. <strong>Un regalo que construimos juntos.</strong>',
       'footer.copy': 'Codigo abierto. Construido con amor para cada ser humano.',
-      'hero.free': '&#128176; GRATIS PARA SIEMPRE',
-      'hero.freetext': 'Cero comisiones. Sin costos ocultos. Financiado por donaciones e inversores.',
-      'hero.createwallet': 'Crear Billetera',
+      'hero.free': '&#128176; GRATIS PARA PROBAR',
+      'hero.freetext': 'Red de pruebas devnet: OST paga cada comisión de red, así que probarlo no te cuesta nada. Sin dinero real.',
+      'hero.createwallet': 'Empieza gratis',
+      'hero.trynote': 'Prueba OST gratis — billetera devnet en 2 toques',
+      'hero.havewallet': 'Ya tengo Phantom / Solflare / Backpack',
       'hero.stat.unbanked': 'Adultos sin banco en el mundo',
       'hero.stat.remittance': '$ perdidos en comisiones de remesas/año',
       'hero.stat.nointernet': 'Personas sin internet',
@@ -468,11 +472,11 @@
       'gv.sub': 'La primera moneda nacida en el espacio con cada nueva generación. Crea una bóveda custodia para tu hijo &mdash; crecerán con dinero digital privado real.',
       'gv.disclaimer': 'Solo uso educativo. Los padres/tutores son responsables de todas las leyes fiscales y de custodia.',
       'depin.title': 'Faucet DePIN de Centro de Datos',
-      'depin.sub': 'Comparte ancho de banda, GPU, CPU o capacidad satelital &mdash; gana OST por construir centros de datos descentralizados e internet satelital.',
+      'depin.sub': 'Vista previa de I+D de un programa futuro que recompensaría compartir ancho de banda, GPU, CPU o capacidad satelital. No está activo: no se verifica nada y no se paga OST.',
       'demos.title': '&#128717;&#65039; Comercio OST', 'demos.sub': 'Compra curada, navegacion de comercios reales y ruteo on-chain de solicitudes con OST.',
       'wallet.getTitle': 'Obten Tu Billetera OST Personal', 'wallet.getSub': 'Elige como crear o conectar tu billetera. Genera una billetera local en este navegador o conecta una billetera Solana existente.',
       'wallet.commandKicker': 'Billetera + riel de conversión',
-      'wallet.commandTitle': 'Abre una billetera, sigue el mercado OST y pasa de fiat o cripto a OST confidencial.',
+      'wallet.commandTitle': 'Abre una billetera, sigue el mercado OST y convierte SOL o USDC de devnet en OST de devnet (red de pruebas, sin valor monetario).',
       'wallet.commandSub': 'La página de billetera ahora funciona como un centro de mando para acceso, mercado, conversión y portales.',
       'wallet.tabs.aria': 'Paneles de la billetera',
       'wallet.market.velocity': 'Velocidad de ruta',
@@ -510,14 +514,14 @@
       'wallet.secure.point3': 'Mantén una sola dirección en swap, pagos y launchpad para reducir la confusión.',
       'wallet.secure.point4': 'La vista conectada muestra balances, QR de recepción y enlaces directos sin salir de la página.',
       'wallet.market.note2': 'La calculadora de abajo usa la misma cotización de OST que el riel de conversión, para que la vista previa y la ejecución coincidan.',
-      'wallet.convert.lead': 'Conversión de moneda de grado institucional, rediseñada para usuarios comunes que necesitan una entrada clara a OST confidencial.',
+      'wallet.convert.lead': 'Convierte SOL o USDC de devnet en OST de devnet mediante el riel de prueba de la tesorería. Fiat y otras cadenas solo muestran cotizaciones: esos rieles son I+D hasta mainnet. Sin dinero real.',
       'wallet.convert.from': 'Desde',
       'wallet.convert.bridge': 'Puente',
       'wallet.convert.swap': 'Intercambio',
       'wallet.convert.encrypt': 'Cifrar',
       'wallet.convert.to': 'Hacia',
       'wallet.convert.providers': 'Rampas fiat directas para la moneda seleccionada:',
-      'wallet.convert.note': 'Actualmente funciona con Jupiter + Wormhole en Solana mientras el motor nativo de intercambio de OST sigue en construcción.',
+      'wallet.convert.note': 'Riel de prueba en devnet. Jupiter y Wormhole son herramientas externas de mainnet para activos de SOL; nunca intercambian ni entregan OST.',
       'wallet.convert.received': 'Recibido',
       'wallet.convert.done': 'Listo - privado e instantáneo',
       'wallet.sell.stable': 'Cambiar a stablecoins',
@@ -526,13 +530,13 @@
       'wallet.sell.cashoutDesc': 'Usa las rutas de venta de Onramper o Transak después de completar el swap de OST a SOL o de OST a USDC.',
       'wallet.sell.p2p': 'Mercado P2P',
       'wallet.sell.p2pDesc': 'El intercambio directo entre billeteras sigue en la hoja de ruta para quienes quieren una salida más simple.',
-      'wallet.portal.wormholeDesc': 'Mueve liquidez desde cadenas principales a Solana antes de que el riel de swap de OST tome el control.',
-      'wallet.portal.onramperDesc': 'Ruta agregadora de entrada con tarjeta, banco, Apple Pay y ruteo fiat local.',
-      'wallet.portal.moonpayDesc': 'Entrada rápida a SOL con tarjeta para usuarios que quieren el flujo de compra más limpio.',
-      'wallet.portal.transakDesc': 'Cobertura regional de pagos con PIX, UPI, SEPA, Faster Payments y tarjetas.',
-      'wallet.portal.onramperSellDesc': 'Retira SOL o USDC a cuentas bancarias y rieles de dinero móvil después de la conversión.',
-      'wallet.portal.transakSellDesc': 'Salidas fiat regionales para usuarios que quieren banca local en lugar de custodiar stablecoins.',
-      'wallet.portal.jupiterDesc': 'Agregador de mejor ruta para conversiones OST, salidas estables y rotaciones spot.',
+      'wallet.portal.wormholeDesc': 'Puente externo de mainnet: mueve activos de otras cadenas a Solana. No entrega OST.',
+      'wallet.portal.onramperDesc': 'Rampa externa de mainnet: compra SOL real con tarjeta, banco o Apple Pay. No entrega OST.',
+      'wallet.portal.moonpayDesc': 'Rampa externa de mainnet: compra SOL real con tarjeta. No entrega OST.',
+      'wallet.portal.transakDesc': 'Rampa externa de mainnet con PIX, UPI, SEPA, Faster Payments y tarjetas. No entrega OST.',
+      'wallet.portal.onramperSellDesc': 'Salida externa de mainnet: vende SOL o USDC reales a bancos y dinero móvil. El OST de devnet no se puede retirar.',
+      'wallet.portal.transakSellDesc': 'Salida externa de mainnet a bancos locales. El OST de devnet no se puede retirar.',
+      'wallet.portal.jupiterDesc': 'Agregador externo de mainnet para SOL y otros tokens de Solana. No intercambia OST.',
       'wallet.portal.raydiumDesc': 'Lugar de liquidez e intercambio para usuarios que quieren acceso directo a pools en Solana.',
       'wallet.portal.orcaDesc': 'Ruta de swap más limpia para usuarios de liquidez concentrada que quieren una interfaz más simple.',
       'wallet.portal.meteoraDesc': 'Lugar de liquidez dinámica para activos nuevos y ruteo nativo del launchpad.',
@@ -709,7 +713,7 @@
       'features.f1.title': '机密转账', 'features.f1.text': '零知识证明隐藏您的余额和每笔交易。',
       'features.f2.title': '亚秒级结算', 'features.f2.text': 'Solana上400毫秒。比刷卡还快。',
       'features.f3.title': '万币通桥', 'features.f3.text': '比特币、以太坊、USDC、银行转账——一切皆可兑换。',
-      'features.f4.title': '永久免费', 'features.f4.text': '零交易费用。由捐款和投资者资助。链上透明。',
+      'features.f4.title': '免费试用', 'features.f4.text': '开发网测试网络：OST 支付所有网络费用。不涉及真实资金。链上透明。',
       'features.f5.title': '离线支付', 'features.f5.text': 'NFC、二维码、蓝牙。无需互联网即可支付。',
       'features.f6.title': 'ZK税务合规', 'features.f6.text': '在不暴露余额的情况下证明纳税。',
       'pay.title': '用OST购物 - 实时价格', 'pay.sub': '真实产品，真实价格。体验隐私支付的感觉。',
@@ -754,8 +758,8 @@
       'wallet.title': '连接你的钱包', 'wallet.sub': '选择一个钱包连接到OST。',
       'footer.mission': '每笔交易都帮助资助卫星基础设施，实现全球互联网接入。<strong>我们共同建设的礼物。</strong>',
       'footer.copy': '开源。为地球上每个人用爱建造。',
-      'hero.free': '&#128176; \u6c38\u4e45\u514d\u8d39',
-      'hero.freetext': '\u96f6\u4ea4\u6613\u8d39\u7528\u3002\u6ca1\u6709\u9690\u85cf\u6210\u672c\u3002\u7531\u6350\u6b3e\u548c\u6295\u8d44\u8005\u8d44\u52a9\u3002',
+      'hero.free': '&#128176; \u514d\u8d39\u8bd5\u7528',
+      'hero.freetext': '\u5f00\u53d1\u7f51\u6d4b\u8bd5\u7f51\u7edc\uff1aOST \u652f\u4ed8\u6240\u6709\u7f51\u7edc\u8d39\u7528\uff0c\u8bd5\u7528\u4e0d\u82b1\u4f60\u4e00\u5206\u94b1\u3002\u4e0d\u6d89\u53ca\u771f\u5b9e\u8d44\u91d1\u3002',
       'hero.createwallet': '\u521b\u5efa\u94b1\u5305',
       'hero.stat.unbanked': '\u5168\u7403\u65e0\u94f6\u884c\u8d26\u6237\u6210\u4eba',
       'hero.stat.remittance': '\u6bcf\u5e74\u6c47\u6b3e\u8d39\u7528\u635f\u5931($)',
@@ -776,7 +780,7 @@
       'gv.sub': '\u6bcf\u4e00\u4ee3\u65b0\u751f\u90fd\u6709\u8bde\u751f\u5728\u592a\u7a7a\u7684\u7b2c\u4e00\u679a\u786c\u5e01\u3002\u4e3a\u4f60\u7684\u5b69\u5b50\u521b\u5efa\u4e00\u4e2a\u6258\u7ba1\u91d1\u5e93 &mdash; \u4ed6\u4eec\u5c06\u4f34\u968f\u771f\u6b63\u7684\u79c1\u5bc6\u6570\u5b57\u73b0\u91d1\u6210\u957f\u3002',
       'gv.disclaimer': '\u4ec5\u4f9b\u6559\u80b2\u7528\u9014\u3002\u7236\u6bcd/\u76d1\u62a4\u4eba\u8d1f\u8d23\u6240\u6709\u7a0e\u52a1\u3001\u76d1\u62a4\u548c\u5f53\u5730\u6cd5\u5f8b\u3002',
       'depin.title': 'DePIN\u6570\u636e\u4e2d\u5fc3\u6c34\u9f99\u5934',
-      'depin.sub': '\u5206\u4eab\u5e26\u5bbd\u3001GPU\u3001CPU\u6216\u536b\u661f\u5bb9\u91cf &mdash; \u4e3a\u5efa\u8bbe\u53bb\u4e2d\u5fc3\u5316\u6570\u636e\u4e2d\u5fc3\u548c\u536b\u661f\u4e92\u8054\u7f51\u83b7\u5f97OST\u5956\u52b1\u3002',
+      'depin.sub': '\u7814\u53d1\u9884\u89c8\uff1a\u672a\u6765\u53ef\u80fd\u5956\u52b1\u5171\u4eab\u5e26\u5bbd\u3001GPU\u3001CPU \u6216\u536b\u661f\u5bb9\u91cf\u7684\u8ba1\u5212\u3002\u76ee\u524d\u672a\u4e0a\u7ebf\uff1a\u4e0d\u505a\u4efb\u4f55\u9a8c\u8bc1\uff0c\u4e5f\u4e0d\u652f\u4ed8\u4efb\u4f55 OST\u3002',
       'demos.title': '&#128717;&#65039; OST \u5546\u4e1a', 'demos.sub': '\u4f53\u9a8c\u79c1\u5bc6\u5373\u65f6\u652f\u4ed8\u7684\u611f\u89c9\u3002\u771f\u5b9e\u4ea7\u54c1\uff0c\u771f\u5b9e\u4ef7\u683c\u3002\u96f6\u8d39\u7528\u3002',
       'wallet.getTitle': '\u83b7\u53d6\u4f60\u7684\u4e2a\u4ebaOST\u94b1\u5305', 'wallet.getSub': '\u9009\u62e9\u5982\u4f55\u521b\u5efa\u6216\u8fde\u63a5\u4f60\u7684\u94b1\u5305\u3002Web3Auth\u65e0\u9700\u52a9\u8bb0\u8bcd\u3002',
       'sell.title': '\u51fa\u552e\u6216\u4ea4\u6613OST', 'sell.sub': '\u63d0\u73b0\u5230\u4efb\u4f55\u52a0\u5bc6\u8d27\u5e01\u6216\u6cd5\u5e01\u3002\u540c\u6837\u7684\u901f\u5ea6\uff0c\u540c\u6837\u7684\u9690\u79c1\u3002',
@@ -860,7 +864,7 @@
       'features.f1.title': 'Конфиденциальные Переводы', 'features.f1.text': 'Доказательства с нулевым разглашением скрывают ваш баланс и каждую транзакцию.',
       'features.f2.title': 'Расчёт за Доли Секунды', 'features.f2.text': '400мс на Solana. Быстрее, чем прикосновение карты.',
       'features.f3.title': 'Мост Для Всех Валют', 'features.f3.text': 'Биткоин, Ethereum, USDC, банковские переводы — всё конвертируется.',
-      'features.f4.title': 'Бесплатно навсегда', 'features.f4.text': 'Нулевые комиссии. Финансируется пожертвованиями и инвесторами. Прозрачность на блокчейне.',
+      'features.f4.title': 'Бесплатно попробовать', 'features.f4.text': 'Тестовая сеть devnet: OST оплачивает все сетевые комиссии. Без реальных денег. Прозрачность на блокчейне.',
       'features.f5.title': 'Оффлайн-Платежи', 'features.f5.text': 'NFC, QR, Bluetooth. Платите без интернета.',
       'features.f6.title': 'ZK Налоговая Отчетность', 'features.f6.text': 'Докажите уплату налогов, не раскрывая баланс.',
       'pay.title': 'Покупки с OST — Реальные Цены', 'pay.sub': 'Настоящие товары, реальные цены. Почувствуйте приватные платежи.',
@@ -905,8 +909,8 @@
       'wallet.title': 'Подключить Кошелек', 'wallet.sub': 'Выберите кошелёк для подключения к OST.',
       'footer.mission': 'Каждая транзакция помогает финансировать спутниковую инфраструктуру. <strong>Подарок, который мы строим вместе.</strong>',
       'footer.copy': 'Открытый исходный код. Создано с любовью для каждого человека на Земле.',
-      'hero.free': '&#128176; \u0411\u0415\u0421\u041f\u041b\u0410\u0422\u041d\u041e \u041d\u0410\u0412\u0421\u0415\u0413\u0414\u0410',
-      'hero.freetext': '\u041d\u0443\u043b\u0435\u0432\u044b\u0435 \u043a\u043e\u043c\u0438\u0441\u0441\u0438\u0438. \u041d\u0438\u043a\u0430\u043a\u0438\u0445 \u0441\u043a\u0440\u044b\u0442\u044b\u0445 \u0440\u0430\u0441\u0445\u043e\u0434\u043e\u0432. \u0424\u0438\u043d\u0430\u043d\u0441\u0438\u0440\u0443\u0435\u0442\u0441\u044f \u043f\u043e\u0436\u0435\u0440\u0442\u0432\u043e\u0432\u0430\u043d\u0438\u044f\u043c\u0438 \u0438 \u0438\u043d\u0432\u0435\u0441\u0442\u043e\u0440\u0430\u043c\u0438.',
+      'hero.free': '&#128176; \u0411\u0415\u0421\u041f\u041b\u0410\u0422\u041d\u041e \u041f\u041e\u041f\u0420\u041e\u0411\u041e\u0412\u0410\u0422\u042c',
+      'hero.freetext': '\u0422\u0435\u0441\u0442\u043e\u0432\u0430\u044f \u0441\u0435\u0442\u044c devnet: OST \u043e\u043f\u043b\u0430\u0447\u0438\u0432\u0430\u0435\u0442 \u0432\u0441\u0435 \u0441\u0435\u0442\u0435\u0432\u044b\u0435 \u043a\u043e\u043c\u0438\u0441\u0441\u0438\u0438, \u043f\u043e\u044d\u0442\u043e\u043c\u0443 \u043f\u0440\u043e\u0431\u043e\u0432\u0430\u0442\u044c \u0431\u0435\u0441\u043f\u043b\u0430\u0442\u043d\u043e. \u0411\u0435\u0437 \u0440\u0435\u0430\u043b\u044c\u043d\u044b\u0445 \u0434\u0435\u043d\u0435\u0433.',
       'hero.createwallet': '\u0421\u043e\u0437\u0434\u0430\u0442\u044c \u043a\u043e\u0448\u0435\u043b\u0435\u043a',
       'hero.stat.unbanked': '\u0412\u0437\u0440\u043e\u0441\u043b\u044b\u0445 \u0431\u0435\u0437 \u0431\u0430\u043d\u043a\u043e\u0432\u0441\u043a\u0438\u0445 \u0441\u0447\u0435\u0442\u043e\u0432',
       'hero.stat.remittance': '$ \u043f\u043e\u0442\u0435\u0440\u044f\u043d\u043e \u043d\u0430 \u043a\u043e\u043c\u0438\u0441\u0441\u0438\u044f\u0445 \u043f\u0435\u0440\u0435\u0432\u043e\u0434\u043e\u0432/\u0433\u043e\u0434',
@@ -927,7 +931,7 @@
       'gv.sub': '\u041f\u0435\u0440\u0432\u0430\u044f \u043c\u043e\u043d\u0435\u0442\u0430, \u0440\u043e\u0436\u0434\u0451\u043d\u043d\u0430\u044f \u0432 \u043a\u043e\u0441\u043c\u043e\u0441\u0435 \u0441 \u043a\u0430\u0436\u0434\u044b\u043c \u043d\u043e\u0432\u044b\u043c \u043f\u043e\u043a\u043e\u043b\u0435\u043d\u0438\u0435\u043c. \u0421\u043e\u0437\u0434\u0430\u0439\u0442\u0435 \u0445\u0440\u0430\u043d\u0438\u043b\u0438\u0449\u0435 \u0434\u043b\u044f \u0432\u0430\u0448\u0435\u0433\u043e \u0440\u0435\u0431\u0451\u043d\u043a\u0430.',
       'gv.disclaimer': '\u0422\u043e\u043b\u044c\u043a\u043e \u0434\u043b\u044f \u043e\u0431\u0440\u0430\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u044c\u043d\u044b\u0445 \u0446\u0435\u043b\u0435\u0439. \u0420\u043e\u0434\u0438\u0442\u0435\u043b\u0438 \u043d\u0435\u0441\u0443\u0442 \u043e\u0442\u0432\u0435\u0442\u0441\u0442\u0432\u0435\u043d\u043d\u043e\u0441\u0442\u044c \u0437\u0430 \u0432\u0441\u0435 \u043d\u0430\u043b\u043e\u0433\u043e\u0432\u044b\u0435 \u0438 \u043f\u0440\u0430\u0432\u043e\u0432\u044b\u0435 \u0432\u043e\u043f\u0440\u043e\u0441\u044b.',
       'depin.title': '\u041a\u0440\u0430\u043d DePIN \u0434\u0430\u0442\u0430-\u0446\u0435\u043d\u0442\u0440\u043e\u0432',
-      'depin.sub': '\u0414\u0435\u043b\u0438\u0442\u0435\u0441\u044c \u043f\u0440\u043e\u043f\u0443\u0441\u043a\u043d\u043e\u0439 \u0441\u043f\u043e\u0441\u043e\u0431\u043d\u043e\u0441\u0442\u044c\u044e, GPU, CPU \u0438\u043b\u0438 \u0441\u043f\u0443\u0442\u043d\u0438\u043a\u043e\u0432\u043e\u0439 \u0435\u043c\u043a\u043e\u0441\u0442\u044c\u044e &mdash; \u043f\u043e\u043b\u0443\u0447\u0430\u0439\u0442\u0435 OST \u0437\u0430 \u0441\u0442\u0440\u043e\u0438\u0442\u0435\u043b\u044c\u0441\u0442\u0432\u043e \u0434\u0435\u0446\u0435\u043d\u0442\u0440\u0430\u043b\u0438\u0437\u043e\u0432\u0430\u043d\u043d\u044b\u0445 \u0434\u0430\u0442\u0430-\u0446\u0435\u043d\u0442\u0440\u043e\u0432.',
+      'depin.sub': '\u041f\u0440\u0435\u0434\u0432\u0430\u0440\u0438\u0442\u0435\u043b\u044c\u043d\u044b\u0439 \u043e\u0431\u0437\u043e\u0440 (R&D) \u0431\u0443\u0434\u0443\u0449\u0435\u0439 \u043f\u0440\u043e\u0433\u0440\u0430\u043c\u043c\u044b \u0432\u043e\u0437\u043d\u0430\u0433\u0440\u0430\u0436\u0434\u0435\u043d\u0438\u0439 \u0437\u0430 \u043f\u0440\u043e\u043f\u0443\u0441\u043a\u043d\u0443\u044e \u0441\u043f\u043e\u0441\u043e\u0431\u043d\u043e\u0441\u0442\u044c, GPU, CPU \u0438\u043b\u0438 \u0441\u043f\u0443\u0442\u043d\u0438\u043a\u043e\u0432\u0443\u044e \u0451\u043c\u043a\u043e\u0441\u0442\u044c. \u041d\u0435 \u0437\u0430\u043f\u0443\u0449\u0435\u043d\u043e: \u043d\u0438\u0447\u0435\u0433\u043e \u043d\u0435 \u043f\u0440\u043e\u0432\u0435\u0440\u044f\u0435\u0442\u0441\u044f, OST \u043d\u0435 \u0432\u044b\u043f\u043b\u0430\u0447\u0438\u0432\u0430\u044e\u0442\u0441\u044f.',
       'demos.title': '&#128717;&#65039; \u041a\u043e\u043c\u043c\u0435\u0440\u0446\u0438\u044f OST', 'demos.sub': '\u041f\u043e\u0447\u0443\u0432\u0441\u0442\u0432\u0443\u0439\u0442\u0435 \u043f\u0440\u0438\u0432\u0430\u0442\u043d\u044b\u0435 \u043c\u0433\u043d\u043e\u0432\u0435\u043d\u043d\u044b\u0435 \u043f\u043b\u0430\u0442\u0435\u0436\u0438. \u0420\u0435\u0430\u043b\u044c\u043d\u044b\u0435 \u0442\u043e\u0432\u0430\u0440\u044b. \u041d\u0443\u043b\u0435\u0432\u044b\u0435 \u043a\u043e\u043c\u0438\u0441\u0441\u0438\u0438.',
       'wallet.getTitle': '\u041f\u043e\u043b\u0443\u0447\u0438\u0442\u0435 \u0441\u0432\u043e\u0439 \u043a\u043e\u0448\u0435\u043b\u0451\u043a OST', 'wallet.getSub': '\u0412\u044b\u0431\u0435\u0440\u0438\u0442\u0435 \u0441\u043f\u043e\u0441\u043e\u0431 \u0441\u043e\u0437\u0434\u0430\u043d\u0438\u044f \u043a\u043e\u0448\u0435\u043b\u044c\u043a\u0430. \u0421\u0435\u043c\u0435\u043d\u043d\u0430\u044f \u0444\u0440\u0430\u0437\u0430 \u043d\u0435 \u043d\u0443\u0436\u043d\u0430 c Web3Auth.',
       'sell.title': '\u041f\u0440\u043e\u0434\u0430\u0442\u044c \u0438\u043b\u0438 \u043e\u0431\u043c\u0435\u043d\u044f\u0442\u044c OST', 'sell.sub': '\u0412\u044b\u0432\u043e\u0434 \u0432 \u043b\u044e\u0431\u0443\u044e \u043a\u0440\u0438\u043f\u0442\u043e \u0438\u043b\u0438 \u0444\u0438\u0430\u0442. \u0422\u0430 \u0436\u0435 \u0441\u043a\u043e\u0440\u043e\u0441\u0442\u044c, \u0442\u0430 \u0436\u0435 \u043f\u0440\u0438\u0432\u0430\u0442\u043d\u043e\u0441\u0442\u044c.',
@@ -1011,7 +1015,7 @@
       'features.f1.title': 'गोपनीय ट्रांसफर', 'features.f1.text': 'शून्य-ज्ञान प्रमाण आपकी शेष राशि और हर लेनदेन को छिपाते हैं।',
       'features.f2.title': 'सब-सेकंड निपटान', 'features.f2.text': 'Solana पर 400ms। कार्ड टैप करने से भी तेज़।',
       'features.f3.title': 'किसी भी मुद्रा से OST ब्रिज', 'features.f3.text': 'बिटकॉइन, एथेरियम, USDC, बैंक ट्रांसफर — सब कुछ परिवर्तित होता है।',
-      'features.f4.title': 'हमेशा मुफ्त', 'features.f4.text': 'शून्य लेनदेन शुल्क। दान और निवेशकों द्वारा वित्त पोषित। ऑन-चेन पारदर्शिता।',
+      'features.f4.title': 'आज़माने के लिए मुफ़्त', 'features.f4.text': 'डेवनेट टेस्ट नेटवर्क: हर नेटवर्क शुल्क OST चुकाता है। कोई असली पैसा नहीं। ऑन-चेन पारदर्शिता।',
       'features.f5.title': 'ऑफलाइन भुगतान', 'features.f5.text': 'NFC, QR, ब्लूटूथ। इंटरनेट के बिना भुगतान करें।',
       'features.f6.title': 'ZK कर अनुपालन', 'features.f6.text': 'अपनी शेष राशि प्रकट किए बिना करों का प्रमाण दें।',
       'pay.title': 'OST से खरीदारी — वास्तविक कीमतें', 'pay.sub': 'असली उत्पाद, वास्तविक कीमतें। निजी भुगतान कैसा लगता है देखें।',
@@ -1056,8 +1060,8 @@
       'wallet.title': 'अपना वॉलेट कनेक्ट करें', 'wallet.sub': 'OST से जुड़ने के लिए एक वॉलेट चुनें।',
       'footer.mission': 'हर लेनदेन सार्वभौमिक इंटरनेट के लिए उपग्रह बुनियादी ढांचे को निधि देने में मदद करता है। <strong>एक उपहार जो हम साथ मिलकर बनाते हैं।</strong>',
       'footer.copy': 'ओपन सोर्स। पृथ्वी पर हर इंसान के लिए प्यार से बनाया गया।',
-      'hero.free': '&#128176; हमेशा मुफ्त',
-      'hero.freetext': 'शून्य लेनदेन शुल्क। कोई छिपी लागत नहीं। दान और निवेशकों द्वारा वित्त पोषित।',
+      'hero.free': '&#128176; आज़माने के लिए मुफ़्त',
+      'hero.freetext': 'डेवनेट टेस्ट नेटवर्क: हर नेटवर्क शुल्क OST चुकाता है, इसलिए आज़माने में आपका कुछ खर्च नहीं होता। कोई असली पैसा नहीं।',
       'hero.createwallet': 'वॉलेट बनाएं',
       'hero.stat.unbanked': 'दुनिया भर में बैंक रहित वयस्क',
       'hero.stat.remittance': '$ रेमिटेंस शुल्क में खोया/वर्ष',
@@ -1078,7 +1082,7 @@
       'gv.sub': 'हर नई पीढ़ी के साथ अंतरिक्ष में जन्मा पहला सिक्का। अपने बच्चे के लिए एक कस्टोडियल वॉल्ट बनाएं।',
       'gv.disclaimer': 'केवल शैक्षिक उपयोग। माता-पिता/अभिभावक सभी कर और स्थानीय कानूनों के लिए जिम्मेदार हैं।',
       'depin.title': 'DePIN डेटा-सेंटर फॉसेट',
-      'depin.sub': 'बैंडविड्थ, GPU, CPU या उपग्रह क्षमता साझा करें &mdash; विकेंद्रीकृत डेटा सेंटर बनाने के लिए OST अर्जित करें।',
+      'depin.sub': 'भविष्य के एक कार्यक्रम का R&D पूर्वावलोकन, जो बैंडविड्थ, GPU, CPU या उपग्रह क्षमता साझा करने पर इनाम दे सकता है। यह अभी लाइव नहीं है: कुछ भी सत्यापित नहीं होता और कोई OST नहीं दिया जाता।',
       'demos.title': '&#128717;&#65039; OST कॉमर्स', 'demos.sub': 'निजी, तत्काल भुगतान कैसा लगता है देखें। वास्तविक उत्पाद। शून्य शुल्क।',
       'wallet.getTitle': 'अपना व्यक्तिगत OST वॉलेट प्राप्त करें', 'wallet.getSub': 'अपना वॉलेट बनाने या कनेक्ट करने का तरीका चुनें।',
       'sell.title': 'OST बेचें या व्यापार करें', 'sell.sub': 'किसी भी क्रिप्टो या फिएट में निकासी। समान गति, समान गोपनीयता।',
@@ -1162,7 +1166,7 @@
       'features.f1.title': 'تحويلات سرية', 'features.f1.text': 'براهين المعرفة الصفرية تخفي رصيدك وكل معاملة.',
       'features.f2.title': 'تسوية فورية', 'features.f2.text': '400 مللي ثانية على Solana. أسرع من لمس بطاقتك.',
       'features.f3.title': 'جسر لكل العملات', 'features.f3.text': 'بيتكوين، إيثريوم، USDC، تحويلات بنكية — كل شيء يتحول.',
-      'features.f4.title': 'مجاني إلى الأبد', 'features.f4.text': 'صفر رسوم معاملات. ممول من التبرعات والمستثمرين. شفافية على البلوكتشين.',
+      'features.f4.title': 'مجاني للتجربة', 'features.f4.text': 'شبكة اختبار devnet: يدفع OST كل رسوم الشبكة. لا أموال حقيقية. شفافية على البلوكتشين.',
       'features.f5.title': 'دفع بدون إنترنت', 'features.f5.text': 'NFC، QR، بلوتوث. ادفع بدون إنترنت.',
       'features.f6.title': 'امتثال ضريبي ZK', 'features.f6.text': 'أثبت دفع الضرائب دون كشف رصيدك.',
       'pay.title': 'تسوق بـ OST — أسعار حقيقية', 'pay.sub': 'منتجات حقيقية بأسعار واقعية. اختبر المدفوعات الخاصة.',
@@ -1207,8 +1211,8 @@
       'wallet.title': 'ربط محفظتك', 'wallet.sub': 'اختر محفظة للاتصال بـ OST.',
       'footer.mission': 'كل معاملة تساعد في تمويل البنية التحتية للأقمار الصناعية. <strong>هدية نبنيها معاً.</strong>',
       'footer.copy': 'مفتوح المصدر. مبني بحب لكل إنسان على الأرض.',
-      'hero.free': '&#128176; مجاني إلى الأبد',
-      'hero.freetext': 'صفر رسوم معاملات. لا تكاليف خفية. ممول من التبرعات والمستثمرين.',
+      'hero.free': '&#128176; مجاني للتجربة',
+      'hero.freetext': 'شبكة اختبار devnet: يدفع OST كل رسوم الشبكة، لذا فالتجربة لا تكلفك شيئًا. لا أموال حقيقية.',
       'hero.createwallet': 'إنشاء محفظة',
       'hero.stat.unbanked': 'بالغون بدون حسابات بنكية حول العالم',
       'hero.stat.remittance': '$ مفقودة في رسوم التحويلات/سنة',
@@ -1229,7 +1233,7 @@
       'gv.sub': 'أول عملة تولد في الفضاء مع كل جيل جديد. أنشئ خزنة لطفلك.',
       'gv.disclaimer': 'للاستخدام التعليمي فقط. الآباء/الأوصياء مسؤولون عن جميع الضرائب والقوانين.',
       'depin.title': 'صنبور DePIN لمراكز البيانات',
-      'depin.sub': 'شارك عرض النطاق أو GPU أو CPU أو سعة الأقمار الصناعية &mdash; واكسب OST لبناء مراكز بيانات لامركزية.',
+      'depin.sub': 'معاينة بحث وتطوير لبرنامج مستقبلي قد يكافئ مشاركة عرض النطاق أو GPU أو CPU أو سعة الأقمار الصناعية. غير مفعّل: لا يتم التحقق من أي شيء ولا يُدفع أي OST.',
       'demos.title': '&#128717;&#65039; تجارة OST', 'demos.sub': 'شاهد كيف تبدو المدفوعات الخاصة والفورية. منتجات حقيقية. صفر رسوم.',
       'wallet.getTitle': 'احصل على محفظة OST الخاصة بك', 'wallet.getSub': 'اختر طريقة إنشاء أو ربط محفظتك.',
       'sell.title': 'بيع أو تداول OST', 'sell.sub': 'سحب إلى أي عملة رقمية أو ورقية. نفس السرعة والخصوصية.',
@@ -1313,7 +1317,7 @@
       'features.f1.title': 'Transferencias Confidenciais', 'features.f1.text': 'Provas de conhecimento zero escondem seu saldo e cada transacao.',
       'features.f2.title': 'Liquidacao em Fracao de Segundo', 'features.f2.text': '400ms no Solana. Mais rapido que tocar seu cartao.',
       'features.f3.title': 'Ponte Para Todas as Moedas', 'features.f3.text': 'Bitcoin, Ethereum, USDC, transferencias bancarias — tudo se converte.',
-      'features.f4.title': 'Gratis Para Sempre', 'features.f4.text': 'Zero taxas de transacao. Financiado por doacoes e investidores. Transparencia on-chain.',
+      'features.f4.title': 'Grátis Para Experimentar', 'features.f4.text': 'Rede de teste devnet: o OST paga todas as taxas de rede. Sem dinheiro real. Transparência on-chain.',
       'features.f5.title': 'Pagamentos Offline', 'features.f5.text': 'NFC, QR, Bluetooth. Pague sem internet.',
       'features.f6.title': 'Conformidade Fiscal ZK', 'features.f6.text': 'Prove seus impostos sem revelar seu saldo.',
       'pay.title': 'Compre com OST — Precos Reais', 'pay.sub': 'Produtos reais, precos reais. Sinta os pagamentos privados.',
@@ -1358,8 +1362,8 @@
       'wallet.title': 'Conectar Sua Carteira', 'wallet.sub': 'Escolha uma carteira para conectar ao OST.',
       'footer.mission': 'Cada transacao ajuda a financiar infraestrutura de satelites. <strong>Um presente que construimos juntos.</strong>',
       'footer.copy': 'Codigo aberto. Construido com amor para cada ser humano na Terra.',
-      'hero.free': '&#128176; GRÁTIS PARA SEMPRE',
-      'hero.freetext': 'Zero taxas de transação. Sem custos ocultos. Financiado por doações e investidores.',
+      'hero.free': '&#128176; GRÁTIS PARA EXPERIMENTAR',
+      'hero.freetext': 'Rede de teste devnet: o OST paga todas as taxas de rede, então experimentar não custa nada. Sem dinheiro real.',
       'hero.createwallet': 'Criar Carteira',
       'hero.stat.unbanked': 'Adultos sem banco no mundo',
       'hero.stat.remittance': '$ perdidos em taxas de remessa/ano',
@@ -1380,7 +1384,7 @@
       'gv.sub': 'A primeira moeda nascida no espaço a cada nova geração. Crie um cofre custodial para seu filho.',
       'gv.disclaimer': 'Apenas uso educacional. Pais/responsáveis são responsáveis por todas as leis fiscais e locais.',
       'depin.title': 'Faucet DePIN de Data Center',
-      'depin.sub': 'Compartilhe largura de banda, GPU, CPU ou capacidade de satélite &mdash; ganhe OST por construir data centers descentralizados.',
+      'depin.sub': 'Prévia de P&D de um programa futuro que recompensaria o compartilhamento de largura de banda, GPU, CPU ou capacidade de satélite. Não está ativo: nada é verificado e nenhum OST é pago.',
       'demos.title': '&#128717;&#65039; Comércio OST', 'demos.sub': 'Veja como são pagamentos privados e instantâneos. Produtos reais. Zero taxas.',
       'wallet.getTitle': 'Obtenha Sua Carteira OST Pessoal', 'wallet.getSub': 'Escolha como criar ou conectar sua carteira.',
       'sell.title': 'Vender ou Trocar OST', 'sell.sub': 'Saque para qualquer cripto ou fiat. Mesma velocidade, mesma privacidade.',
@@ -1464,7 +1468,7 @@
       'features.f1.title': 'Transferts Confidentiels', 'features.f1.text': 'Les preuves a divulgation nulle cachent votre solde et chaque transaction.',
       'features.f2.title': 'Reglement Infra-Seconde', 'features.f2.text': '400ms sur Solana. Plus rapide qu\'un paiement sans contact.',
       'features.f3.title': 'Pont Universel vers OST', 'features.f3.text': 'Bitcoin, Ethereum, USDC, virements — tout se convertit.',
-      'features.f4.title': 'Gratuit Pour Toujours', 'features.f4.text': 'Zero frais de transaction. Finance par des dons et des investisseurs. Transparence on-chain.',
+      'features.f4.title': 'Gratuit à Essayer', 'features.f4.text': 'Réseau de test devnet : OST paie tous les frais de réseau. Pas d\'argent réel. Transparence on-chain.',
       'features.f5.title': 'Paiements Hors Ligne', 'features.f5.text': 'NFC, QR, Bluetooth. Payez sans internet.',
       'features.f6.title': 'Conformite Fiscale ZK', 'features.f6.text': 'Prouvez vos impots sans reveler votre solde.',
       'pay.title': 'Achetez avec OST — Prix Reels', 'pay.sub': 'Vrais produits, vrais prix. Decouvrez les paiements prives.',
@@ -1509,8 +1513,8 @@
       'wallet.title': 'Connecter Votre Portefeuille', 'wallet.sub': 'Choisissez un portefeuille pour vous connecter a OST.',
       'footer.mission': 'Chaque transaction aide a financer l\'infrastructure satellite. <strong>Un cadeau que nous construisons ensemble.</strong>',
       'footer.copy': 'Open source. Construit avec amour pour chaque habitant de la Terre.',
-      'hero.free': '&#128176; GRATUIT POUR TOUJOURS',
-      'hero.freetext': 'Zéro frais de transaction. Aucun coût caché. Financé par des dons et des investisseurs.',
+      'hero.free': '&#128176; GRATUIT À ESSAYER',
+      'hero.freetext': 'Réseau de test devnet : OST paie tous les frais de réseau, donc essayer ne vous coûte rien. Pas d\'argent réel.',
       'hero.createwallet': 'Créer un Portefeuille',
       'hero.stat.unbanked': 'Adultes non bancarisés dans le monde',
       'hero.stat.remittance': '$ perdus en frais de transfert/an',
@@ -1531,7 +1535,7 @@
       'gv.sub': 'La première monnaie née dans l\'espace avec chaque nouvelle génération. Créez un coffre pour votre enfant.',
       'gv.disclaimer': 'Usage éducatif uniquement. Les parents/tuteurs sont responsables de toutes les lois fiscales et locales.',
       'depin.title': 'Robinet DePIN Data Center',
-      'depin.sub': 'Partagez bande passante, GPU, CPU ou capacité satellite &mdash; gagnez des OST pour construire des centres de données décentralisés.',
+      'depin.sub': 'Aperçu R&D d\'un futur programme qui récompenserait le partage de bande passante, GPU, CPU ou capacité satellite. Pas encore actif : rien n\'est vérifié et aucun OST n\'est versé.',
       'demos.title': '&#128717;&#65039; Commerce OST', 'demos.sub': 'Découvrez les paiements privés et instantanés. Produits réels. Zéro frais.',
       'wallet.getTitle': 'Obtenez Votre Portefeuille OST', 'wallet.getSub': 'Choisissez comment créer ou connecter votre portefeuille.',
       'sell.title': 'Vendre ou Échanger OST', 'sell.sub': 'Retrait vers n\'importe quelle crypto ou fiat. Même vitesse, même confidentialité.',
@@ -1615,7 +1619,7 @@
       'features.f1.title': '機密転送', 'features.f1.text': 'ゼロ知識証明があなたの残高とすべての取引を隠します。',
       'features.f2.title': 'サブセカンド決済', 'features.f2.text': 'Solanaで400ミリ秒。カードをタップするより速い。',
       'features.f3.title': '万通貨ブリッジ', 'features.f3.text': 'ビットコイン、イーサリアム、USDC、銀行送金 — すべて変換可能。',
-      'features.f4.title': '永久無料', 'features.f4.text': '取引手数料ゼロ。寄付と投資家による資金提供。オンチェーンの透明性。',
+      'features.f4.title': '無料でお試し', 'features.f4.text': 'devnet テストネットワーク：ネットワーク手数料はすべて OST が支払います。実際のお金は使いません。オンチェーンの透明性。',
       'features.f5.title': 'オフライン決済', 'features.f5.text': 'NFC、QR、Bluetooth。インターネットなしで支払い。',
       'features.f6.title': 'ZK税務コンプライアンス', 'features.f6.text': '残高を明かさずに納税を証明。',
       'pay.title': 'OSTでショッピング — リアル価格', 'pay.sub': '本物の商品、実際の価格。プライベート決済を体験。',
@@ -1660,8 +1664,8 @@
       'wallet.title': 'ウォレットを接続', 'wallet.sub': 'OSTに接続するウォレットを選択してください。',
       'footer.mission': 'すべての取引が衛星インフラの資金調達を支援します。<strong>共に築く贈り物。</strong>',
       'footer.copy': 'オープンソース。地球のすべての人々のために愛を込めて作りました。',
-      'hero.free': '&#128176; 永久無料',
-      'hero.freetext': '取引手数料ゼロ。隠れたコストなし。寄付と投資家が資金提供。',
+      'hero.free': '&#128176; 無料でお試し',
+      'hero.freetext': 'devnet テストネットワーク：ネットワーク手数料はすべて OST が支払うので、試すのに費用はかかりません。実際のお金は使いません。',
       'hero.createwallet': 'ウォレット作成',
       'hero.stat.unbanked': '世界の銀行口座を持たない成人',
       'hero.stat.remittance': '送金手数料で失われた$/年',
@@ -1682,7 +1686,7 @@
       'gv.sub': '新世代と共に宇宙で誕生する最初のコイン。お子様のためのカストディアルボールトを作成しましょう。',
       'gv.disclaimer': '教育目的のみ。両親/保護者がすべての税法と現地法に責任を負います。',
       'depin.title': 'DePINデータセンターフォーセット',
-      'depin.sub': '帯域幅、GPU、CPU、衛星容量を共有 &mdash; 分散型データセンター構築でOSTを獲得。',
+      'depin.sub': '将来のプログラムの研究開発プレビューです（帯域幅・GPU・CPU・衛星容量の共有に報酬を出す構想）。未稼働：検証は行われず、OSTは支払われません。',
       'demos.title': '&#128717;&#65039; OSTコマース', 'demos.sub': 'プライベートで即時の支払いを体験。リアル製品。手数料ゼロ。',
       'wallet.getTitle': 'あなたのOSTウォレットを取得', 'wallet.getSub': 'ウォレットの作成または接続方法を選択してください。',
       'sell.title': 'OSTの売却・取引', 'sell.sub': '任意の暗号通貨またはフィアットに引き出し。同じ速度、同じプライバシー。',
@@ -1766,7 +1770,7 @@
       'features.f1.title': '기밀 전송', 'features.f1.text': '영지식 증명이 잔액과 모든 거래를 숨깁니다.',
       'features.f2.title': '1초 미만 결제', 'features.f2.text': 'Solana에서 400ms. 카드 터치보다 빠릅니다.',
       'features.f3.title': '모든 통화 브릿지', 'features.f3.text': '비트코인, 이더리움, USDC, 은행 송금 — 모든 것이 전환됩니다.',
-      'features.f4.title': '영원히 무료', 'features.f4.text': '거래 수수료 제로. 기부금과 투자자가 자금 지원. 온체인 투명성.',
+      'features.f4.title': '무료 체험', 'features.f4.text': 'devnet 테스트 네트워크: 모든 네트워크 수수료를 OST가 부담합니다. 실제 돈은 사용되지 않습니다. 온체인 투명성.',
       'features.f5.title': '오프라인 결제', 'features.f5.text': 'NFC, QR, 블루투스. 인터넷 없이 결제.',
       'features.f6.title': 'ZK 세금 준수', 'features.f6.text': '잔액을 공개하지 않고 세금을 증명합니다.',
       'pay.title': 'OST로 쇼핑 — 실제 가격', 'pay.sub': '실제 제품, 실제 가격. 프라이빗 결제를 경험하세요.',
@@ -1811,8 +1815,8 @@
       'wallet.title': '지갑 연결하기', 'wallet.sub': 'OST에 연결할 지갑을 선택하세요.',
       'footer.mission': '모든 거래가 위성 인프라 자금 조달을 돕습니다. <strong>함께 만드는 선물.</strong>',
       'footer.copy': '오픈 소스. 지구의 모든 사람을 위해 사랑으로 만들었습니다.',
-      'hero.free': '&#128176; 영원히 무료',
-      'hero.freetext': '거래 수수료 제로. 숨겨진 비용 없음. 기부와 투자자가 자금 지원.',
+      'hero.free': '&#128176; 무료 체험',
+      'hero.freetext': 'devnet 테스트 네트워크: 모든 네트워크 수수료를 OST가 부담하므로 체험 비용이 없습니다. 실제 돈은 사용되지 않습니다.',
       'hero.createwallet': '지갑 만들기',
       'hero.stat.unbanked': '전 세계 은행 계좌 없는 성인',
       'hero.stat.remittance': '송금 수수료로 손실된 $/년',
@@ -1833,7 +1837,7 @@
       'gv.sub': '새로운 세대마다 우주에서 태어나는 첫 번째 코인. 자녀를 위한 수탁 볼트를 만드세요.',
       'gv.disclaimer': '교육 목적으로만 사용. 부모/보호자가 모든 세법과 현지 법률에 책임.',
       'depin.title': 'DePIN 데이터센터 파우셋',
-      'depin.sub': '대역폭, GPU, CPU 또는 위성 용량 공유 &mdash; 분산 데이터센터 구축으로 OST 획득.',
+      'depin.sub': '대역폭, GPU, CPU 또는 위성 용량 공유에 보상하는 향후 프로그램의 R&D 미리보기입니다. 아직 운영되지 않음: 어떤 것도 검증되지 않으며 OST가 지급되지 않습니다.',
       'demos.title': '&#128717;&#65039; OST 커머스', 'demos.sub': '프라이빗 즉시 결제를 경험하세요. 실제 제품. 수수료 제로.',
       'wallet.getTitle': '개인 OST 지갑 받기', 'wallet.getSub': '지갑을 만들거나 연결하는 방법을 선택하세요.',
       'sell.title': 'OST 판매 또는 거래', 'sell.sub': '모든 암호화폐 또는 법정화폐로 출금. 같은 속도, 같은 프라이버시.',
@@ -1917,7 +1921,7 @@
       'features.f1.title': 'Gizli Transferler', 'features.f1.text': 'Sifir bilgi kanitlari bakiyenizi ve her islemi gizler.',
       'features.f2.title': 'Saniyenin Altinda Uzlasma', 'features.f2.text': 'Solana\'da 400ms. Kartinizi dokundurmaktan hizli.',
       'features.f3.title': 'Tum Para Birimleri Koprüsü', 'features.f3.text': 'Bitcoin, Ethereum, USDC, banka transferleri — her sey donusur.',
-      'features.f4.title': 'Sonsuza Kadar Ucretsiz', 'features.f4.text': 'Sifir islem ucreti. Bagislar ve yatirimcilar tarafindan finanse edilir. Zincir uzerinde seffaflik.',
+      'features.f4.title': 'Denemesi Ücretsiz', 'features.f4.text': 'Devnet test ağı: tüm ağ ücretlerini OST öder. Gerçek para yok. Zincir üzerinde şeffaflık.',
       'features.f5.title': 'Cevrimdisi Odemeler', 'features.f5.text': 'NFC, QR, Bluetooth. Internetsiz odeyin.',
       'features.f6.title': 'ZK Vergi Uyumu', 'features.f6.text': 'Bakiyenizi aciklamadan vergi odedigini kanitlayin.',
       'pay.title': 'OST ile Alisveris — Gercek Fiyatlar', 'pay.sub': 'Gercek urunler, gercek fiyatlar. Ozel odemeleri deneyin.',
@@ -1962,8 +1966,8 @@
       'wallet.title': 'Cuzdaninizi Baglayiniz', 'wallet.sub': 'OST\'ye baglanmak icin bir cuzdan secin.',
       'footer.mission': 'Her islem uydu altyapisi icin fon saglamaya yardimci olur. <strong>Birlikte insa ettigimiz bir hediye.</strong>',
       'footer.copy': 'Acik kaynak. Yeryuzundeki her insan icin sevgiyle insa edildi.',
-      'hero.free': '&#128176; SONSUZA DEK ÜCRETSİZ',
-      'hero.freetext': 'Sıfır işlem ücreti. Gizli maliyet yok. Bağışlar ve yatırımcılar tarafından finanse edilir.',
+      'hero.free': '&#128176; DENEMESİ ÜCRETSİZ',
+      'hero.freetext': 'Devnet test ağı: tüm ağ ücretlerini OST öder, yani denemek size hiçbir şeye mal olmaz. Gerçek para yok.',
       'hero.createwallet': 'Cüzdan Oluştur',
       'hero.stat.unbanked': 'Dünyada bankasız yetişkinler',
       'hero.stat.remittance': '$ havale ücretlerinde kaybedilen/yıl',
@@ -1984,7 +1988,7 @@
       'gv.sub': 'Her yeni nesillle birlikte uzayda doğan ilk madeni para. Çocuğunuz için emanet kasası oluşturun.',
       'gv.disclaimer': 'Yalnızca eğitim amaçlıdır. Ebeveynler/vasiler tüm vergi ve yerel yasalardan sorumludur.',
       'depin.title': 'DePIN Veri Merkezi Musluğu',
-      'depin.sub': 'Bant genişliği, GPU, CPU veya uydu kapasitesi paylaşın &mdash; merkeziyetsiz veri merkezleri kurmak için OST kazanın.',
+      'depin.sub': 'Bant genişliği, GPU, CPU veya uydu kapasitesi paylaşımını ödüllendirecek gelecekteki bir programın Ar-Ge önizlemesi. Canlı değil: hiçbir şey doğrulanmaz ve OST ödenmez.',
       'demos.title': '&#128717;&#65039; OST Ticaret', 'demos.sub': 'Özel, anlık ödemelerin nasıl hissettirdiğini görün. Gerçek ürünler. Sıfır ücret.',
       'wallet.getTitle': 'Kişisel OST Cüzdanınızı Alın', 'wallet.getSub': 'Cüzdanınızı nasıl oluşturacağınızı veya bağlayacağınızı seçin.',
       'sell.title': 'OST Sat veya Takas Et', 'sell.sub': 'Herhangi bir kriptoya veya fiata çek. Aynı hız, aynı gizlilik.',
@@ -2173,7 +2177,7 @@
   const OST_DAILY_DROP_AMOUNT = 1;
   const OST_DAILY_DROP_MS = 24 * 60 * 60 * 1000;
   const OST_REWARD_CLAIMS_STORAGE_KEY = 'ost.reward.claims.v1';
-  const OST_FAUCET_REMOTE_SYNC_MS = 30000;
+  const OST_FAUCET_REMOTE_SYNC_MS = 60000;   // NET-3: ≤ 1/min, visible faucet card only
   const OST_DEVNET_METRICS_REFRESH_MS = 120000;
   const LOCAL_WALLET_STORAGE_KEY = 'ost.localWallet.v1';
   const LOCAL_WALLET_BACKUP_EXPORTED_KEY = 'ost.localWallet.backupExportedAt';
@@ -2228,7 +2232,9 @@
   function getSolanaConnection() {
     var url = currentRpcUrl();
     if (typeof solanaWeb3 !== 'undefined' && (!solanaConnection || solanaConnection.__ostUrl !== url)) {
-      solanaConnection = new solanaWeb3.Connection(url, 'confirmed');
+      // NET-1: no web3.js 429 auto-retry (it sleeps 500+1000+2000+4000 ms per
+      // call). A rate-limited endpoint fails fast and rpcCall rotates instead.
+      solanaConnection = new solanaWeb3.Connection(url, { commitment: 'confirmed', disableRetryOnRateLimit: true });
       solanaConnection.__ostUrl = url;
     }
     return solanaConnection;
@@ -2278,11 +2284,24 @@
   async function rpcCall(fn) {
     var seq = healthyRpcSeq(), lastErr = null;
     for (var a = 0; a < seq.length; a++) {
-      var i = seq[a]; useRpcIndex(i);
+      var i = seq[a];
+      // NET-1: never retry an endpoint that is cooling down while a healthy one
+      // exists (only when EVERY endpoint is cooling do we try them anyway).
+      if (a > 0 && RPC_COOLDOWN[RPC_LIST[i]] > Date.now() && lastErr && isRateLimitError(lastErr) && seq.some(function (j) { return !(RPC_COOLDOWN[RPC_LIST[j]] > Date.now()); })) continue;
+      useRpcIndex(i);
       try { var res = await fn(getSolanaConnection()); delete RPC_COOLDOWN[RPC_LIST[i]]; return res; }
       catch (e) { lastErr = e; if (!isRpcEndpointError(e)) throw e; markRpcCooldown(RPC_LIST[i], e); }
     }
     throw lastErr || new Error('all RPC endpoints failed');
+  }
+  // One attempt on the healthiest endpoint only (no rotation): transaction-
+  // critical callers switch to the worker relay on the FIRST failure instead of
+  // walking every throttled browser endpoint (NET-1).
+  async function rpcCallOnce(fn) {
+    var i = healthyRpcSeq()[0];
+    useRpcIndex(i);
+    try { var res = await fn(getSolanaConnection()); delete RPC_COOLDOWN[RPC_LIST[i]]; return res; }
+    catch (e) { if (isRpcEndpointError(e)) markRpcCooldown(RPC_LIST[i], e); throw e; }
   }
   // Fetch the dedicated devnet RPC from the worker SECRET (not committed). It
   // becomes the PRIMARY, with public devnet kept as an automatic fallback.
@@ -2352,9 +2371,10 @@
     if (!force && _bhCache && Date.now() - _bhCache.at < BLOCKHASH_TTL) {
       return Promise.resolve(_bhCache);
     }
-    // Failover: if the primary RPC 401s/429s on getLatestBlockhash, rotate to the
-    // public fallback and retry — this is the "failed to get recent blockhash" fix.
-    _bhInflight = rpcCall(function (c) { return c.getLatestBlockhash('confirmed'); }).then(function (bh) {
+    // NET-1: one try on the healthiest browser endpoint; on the FIRST failure
+    // (401/429/network) go straight to the worker relay below instead of walking
+    // every throttled endpoint (each used to add seconds before a send).
+    _bhInflight = rpcCallOnce(function (c) { return c.getLatestBlockhash('confirmed'); }).then(function (bh) {
       _bhCache = { blockhash: bh.blockhash, lastValidBlockHeight: bh.lastValidBlockHeight, at: Date.now() };
       _bhInflight = null;
       return _bhCache;
@@ -2385,8 +2405,20 @@
   // 20s, and only when the user can actually act.
   (function keepBlockhashWarm() {
     if (typeof window === 'undefined') return;
+    // NET-3: a warm blockhash only helps a transaction the user is about to
+    // make. Pre-warm only within 60 s of a tap / key press (an idle visible tab
+    // used to spend 3 getLatestBlockhash a minute); a cold send fetches one.
+    var lastInput = Date.now();
+    ['pointerdown', 'keydown', 'touchstart'].forEach(function (ev) {
+      window.addEventListener(ev, function () {
+        var wasCold = Date.now() - lastInput > 60000;
+        lastInput = Date.now();
+        if (wasCold) setTimeout(tick, 0);
+      }, { passive: true, capture: true });
+    });
     var tick = function () {
       if (document.visibilityState !== 'visible') return;
+      if (Date.now() - lastInput > 60000) return;
       if (window.OST_IDLE_GUARD && OST_IDLE_GUARD.isGated()) return;   // tab open but user away: don't prewarm Helius RPC
       if (getSolanaConnection()) refreshBlockhash(false);
     };
@@ -2482,19 +2514,17 @@
     setWalletFundingState({
       needsManualFunding: false,
       walletAddress: address,
-      lastError: walletFundingState.lastError || 'OST fee vault covers devnet fees'
+      lastError: walletFundingState.lastError || 'OST pays devnet fees'
     });
-    copyTextToClipboard(address).then(function() {
-      toast('📋', 'Wallet address copied. OST covers the devnet fee when you claim.');
-    }).catch(function() {
-      toast('ℹ️', 'OST covers the devnet fee when you claim.');
-    });
-    if (faucetStatus) {
-      faucetStatus.textContent = 'Wallet address ready. The OST reward vault pays the Solana network fee when you claim.';
+    // SOL-1 / C8: OST and OSTG actions never need SOL (OST pays every fee). The
+    // only devnet SOL source that works is cashing out OST -> SOL (public devnet
+    // airdrops are rate-limited); open that, preset to 10 OST.
+    if (settings.open !== false && window.OST_GET_SOL && typeof window.OST_GET_SOL.open === 'function') {
+      window.OST_GET_SOL.open(10);
+      toast('ℹ️', 'You don\'t need SOL for OST. To get devnet SOL, cash out at least 10 OST → SOL (Solana keeps ≥ 0.00089 SOL in a new account).');
+      return true;
     }
-    if (settings.open !== false && faucetBtn) {
-      try { faucetBtn.focus(); } catch (_) {}
-    }
+    toast('ℹ️', 'You don\'t need SOL for OST — OST pays every network fee. To get devnet SOL, cash out OST → SOL in Wallet → Convert.');
     return true;
   }
 
@@ -2636,7 +2666,7 @@
       if (!conn) return;
       const pubkey = new solanaWeb3.PublicKey(pubkeyStr);
       const [lamports, ostBal] = await Promise.all([
-        conn.getBalance(pubkey),
+        rpcCall(function (c) { return c.getBalance(pubkey); }),   // NET-1: rotation + cooldown
         getOstBalanceForAddress(pubkey).catch(function() { return null; })
       ]);
       const sol = (lamports / 1e9).toFixed(4);
@@ -2645,7 +2675,7 @@
       // strict `!== null` would let that through into .toFixed() and throw.
       // Omitting the figure is right — we do not know it, so we do not claim it.
       const ostTxt = ostBal != null ? ' · ' + ostBal.toFixed(2) + ' OST' : '';
-      toast('💰', `Balance: ${sol} SOL${ostTxt}`);
+      toast('💰', `Balance: ${sol} SOL${ostTxt}`, { background: true });
     } catch (e) {
       // silently ignore balance fetch errors
     }
@@ -2668,10 +2698,15 @@
     if (pubkeyStr) {
       walletBtn.classList.add('connected');
       walletText.textContent = shortAddress(pubkeyStr);
+      // WAL-3: the button opens the wallet (never disconnects); say so.
+      walletBtn.setAttribute('aria-label', 'Open wallet ' + shortAddress(pubkeyStr));
+      walletBtn.title = 'Open wallet';
       return;
     }
     walletBtn.classList.remove('connected');
     walletText.textContent = translations[currentLang]?.['nav.connect'] || 'Connect Wallet';
+    walletBtn.setAttribute('aria-label', 'Connect or create a wallet');
+    walletBtn.title = 'Connect or create a wallet';
   }
 
   window.syncConnectedWalletUi = function syncConnectedWalletUi() {
@@ -2708,7 +2743,9 @@
     return {
       connected: !!connectedWallet,
       pubkey: connectedWallet || null,
+      address: connectedWallet || null,   // C1 event shape {address, kind, type}
       kind: (connectedWalletSession && connectedWalletSession.kind) || null,
+      type: (connectedWalletSession && (connectedWalletSession.type || connectedWalletSession.kind)) || null,
       label: (connectedWalletSession && connectedWalletSession.label) || null
     };
   }
@@ -2740,7 +2777,9 @@
     if (!provider || provider.__ostEventsWired || typeof provider.on !== 'function') return;
     provider.__ostEventsWired = true;
     try {
+      const isCurrent = function () { return !!(connectedWalletSession && connectedWalletSession.provider === provider); };
       provider.on('accountChanged', function (newKey) {
+        if (!isCurrent()) return;   // a provider we switched away from
         if (newKey) {
           try {
             var pkObj = newKey.toBase58 ? newKey : toPublicKey(String(newKey));
@@ -2752,7 +2791,7 @@
           disconnectConnectedWallet();
         }
       });
-      provider.on('disconnect', function () { disconnectConnectedWallet(); });
+      provider.on('disconnect', function () { if (isCurrent()) disconnectConnectedWallet(); });
     } catch (_) {}
   }
 
@@ -2783,11 +2822,25 @@
     }
   }
 
-  function persistLocalWallet(keypair) {
+  // WAL-5: never silently replace a DIFFERENT stored key (that is how an
+  // un-backed-up wallet and its funds were lost). Replacing needs
+  // { confirmedOverwrite: true }, and a new key clears the "backed up" flag.
+  // Returns true when the key is stored.
+  function persistLocalWallet(keypair, opts) {
+    const settings = opts || {};
     try {
+      const current = loadLocalWalletKeypair();
+      const same = current && current.publicKey.toBase58() === keypair.publicKey.toBase58();
+      if (current && !same && !settings.confirmedOverwrite) {
+        toast('⚠️', 'This browser already holds a different wallet. Use Wallet → Restore to replace it.');
+        return false;
+      }
       localStorage.setItem(LOCAL_WALLET_STORAGE_KEY, JSON.stringify(createLocalWalletRecord(keypair)));
+      if (!same) { try { localStorage.removeItem(LOCAL_WALLET_BACKUP_EXPORTED_KEY); } catch {} }
+      return true;
     } catch {
       toast('⚠️', 'Could not persist the local wallet in this browser');
+      return false;
     }
   }
 
@@ -2827,9 +2880,11 @@
     }
   }
 
+  // Only ever called from an explicit user "Download backup" tap (WAL-2).
   function exportLocalWalletBackup(keypair) {
+    const pk = keypair.publicKey.toBase58();
+    downloadTextFile('ost-browser-wallet-' + pk.slice(0, 4) + '-' + pk.slice(-4) + '.json', JSON.stringify(Array.from(keypair.secretKey)), 'application/json');
     markLocalWalletBackupExported();
-    downloadTextFile('ost-browser-wallet.json', JSON.stringify(Array.from(keypair.secretKey)), 'application/json');
   }
 
   function getLocalWalletSession() {
@@ -2850,31 +2905,40 @@
     if (!connectedWalletSession || !connectedWalletSession.publicKey || connectedWalletSession.publicKey.toBase58() !== session.publicKey.toBase58()) {
       clearWalletFundingState();
     }
+    const previousExtension = connectedWalletSession && connectedWalletSession.kind === 'extension' ? connectedWalletSession.provider : null;
     connectedWalletSession = session;
     connectedWallet = session.publicKey.toBase58();
     if (session.kind === 'extension' && session.provider) attachProviderEvents(session.provider);
+    // WAL-4: remember what the user picked so a reload restores THAT wallet (an
+    // extension is never replaced by a saved browser wallet), and an explicit
+    // connect clears a previous explicit disconnect.
+    if (settings.remember !== false) rememberWalletLast(session);
+    if (previousExtension && previousExtension !== session.provider) {
+      try {
+        // Its 'disconnect' event is ignored (attachProviderEvents only acts for the
+        // provider that is CURRENTLY connected).
+        const p =typeof previousExtension.disconnect === 'function' ? previousExtension.disconnect() : null;
+        if (p && typeof p.catch === 'function') p.catch(function () {});
+      } catch (_) {}
+    }
     publishWalletState();   // canonical: mirror + nav + subscribers + events, all at once
 
-    if (settings.backup && session.kind === 'local' && session.keypair) {
-      exportLocalWalletBackup(session.keypair);
-      toast('🧾', 'Wallet backup downloaded. Keep that file offline.');
-    }
-
+    // WAL-2: never auto-download the key and never mark it backed up here. A new
+    // browser wallet goes to the wallet-home backup step (OST_WALLET.createLocal).
     if (settings.announce !== false) {
-      if (session.kind === 'local' && settings.backup) {
-        toast('🔐', 'Browser wallet created on Solana devnet.');
+      if (session.kind === 'local' && (settings.created || session.created)) {
+        toast('🔐', 'Browser wallet created · ' + shortAddress(connectedWallet), { kind: 'ok' });
+      } else if (session.kind === 'local') {
+        toast('✅', 'Browser wallet connected · ' + shortAddress(connectedWallet));
       } else {
-        toast('✅', `Connected: ${shortAddress(connectedWallet)}`);
+        toast('✅', 'Connected ' + (session.label || 'wallet') + ' · ' + shortAddress(connectedWallet));
       }
-      verifyWalletAccount(connectedWallet).then(info => {
-        if (info.verified) {
-          toast('🔗', `Account verified — ${info.balance.toFixed(4)} SOL`);
-        } else if (session.kind === 'local') {
-          toast('💡', 'Local wallet ready. Claim devnet OST next to finish the live test flow.');
-        } else {
-          toast('💡', `New wallet — ${info.balance.toFixed(4)} SOL. Use the faucet below to get OST.`);
-        }
-      });
+    }
+    // C1: a pending gate (requireWallet) resumes once a usable wallet exists. A
+    // brand-new browser wallet resumes from the wallet home after its backup /
+    // first-OST steps, so the backup screen is never yanked away.
+    if (_walletRequirement && !(session.kind === 'local' && (settings.created || session.created))) {
+      setTimeout(resumeWalletRequirement, 350);
     }
 
     setTimeout(() => {
@@ -2903,13 +2967,25 @@
     }, 0);
   }
 
-  function disconnectConnectedWallet() {
+  function disconnectConnectedWallet(opts) {
+    const settings = opts || {};
+    if (!connectedWallet && !connectedWalletSession) return;
     const provider = connectedWalletSession && connectedWalletSession.provider;
-    try {
-      if (provider && typeof provider.disconnect === 'function') provider.disconnect();
-    } catch {}
+    // WAL-4: an explicit disconnect sticks across reloads (no silent re-adopt of
+    // the extension and no fallback to the saved browser wallet).
+    if (settings.user) {
+      try { localStorage.setItem(WALLET_USER_DISCONNECTED_KEY, '1'); } catch {}
+    }
+    // Clear first: provider.disconnect() fires its 'disconnect' event back into
+    // this function, which must then be a no-op (one notice, one publish).
     connectedWalletSession = null;
     connectedWallet = null;
+    try {
+      if (provider && typeof provider.disconnect === 'function') {
+        const pending = provider.disconnect();
+        if (pending && typeof pending.catch === 'function') pending.catch(function () {});
+      }
+    } catch {}
     clearWalletFundingState();
     publishWalletState();   // was silent before — modules never learned about disconnects
     if (typeof window.syncInterchangeDeskWallet === 'function') {
@@ -2955,7 +3031,11 @@
         { pubkey: solanaWeb3.SystemProgram.programId, isSigner: false, isWritable: false },
         { pubkey: tokenProgramId || TOKEN_2022_PROGRAM_ID, isSigner: false, isWritable: false }
       ],
-      data: new Uint8Array([])
+      // SRV-5: CreateIdempotent (instruction 1). The plain Create (empty data)
+      // FAILS with IllegalOwner when the account already exists — a cold or
+      // throttled RPC read that "missed" an existing account turned into a
+      // failed, fee-paying transaction. Idempotent create is a no-op instead.
+      data: new Uint8Array([1])
     });
   }
 
@@ -3119,6 +3199,318 @@
     return String(order.signature || order.sig || order.remoteId || order.id || [order.wallet || '', order.marketId || '', order.side || '', order.createdAt || order.ts || ''].join(':'));
   }
 
+  // ONE rule for "what kind of ticket is this, and may the OST pool ever pay
+  // it?" — shared by the cash-out, the Portfolio, the HUD, auto-claim and
+  // live-watch through OST_PREDICTION_API.ticketTrust (PRD-1 / PRD-6 / PRD-7 /
+  // SRV-3). It reads the record only:
+  //   rail     'play'    OST server ledger (BTC 5-min). Any p_<openAt>_… id is a
+  //                      server position, even on a record an older client
+  //                      imported without fundedBy — the server pays it to the
+  //                      play balance, the pool never does.
+  //            'onchain' escrowed in the program vault (paid by the program)
+  //            'credits' retired legacy credits (D1)
+  //            'wallet'  OST staked on chain into the OST pool
+  //   fake     a wallet ticket with no real stake signature ('local-…',
+  //            'sim-…', '[object Object]'…): no OST ever moved, nothing to pay
+  //   imported first seen in /positions, which anyone can POST: the stake must
+  //            be verified on chain before the pool pays it
+  var PRED_SIG_RE = /^[1-9A-HJ-NP-Za-km-z]{64,90}$/;
+  var PRED_B58 = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+  // A Solana transaction signature is exactly 64 bytes. Most made-up base58
+  // strings of the right length decode to 65 — they can never be a stake.
+  function predictionIsTxSignature(s) {
+    s = String(s || '');
+    if (!PRED_SIG_RE.test(s)) return false;
+    var bytes = [];
+    for (var i = 0; i < s.length; i++) {
+      var carry = PRED_B58.indexOf(s.charAt(i));
+      if (carry < 0) return false;
+      for (var j = 0; j < bytes.length; j++) { carry += bytes[j] * 58; bytes[j] = carry & 0xff; carry >>= 8; }
+      while (carry > 0) { bytes.push(carry & 0xff); carry >>= 8; }
+    }
+    var zeros = 0;
+    while (zeros < s.length && s.charAt(zeros) === '1') zeros++;
+    return zeros + bytes.length === 64;
+  }
+  function predictionServerPositionId(o) {
+    if (!o) return '';
+    var c = [o.serverPositionId, o.signature, o.sig, o.id, o.remoteId];
+    for (var i = 0; i < c.length; i++) {
+      var s = String(c[i] || '').replace(/^desk-/, '');
+      if (/^p_\d+_/.test(s)) return s;
+    }
+    return '';
+  }
+  function predictionTicketTrust(o) {
+    o = o || {};
+    var f = String(o.fundedBy || '');
+    var pid = predictionServerPositionId(o);
+    var sig = String(o.signature || o.sig || '');
+    var rail;
+    if (pid || f === 'ostg-native' || f === 'ostg' || o.rail === 'play') rail = 'play';
+    else if (f === 'onchain' || o.onChain || o.rail === 'onchain') rail = 'onchain';
+    else if (f === 'credits' || o.rail === 'credits' || /^credits-/.test(sig)) rail = 'credits';
+    else rail = 'wallet';
+    var native = !!pid || f === 'ostg-native';
+    var stakePending = o.fundingState === 'submitting' || o.fundingState === 'confirming' || !!o.pending;
+    var realSig = predictionIsTxSignature(sig);
+    var imported = rail === 'wallet' && o.syncedFrom === 'ost-api';
+    var fakePaid = !!o.cashedOut && !!o.cashoutSig && /^(local|sim|credits|fake)-|^\[object/.test(String(o.cashoutSig));
+    return {
+      rail: rail,
+      unit: (rail === 'play' || rail === 'onchain') ? 'OSTG' : 'OST',
+      native: native,
+      legacyPlay: f === 'ostg' && !native,
+      serverPositionId: pid,
+      serverSettled: rail === 'play' || rail === 'onchain',
+      realSig: realSig,
+      stakePending: stakePending,
+      fake: rail === 'wallet' && !realSig && !stakePending,
+      fakePaid: fakePaid,
+      imported: imported,
+      verified: !imported || !!o.stakeVerifiedAt,
+      unverifiable: imported && !o.stakeVerifiedAt && !!o.stakeUnverifiedAt,
+      // May the OST pool pay this ticket (claim or sell) at all?
+      payable: rail === 'wallet' && realSig && !stakePending && !(imported && !o.stakeVerifiedAt)
+    };
+  }
+
+  // SRV-3, client half. A wallet ticket that this device did not record at
+  // stake time is paid only once its stake is FOUND on chain: a confirmed,
+  // error-free transaction in which THIS wallet authorised a transfer of OST
+  // into the OST pool, with an 'OST|prediction|' memo that names the ticket's
+  // market and side. The shares are capped at what that stake bought at the
+  // memo price. Read-only (one getParsedTransaction). Resolves
+  //   { ok:true, stake, price, side, market, maxShares }
+  //   { ok:false, definite:true|false, reason }
+  function predictionMemoFields(memo) {
+    var out = {};
+    String(memo || '').split('|').forEach(function (part) {
+      var i = part.indexOf('=');
+      if (i > 0) out[part.slice(0, i).trim()] = part.slice(i + 1).trim();
+    });
+    return out;
+  }
+  function verifyPredictionStakeOnChain(o) {
+    var sig = String(o && (o.signature || o.sig) || '');
+    var owner = String(o && o.wallet || '');
+    if (!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(owner)) owner = getPredictionWalletAddress();
+    var pool = window.OST_SWAP_POOL || {};
+    if (!predictionIsTxSignature(sig)) return Promise.resolve({ ok: false, definite: true, reason: 'no_stake_signature' });
+    if (!owner || !pool.ata || !pool.mint) return Promise.resolve({ ok: false, definite: false, reason: 'not_ready' });
+    var api = window.OST_PREDICTION_API;
+    if (!api || typeof api._rpc !== 'function') return Promise.resolve({ ok: false, definite: false, reason: 'not_ready' });
+    var age = Date.now() - Number(o.createdAt || o.ts || 0);
+    return api._rpc(function (c) { return c.getParsedTransaction(sig, { commitment: 'confirmed', maxSupportedTransactionVersion: 0 }); })
+      .then(function (tx) {
+        if (!tx) return { ok: false, definite: age > 600000, reason: 'stake_not_found' };
+        if (tx.meta && tx.meta.err) return { ok: false, definite: true, reason: 'stake_failed' };
+        var ixs = ((tx.transaction && tx.transaction.message && tx.transaction.message.instructions) || []).slice();
+        ((tx.meta && tx.meta.innerInstructions) || []).forEach(function (g) { (g.instructions || []).forEach(function (ix) { ixs.push(ix); }); });
+        var memo = '', amount = 0;
+        ixs.forEach(function (ix) {
+          if (!ix) return;
+          var prog = String(ix.program || '');
+          if ((prog === 'spl-memo' || String(ix.programId || '') === 'MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr') && typeof ix.parsed === 'string') {
+            if (ix.parsed.indexOf('OST|prediction|') === 0) memo = ix.parsed;
+            return;
+          }
+          var p = ix.parsed;
+          if (!p || (prog !== 'spl-token' && prog !== 'spl-token-2022')) return;
+          if (p.type !== 'transferChecked' && p.type !== 'transfer') return;
+          var info = p.info || {};
+          if (String(info.destination || '') !== String(pool.ata)) return;
+          if (info.mint && String(info.mint) !== String(pool.mint)) return;
+          if (String(info.authority || info.multisigAuthority || '') !== owner) return;
+          var amt = info.tokenAmount ? Number(info.tokenAmount.uiAmountString || info.tokenAmount.uiAmount) : Number(info.amount) / Math.pow(10, Number(pool.decimals) || 9);
+          if (Number.isFinite(amt) && amt > 0) amount += amt;
+        });
+        if (!memo) return { ok: false, definite: true, reason: 'not_a_prediction_stake' };
+        if (!(amount > 0)) return { ok: false, definite: true, reason: 'no_stake_from_this_wallet' };
+        var f = predictionMemoFields(memo);
+        var wantMarket = sanitizeMemoChunk(o.marketId, 24);
+        if (!f.market || f.market !== wantMarket) return { ok: false, definite: true, reason: 'different_market' };
+        var wantSide = String(o.side || '').toLowerCase() === 'no' ? 'no' : 'yes';
+        if (String(f.side || '').toLowerCase() !== wantSide) return { ok: false, definite: true, reason: 'different_side' };
+        var price = Number(f.price);
+        var capPrice = Math.min(0.999, Math.max(0.02, Number.isFinite(price) && price > 0 ? price : 0.5));
+        var stake = Math.round(amount * 1e6) / 1e6;
+        return { ok: true, stake: stake, price: Number.isFinite(price) ? price : 0, side: wantSide, market: f.market, maxShares: Math.floor(stake / capPrice * 1e6) / 1e6 };
+      }, function () { return { ok: false, definite: false, reason: 'rpc_unavailable' }; });
+  }
+  // A cash-out signature another device reported (via /positions) is adopted
+  // only once it is found on chain: a confirmed pool payout INTO this wallet's
+  // OST account whose memo carries this ticket's payoutId.
+  function verifyPredictionCashoutOnChain(o, cashoutSig) {
+    var sig = String(cashoutSig || '');
+    var owner = String(o && o.wallet || '');
+    if (!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(owner)) owner = getPredictionWalletAddress();
+    var pool = window.OST_SWAP_POOL || {};
+    var api = window.OST_PREDICTION_API;
+    if (!predictionIsTxSignature(sig)) return Promise.resolve({ ok: false, definite: true, reason: 'no_signature' });
+    if (!owner || !pool.ata || !api || typeof api._rpc !== 'function') return Promise.resolve({ ok: false, definite: false, reason: 'not_ready' });
+    var pid = '';
+    try { pid = api.predictionPayoutId ? String(api.predictionPayoutId(o) || '') : ''; } catch (_) { pid = ''; }
+    var stakeSig = String(o && (o.signature || o.sig) || '');
+    return api._rpc(function (c) { return c.getParsedTransaction(sig, { commitment: 'confirmed', maxSupportedTransactionVersion: 0 }); })
+      .then(function (tx) {
+        if (!tx) return { ok: false, definite: false, reason: 'not_found' };
+        if (tx.meta && tx.meta.err) return { ok: false, definite: true, reason: 'payout_failed' };
+        var ixs = ((tx.transaction && tx.transaction.message && tx.transaction.message.instructions) || []).slice();
+        ((tx.meta && tx.meta.innerInstructions) || []).forEach(function (g) { (g.instructions || []).forEach(function (ix) { ixs.push(ix); }); });
+        var memoOk = false, amount = 0, ownerAta = '';
+        try {
+          var T22 = new solanaWeb3.PublicKey('TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb');
+          var ATAP = new solanaWeb3.PublicKey('ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL');
+          ownerAta = solanaWeb3.PublicKey.findProgramAddressSync([new solanaWeb3.PublicKey(owner).toBuffer(), T22.toBuffer(), new solanaWeb3.PublicKey(pool.mint).toBuffer()], ATAP)[0].toBase58();
+        } catch (_) { ownerAta = ''; }
+        ixs.forEach(function (ix) {
+          if (!ix) return;
+          var prog = String(ix.program || '');
+          if ((prog === 'spl-memo' || String(ix.programId || '') === 'MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr') && typeof ix.parsed === 'string') {
+            var m = ix.parsed;
+            if ((pid && m.indexOf('payoutId:' + pid) >= 0) || (stakeSig && m.indexOf('payoutId:prediction-cashout:' + stakeSig.slice(0, 40)) >= 0)) memoOk = true;
+            return;
+          }
+          var p = ix.parsed;
+          if (!p || (prog !== 'spl-token' && prog !== 'spl-token-2022')) return;
+          if (p.type !== 'transferChecked' && p.type !== 'transfer') return;
+          var info = p.info || {};
+          if (String(info.source || '') !== String(pool.ata) || !ownerAta || String(info.destination || '') !== ownerAta) return;
+          var amt = info.tokenAmount ? Number(info.tokenAmount.uiAmountString || info.tokenAmount.uiAmount) : Number(info.amount) / Math.pow(10, Number(pool.decimals) || 9);
+          if (Number.isFinite(amt) && amt > 0) amount += amt;
+        });
+        if (!memoOk || !(amount > 0)) return { ok: false, definite: true, reason: 'not_this_ticket' };
+        return { ok: true, sig: sig, ost: Math.round(amount * 1e6) / 1e6, at: (Number(tx.blockTime) || 0) * 1000 || Date.now() };
+      }, function () { return { ok: false, definite: false, reason: 'rpc_unavailable' }; });
+  }
+  // After a /positions sync: check imported wallet tickets (stake on chain)
+  // and remote cash-outs (payout on chain) — a few per run, read-only.
+  function verifyImportedPredictionRecords() {
+    if (verifyImportedPredictionRecords.inFlight) return Promise.resolve(0);
+    var now = Date.now();
+    var todo = readPredictionOrderRecords().filter(function (o) {
+      if (!o) return false;
+      var t = predictionTicketTrust(o);
+      if (t.rail !== 'wallet') return false;
+      var needStake = t.imported && !o.stakeVerifiedAt && !o.stakeUnverifiedAt && t.realSig && now - Number(o.stakeCheckAt || 0) > 120000;
+      var needCash = !o.cashedOut && o.remoteCashout && o.remoteCashout.sig && now - Number(o.remoteCashout.checkAt || 0) > 120000;
+      return needStake || needCash;
+    }).slice(0, 6);
+    if (!todo.length) return Promise.resolve(0);
+    verifyImportedPredictionRecords.inFlight = true;
+    var changed = 0;
+    return todo.reduce(function (p, o) {
+      return p.then(function () {
+        var key = predictionOrderKey(o);
+        var t = predictionTicketTrust(o);
+        var step = Promise.resolve();
+        if (t.imported && !o.stakeVerifiedAt && !o.stakeUnverifiedAt && t.realSig) {
+          step = step.then(function () { return verifyPredictionStakeOnChain(o); }).then(function (v) {
+            changed++;
+            applyPredictionStakeCheck(key, v);
+          });
+        }
+        if (!o.cashedOut && o.remoteCashout && o.remoteCashout.sig) {
+          step = step.then(function () {
+            var cur = readPredictionOrderRecords().filter(function (x) { return predictionOrderKey(x) === key; })[0] || o;
+            if (predictionTicketTrust(cur).imported && !cur.stakeVerifiedAt) {
+              // Stake first. A ticket whose stake is not on chain has no real
+              // payout either: drop the claim; otherwise look again later.
+              var l0 = readPredictionOrderRecords(), i0 = l0.findIndex(function (x) { return predictionOrderKey(x) === key; });
+              if (i0 >= 0) {
+                if (l0[i0].stakeUnverifiedAt) delete l0[i0].remoteCashout;
+                else l0[i0].remoteCashout = Object.assign({}, l0[i0].remoteCashout || {}, { checkAt: Date.now() });
+                writePredictionOrderRecords(l0);
+              }
+              return null;
+            }
+            return verifyPredictionCashoutOnChain(cur, o.remoteCashout.sig).then(function (v) {
+              var list = readPredictionOrderRecords();
+              var i = list.findIndex(function (x) { return predictionOrderKey(x) === key; });
+              if (i < 0) return;
+              var r = list[i];
+              if (v.ok && !r.cashedOut && !r.cashoutPending) {
+                var rc = r.remoteCashout || {};
+                r.cashedOut = true; r.cashoutSig = v.sig; r.cashoutOst = v.ost; r.cashoutAt = v.at || Date.now();
+                r.cashoutKind = rc.kind || r.cashoutKind || 'prediction-cashout';
+                if (/^(sold|settled|won|lost|refunded)$/.test(String(rc.status || ''))) r.status = rc.status === 'won' ? 'settled' : rc.status;
+                r.cashoutVerifiedAt = Date.now();
+                delete r.remoteCashout;
+              } else if (v.definite || (r.remoteCashout && Number(r.remoteCashout.n) >= 4)) {
+                // Not a real payout for this ticket: ignore it (and the same claim
+                // when /positions repeats it).
+                r.remoteCashoutRejected = String((r.remoteCashout && r.remoteCashout.sig) || o.remoteCashout.sig || '');
+                delete r.remoteCashout;
+              } else {
+                r.remoteCashout = Object.assign({}, r.remoteCashout || {}, { checkAt: Date.now(), n: (Number(r.remoteCashout && r.remoteCashout.n) || 0) + 1 });
+              }
+              list[i] = r; writePredictionOrderRecords(list); changed++;
+            });
+          });
+        }
+        return step.catch(function () {});
+      });
+    }, Promise.resolve()).then(function () {
+      if (changed) { try { window.dispatchEvent(new CustomEvent('ost:prediction:order-changed')); } catch (_) {} }
+      return changed;
+    }).finally(function () { verifyImportedPredictionRecords.inFlight = false; });
+  }
+  // Rendering an imported, not-yet-verified ticket asks for its check (at most
+  // every 30 s; the check itself skips records looked at in the last 2 min).
+  var predictionVerifyKickAt = 0;
+  function schedulePredictionImportVerify() {
+    if (Date.now() - predictionVerifyKickAt < 30000) return;
+    predictionVerifyKickAt = Date.now();
+    setTimeout(function () { try { verifyImportedPredictionRecords(); } catch (_) {} }, 400);
+  }
+  function applyPredictionStakeCheck(key, v) {
+    var list = readPredictionOrderRecords();
+    var i = list.findIndex(function (x) { return predictionOrderKey(x) === key; });
+    if (i < 0) return null;
+    var r = list[i];
+    if (v && v.ok) {
+      r.stakeVerifiedAt = Date.now(); r.stakeVerifiedOst = v.stake; r.stakeVerifiedPrice = v.price;
+      delete r.stakeUnverifiedAt; delete r.stakeUnverifiedReason;
+      // The verified stake bought at most maxShares — never pay a client-asserted
+      // larger number (each winning share pays up to 1 OST).
+      r.stake = v.stake;
+      if (!(Number(r.shares) > 0) || Number(r.shares) > v.maxShares) r.shares = v.maxShares;
+      if (!(Number(r.potentialReturn) > 0) || Number(r.potentialReturn) > v.maxShares) r.potentialReturn = v.maxShares;
+      if (!(Number(r.price) > 0) && v.price > 0) r.price = v.price;
+    } else if (v && v.definite) {
+      r.stakeUnverifiedAt = Date.now(); r.stakeUnverifiedReason = String(v.reason || 'unverified');
+    } else {
+      r.stakeCheckAt = Date.now();
+      // The chain answered "no such transaction" again and again (a made-up
+      // signature with a made-up recent date): stop asking after 5 answers.
+      if (v && v.reason === 'stake_not_found') {
+        r.stakeCheckN = (Number(r.stakeCheckN) || 0) + 1;
+        if (r.stakeCheckN >= 5) { r.stakeUnverifiedAt = Date.now(); r.stakeUnverifiedReason = 'stake_not_found'; }
+      }
+    }
+    list[i] = r; writePredictionOrderRecords(list);
+    return r;
+  }
+  // PRD-1: records an OLDER client stored for server-ledger positions (p_…)
+  // without fundedBy are put back on the play rail, so nothing ever offers a
+  // pool claim for them and the server's result is read again.
+  function migrateLegacyPredictionRecords(list) {
+    var write = !list;
+    list = list || readPredictionOrderRecords();
+    var changed = false;
+    list.forEach(function (o) {
+      if (!o) return;
+      var pid = predictionServerPositionId(o);
+      if (!pid || o.fundedBy === 'ostg-native') return;
+      o.fundedBy = 'ostg-native'; o.rail = 'play'; o.unit = 'OSTG'; o.serverSettled = true;
+      o.serverPositionId = o.serverPositionId || pid;
+      changed = true;
+    });
+    if (changed && write) writePredictionOrderRecords(list);
+    return changed;
+  }
+
   function normalizeRemotePredictionPosition(position, wallet) {
     if (!position || !position.marketId) return null;
     const stake = Number(position.stake || position.amount || 0) || 0;
@@ -3127,6 +3519,20 @@
     const sidePrice = side === 'no' ? Number(position.noPrice) : Number(position.yesPrice);
     const price = Number.isFinite(rawPrice) && rawPrice > 0 ? rawPrice : sidePrice;
     const createdAt = normalizeRemoteTs(position.createdAt || position.ts);
+    // A remote record is client-asserted (any browser can POST one), so it is
+    // DATA, never a payable claim. PRD-1 / SRV-3: a remote `won` comes in as
+    // 'open' (unverified) — only this device's resolver or the server ledger
+    // can make a ticket a win. A server-ledger position (id p_<openAt>_…) is
+    // marked as the play rail so nothing ever claims it from the OST pool.
+    const remoteId = String(position.id || position.signature || position.sig || '');
+    const serverPos = /^p_\d+_/.test(remoteId) || !!predictionServerPositionId(position);
+    const remoteStatus = String(position.status || 'open').toLowerCase();
+    // A remote cash-out signature is a CLAIM by whoever posted the record: it
+    // is kept aside (remoteCashout) and adopted only once the payout is found
+    // on chain (verifyImportedPredictionRecords). A server-ledger position's
+    // result comes from the server itself (/play/predict/get).
+    const remoteCashSig = String(position.cashoutSig || '');
+    const importedStatus = (remoteStatus === 'won' || ((remoteStatus === 'sold' || remoteStatus === 'settled') && !serverPos)) ? 'open' : remoteStatus;
     return {
       signature: position.signature || position.sig || position.id || '',
       sig: position.sig || position.signature || position.id || '',
@@ -3134,7 +3540,12 @@
       syncedFrom: 'ost-api',
       ts: createdAt,
       createdAt: createdAt,
-      status: position.status || 'open',
+      status: importedStatus,
+      remoteStatus: remoteStatus,
+      fundedBy: serverPos ? 'ostg-native' : (position.fundedBy || ''),
+      serverPositionId: serverPos ? remoteId : '',
+      rail: serverPos ? 'play' : (position.rail || ''),
+      unit: serverPos ? 'OSTG' : (position.unit || 'OST'),
       wallet: position.wallet || wallet || '',
       source: position.source || 'polymarket',
       marketId: String(position.marketId),
@@ -3154,11 +3565,12 @@
       closeAtMs: Number(position.closeAtMs || 0) || 0,
       clobTokenIds: Array.isArray(position.clobTokenIds) ? position.clobTokenIds.slice(0, 4) : [],
       sourceUrl: position.sourceUrl || '',
-      cashoutKind: position.cashoutKind || '',
-      cashoutSig: position.cashoutSig || '',
-      cashoutOst: Number(position.cashoutOst || 0) || 0,
-      cashoutAt: Number(position.cashoutAt || 0) || 0,
-      cashedOut: !!position.cashoutAt || !!position.cashoutSig || position.status === 'sold' || position.status === 'settled',
+      cashoutKind: '',
+      cashoutSig: '',
+      cashoutOst: 0,
+      cashoutAt: 0,
+      cashedOut: false,
+      remoteCashout: (remoteCashSig && !serverPos) ? { sig: remoteCashSig, ost: Number(position.cashoutOst || 0) || 0, at: Number(position.cashoutAt || 0) || 0, kind: String(position.cashoutKind || ''), status: remoteStatus } : undefined,
       finalYesPrice: Number(position.finalYesPrice),
       finalNoPrice: Number(position.finalNoPrice),
       resolvedAt: Number(position.resolvedAt || 0) || 0,
@@ -3168,26 +3580,89 @@
 
   function mergePredictionOrderRecords(records) {
     const byKey = new Map();
+    // Fields this device recorded at fill / payout time. A REMOTE copy (from
+    // /positions, re-priced by the server and client-asserted) may fill gaps
+    // but never overwrites them — that is what showed a P&L the user never
+    // made (PRD-4) and a paid ticket as sellable again (PRD-6).
+    const LOCAL_TRUTH = ['fundedBy', 'rail', 'unit', 'serverPositionId', 'reference', 'stake', 'price', 'fillPrice', 'entry',
+      'shares', 'potentialReturn', 'ostgBucket', 'onChain', 'onChainOpenAt', 'wallet', 'cashoutSig', 'cashoutOst', 'cashoutAt',
+      'cashoutKind', 'cashedOut', 'cashoutPending', 'cashoutPayoutId', 'cashoutRequestedOst', 'fundingState', 'payout'];
     readPredictionOrderRecords().concat(records || []).forEach(function(order) {
       if (!order) return;
       const key = predictionOrderKey(order);
       if (!key) return;
       const existing = byKey.get(key);
-      if (!existing || Number(order.cashoutAt || order.resolvedAt || order.createdAt || order.ts || 0) >= Number(existing.cashoutAt || existing.resolvedAt || existing.createdAt || existing.ts || 0)) {
-        byKey.set(key, Object.assign({}, existing || {}, order));
+      if (!existing) { byKey.set(key, Object.assign({}, order)); return; }
+      // A remote copy only FILLS GAPS — also over a record imported earlier: a
+      // re-posted /positions record must never grow a verified ticket's shares
+      // or move it to another market (SRV-3).
+      if (order.syncedFrom === 'ost-api') {
+        const merged = Object.assign({}, existing);
+        Object.keys(order).forEach(function(k) {
+          const cur = merged[k];
+          if (LOCAL_TRUTH.indexOf(k) >= 0 && cur != null && cur !== '' && !(typeof cur === 'number' && !Number.isFinite(cur))) return;
+          if (k === 'status' || k === 'remoteStatus' || k === 'syncedFrom' || k === 'remoteCashout' || /^stake(Verified|Unverified|Check)/.test(k)) return;
+          if (existing.stakeVerifiedAt && (k === 'marketId' || k === 'side')) return;
+          if (cur == null || cur === '' || (typeof cur === 'number' && !Number.isFinite(cur))) merged[k] = order[k];
+        });
+        // Cross-device close: a remote cash-out signature is only a CLAIM (anyone
+        // can POST /positions). It is kept aside and adopted once the payout is
+        // found on chain (verifyImportedPredictionRecords) — never adopted
+        // directly, which let a forged record mark a real ticket "Sold" and
+        // hide its Sell / Claim. Never adopt a bare remote "won".
+        const rc = order.remoteCashout || (order.cashoutSig ? { sig: order.cashoutSig, ost: order.cashoutOst, at: order.cashoutAt, kind: order.cashoutKind, status: order.remoteStatus || order.status } : null);
+        if (!existing.cashedOut && !existing.cashoutPending && rc && rc.sig && rc.sig !== existing.cashoutSig && rc.sig !== existing.remoteCashoutRejected && !predictionServerPositionId(existing)) {
+          const sameClaim = !!(existing.remoteCashout && existing.remoteCashout.sig === rc.sig);
+          merged.remoteCashout = Object.assign({}, rc, { checkAt: sameClaim ? existing.remoteCashout.checkAt : 0, n: sameClaim ? existing.remoteCashout.n : 0 });
+        }
+        merged.remoteSyncedAt = Date.now();
+        byKey.set(key, merged);
+        return;
+      }
+      if (Number(order.cashoutAt || order.resolvedAt || order.createdAt || order.ts || 0) >= Number(existing.cashoutAt || existing.resolvedAt || existing.createdAt || existing.ts || 0)) {
+        const next = Object.assign({}, existing, order);
+        // A recorded payout (with its signature) is final: never overwritten by
+        // a later write that does not carry one (PRD-4).
+        if (existing.cashoutSig && !order.cashoutSig && Number(existing.cashoutOst) > 0) {
+          next.cashoutSig = existing.cashoutSig; next.cashoutOst = existing.cashoutOst; next.cashedOut = true;
+        }
+        byKey.set(key, next);
       }
     });
     const merged = Array.from(byKey.values()).sort(function(a, b) {
       return Number(b.createdAt || b.ts || 0) - Number(a.createdAt || a.ts || 0);
     }).slice(0, 300);
+    migrateLegacyPredictionRecords(merged);
     writePredictionOrderRecords(merged);
     return merged;
   }
 
   function sharePredictionOrderRecord(record) {
     const base = getOstApiBase();
-    const wallet = record && (record.wallet || getPredictionWalletAddress());
-    if (!base || !wallet || !record || !record.marketId) return;
+    if (!base || !record || !record.marketId) return;
+    // PRD-7: tickets used to sync under pseudo-wallets ('ostg', 'credits',
+    // 'wallet'). Only a real base58 wallet is ever posted; the rail lives in
+    // fundedBy / rail, never in `wallet`.
+    const own = getPredictionWalletAddress();
+    const recWallet = String(record.wallet || '');
+    const wallet = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(recWallet) ? recWallet : own;
+    if (!wallet || (own && wallet !== own)) return;
+    const signature = record.signature || record.sig || '';
+    // A still-pending ticket (no signature yet) is never published (no phantoms).
+    if (!signature || record.pending || record.fundedBy === 'credits') return;
+    // NET-3: post only when the shareable content CHANGED. Every public
+    // prediction event used to make every tab re-POST up to 80 unchanged
+    // orders, each of which published another public event.
+    const shareKey = String(signature);
+    const digest = [record.status || 'open', record.cashedOut ? 1 : 0, record.cashoutSig || '', Number(record.cashoutOst || 0).toFixed(6),
+      Number(record.stake || 0).toFixed(6), Number(record.shares || 0).toFixed(6), record.side || '', record.marketId,
+      record.cashoutPending ? 1 : 0].join('|');
+    let sent = {};
+    try { sent = JSON.parse(localStorage.getItem('ost.prediction.shared.v1') || '{}') || {}; } catch (_) { sent = {}; }
+    if (sent[shareKey] === digest) return;
+    if (!sharePredictionOrderRecord.inflight) sharePredictionOrderRecord.inflight = {};
+    if (sharePredictionOrderRecord.inflight[shareKey] === digest) return;
+    sharePredictionOrderRecord.inflight[shareKey] = digest;
     try {
       fetch(base + '/positions', {
         method: 'POST',
@@ -3195,10 +3670,21 @@
         body: JSON.stringify(Object.assign({}, record, {
           wallet: wallet,
           marketTitle: record.title || record.marketTitle || '',
-          signature: record.signature || record.sig || '',
+          signature: signature,
           ts: record.createdAt || record.ts || Date.now()
         }))
-      }).catch(function() {});
+      }).then(function(res) {
+        if (!res || !res.ok) return;
+        try {
+          const cur = JSON.parse(localStorage.getItem('ost.prediction.shared.v1') || '{}') || {};
+          cur[shareKey] = digest;
+          const keys = Object.keys(cur);
+          if (keys.length > 400) keys.slice(0, keys.length - 400).forEach(function(k) { delete cur[k]; });
+          localStorage.setItem('ost.prediction.shared.v1', JSON.stringify(cur));
+        } catch (_) {}
+      }).catch(function() {}).finally(function() {
+        if (sharePredictionOrderRecord.inflight[shareKey] === digest) delete sharePredictionOrderRecord.inflight[shareKey];
+      });
     } catch {}
   }
 
@@ -3264,19 +3750,27 @@
     const wallet = getPredictionWalletAddress();
     const now = Date.now();
     if (!base || !wallet) return false;
-    if (!settings.force && now - predictionOrderShareAllLastAt < 15000) return false;
+    if (!settings.force && now - predictionOrderShareAllLastAt < 60000) return false;
     predictionOrderShareAllLastAt = now;
+    // sharePredictionOrderRecord skips every record whose content is unchanged
+    // since it was last stored remotely (NET-3), so this is cheap when idle.
     readPredictionOrderRecords()
-      .filter(function(order) { return order && order.marketId && (!order.wallet || order.wallet === wallet); })
+      .filter(function(order) { return order && order.marketId && !order.syncedFrom && (!order.wallet || order.wallet === wallet || !/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(String(order.wallet))); })
       .slice(0, 80)
-      .forEach(function(order) { sharePredictionOrderRecord(Object.assign({}, order, { wallet: order.wallet || wallet })); });
+      .forEach(function(order) { sharePredictionOrderRecord(order); });
     return true;
   }
 
-  function syncPredictionOrdersFromRemote() {
+  // NET-3: at most one remote sync per 60 s unless the user asked for it
+  // ({force:true} — the Portfolio ↻ button). Realtime pushes for this wallet are
+  // debounced in realtime.js; other users' events never trigger a sync.
+  function syncPredictionOrdersFromRemote(opts) {
     const base = getOstApiBase();
     const wallet = getPredictionWalletAddress();
     if (!base || !wallet || syncPredictionOrdersFromRemote.inFlight) return Promise.resolve(false);
+    const forced = !!(opts && opts.force === true);
+    if (!forced && syncPredictionOrdersFromRemote.lastAt && Date.now() - syncPredictionOrdersFromRemote.lastAt < 60000) return Promise.resolve(false);
+    syncPredictionOrdersFromRemote.lastAt = Date.now();
     syncPredictionOrdersFromRemote.inFlight = true;
     return fetch(base + '/positions/' + encodeURIComponent(wallet), { cache: 'no-store', headers: { accept: 'application/json' } })
       .then(function(response) { return response.ok ? response.json() : null; })
@@ -3291,6 +3785,9 @@
         mergePredictionOrderRecords(normalized);
         shareLocalPredictionOrdersToRemote();
         try { window.dispatchEvent(new CustomEvent('ost:prediction-orders-synced')); } catch {}
+        // SRV-3: imported tickets / remote cash-outs are checked on chain
+        // before anything treats them as real (background, read-only).
+        setTimeout(function() { try { verifyImportedPredictionRecords(); } catch (_) {} }, 1500);
         return readPredictionOrderRecords().length !== before;
       })
       .catch(function() { return false; })
@@ -3359,6 +3856,8 @@
     return ensureInterchangeDeskVaultAccount();
   }
 
+  // ref -> start time of a wallet stake this tab is settling right now.
+  var predictionStakeInFlight = {};
   async function createPredictionMarketOrder(order) {
     if (!order || !Number.isFinite(Number(order.stake)) || Number(order.stake) <= 0) {
       throw new Error('Select a live market and enter a valid OST stake first.');
@@ -3398,115 +3897,61 @@
     // authoritative for ALL callers (desk, modal, direct API): the recorded
     // shares are set to the arb-adjusted amount so the spread is real, never
     // double-counted.
-    try {
-      if (window.OST_ARB && typeof window.OST_ARB.bookBuy === 'function') {
-        var midForArb = (window.OST_PRICES && order.marketId) ? window.OST_PRICES.mid(order.marketId, order.side) : Number(order.price);
-        if (!Number.isFinite(midForArb) || midForArb <= 0) midForArb = Number(order.price);
-        if (Number.isFinite(midForArb) && midForArb > 0) {
-          var aq = window.OST_ARB.bookBuy(Number(order.stake), midForArb, { marketId: order.marketId, side: order.side });
+    //
+    // PRD-4: QUOTE = FILL = RECORD. A caller that showed the user a price
+    // (quoteLocked + price) is filled at exactly that side price — re-reading a
+    // different source here is what quoted 44¢ / 11.4 shares and filled 29.8¢ /
+    // 16.8 shares. If the live price has since moved more than 3¢ the order is
+    // refused with the new price instead of silently filling elsewhere.
+    // BTC 5-min rounds are filled by the OST server at ITS odds, so no client
+    // spread is booked for them (the server's entry/shares are recorded).
+    const isServerRound = /^ost-btc5m-\d+$/.test(String(order.marketId || ''));
+    if (!isServerRound) {
+      var livePx = NaN;
+      try { livePx = (window.OST_PRICES && order.marketId) ? Number(window.OST_PRICES.mid(order.marketId, order.side)) : NaN; } catch (_) { livePx = NaN; }
+      var quotedPx = Number(order.price);
+      var midForArb = (order.quoteLocked && quotedPx > 0 && quotedPx < 1) ? quotedPx : livePx;
+      if (!(midForArb > 0 && midForArb < 1)) midForArb = quotedPx;
+      // Only the fast native rounds price from OST_PRICES live; a venue page may
+      // hold a FRESHER quote (live Kalshi/CLOB) than the catalog OST_PRICES reads.
+      const fastRound = /^ost-(eth|sol)5m-\d+$/.test(String(order.marketId || ''));
+      if (fastRound && order.quoteLocked && quotedPx > 0 && livePx > 0 && livePx < 1 && Math.abs(livePx - quotedPx) > 0.03) {
+        const moved = new Error('The price moved to ' + (livePx * 100).toFixed(1) + '¢ (you saw ' + (quotedPx * 100).toFixed(1) + '¢). Review the new price and buy again.');
+        moved.code = 'price_moved'; moved.livePrice = livePx;
+        throw moved;
+      }
+      if (Number.isFinite(midForArb) && midForArb > 0) {
+        order.price = midForArb;
+        try {
+          var aq = (window.OST_ARB && typeof window.OST_ARB.buyQuote === 'function') ? window.OST_ARB.buyQuote(Number(order.stake), midForArb) : null;
           if (aq && aq.shares > 0) {
             order.shares = aq.shares;
             order.potentialReturn = aq.shares;   // each winning share pays up to 1 OST
-            order.fillPrice = aq.ask;
+            order.fillPrice = aq.ask;            // effective price paid = stake / shares
             order.arbCut = aq.arb;
+            order.quoteMid = midForArb;
           }
-        }
+        } catch (_) {}
       }
-    } catch (_) {}
+    }
 
-    // Funding — robust against flaky devnet RPC:
-    //   · No wallet          -> credits pool (faucet + game winnings live there).
-    //   · Wallet connected   -> ATTEMPT the real on-chain transfer (it is the
-    //     true gate); if it can't fund for ANY reason (insufficient, RPC error,
-    //     ATA, timeout) and the credits pool can cover the stake, fall back to
-    //     credits so a funded user is NEVER blocked. We do NOT pre-gate on a
-    //     balance read — a stale/failed read used to force the credits path and
-    //     falsely report "not enough OST" for wallets that actually had funds.
+    // FUNDING — every ticket is funded from the user's OWN wallet, on the rail
+    // the market really uses, and the record says which (contract C6: `rail` +
+    // `unit` on every ticket):
+    //   · BTC 5-min (ost-btc5m-*) -> the OST server ledger (play balance, OSTG).
+    //     /play/predict/open debits the stake; the server settles from the BTC
+    //     close price and credits the win itself. No fallback to another rail —
+    //     a failure is reported, never silently re-routed.
+    //   · every other market       -> wallet OST, moved on-chain to the OST pool
+    //     (the pool pays the fee), confirmed in the background.
+    // D1 (FCT-2): legacy credits are retired and are never spent here. The old
+    // credits fallback and the dead PlayLedger `fundFromOstg` path are gone.
     const stakeAmt = Number(order.stake);
-    function creditsAvailable() {
-      try { return (window.OST_MONEY && typeof window.OST_MONEY.get === 'function') ? (Number(window.OST_MONEY.get()) || 0) : 0; } catch (_) { return 0; }
-    }
-    function fundFromCredits() {
-      if (!window.OST_MONEY || typeof window.OST_MONEY.spend !== 'function') {
-        throw new Error('Balance system is still loading. Refresh and try again.');
-      }
-      if (creditsAvailable() + 1e-9 < stakeAmt) {
-        throw new Error('Not enough OST to place this ticket. Claim the faucet or win some first.');
-      }
-      if (!window.OST_MONEY.spend(stakeAmt, 'prediction-bet')) {
-        throw new Error('Could not debit your OST balance for this ticket.');
-      }
-      const csig = 'credits-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-      const creditRecord = {
-        signature: csig, sig: csig, ts: Date.now(), status: 'open',
-        wallet: 'credits', fundedBy: 'credits',
-        source: order.source, marketId: order.marketId, conditionId: order.conditionId || '',
-        title: order.title, side: order.side, topic: order.topic,
-        price: Number(order.price), yesPrice: Number(order.yesPrice), noPrice: Number(order.noPrice),
-        stake: stakeAmt,
-        shares: Number(order.shares) || (Number(order.price) > 0 ? stakeAmt / Number(order.price) : Number(order.potentialReturn || 0)),
-        potentialReturn: Number(order.potentialReturn),
-        closeAtMs: Number(order.closeAtMs || 0),
-        clobTokenIds: Array.isArray(order.clobTokenIds) ? order.clobTokenIds.slice(0, 4) : [],
-        sourceUrl: order.sourceUrl, outcomeKey: order.outcomeKey || '', outcomeLabel: order.outcomeLabel || '',
-        gammaMarketId: order.gammaMarketId || '',
-        baseYesPrice: Number(order.baseYesPrice), fairYesPrice: Number(order.fairYesPrice), fairNoPrice: Number(order.fairNoPrice),
-        tradableYesPrice: Number(order.tradableYesPrice), tradableNoPrice: Number(order.tradableNoPrice),
-        quotedAt: Number(order.quotedAt || Date.now()), quoteSource: order.quoteSource || '',
-        openAt: Number(order.openAt || 0), closeAt: Number(order.closeAt || 0),
-        openPrice: Number(order.openPrice), priceToBeat: Number(order.priceToBeat), livePrice: Number(order.livePrice),
-        vaultFlow: 'credits-stake', createdAt: Date.now()
-      };
-      storePredictionOrderRecord(creditRecord);
-      try { window.dispatchEvent(new CustomEvent('ost:prediction-order-recorded', { detail: creditRecord })); } catch (_) {}
-      try { if (typeof window.notifyOstTxHistory === 'function') window.notifyOstTxHistory(); } catch (_) {}
-      return { signature: csig, remainingBalance: creditsAvailable(), record: creditRecord, fundedBy: 'credits' };
-    }
-
-    // ---- OSTG IS THE RAIL --------------------------------------------------
-    // Games moved to the server-authoritative OSTG play balance in Phase 2;
-    // predictions were left funding from the localStorage credits pool or a
-    // direct OSTC transfer, which is why tickets kept spending OSTC. Route them
-    // through OST_PLAY first so every product spends the same money.
-    //
-    // OST_PLAY.stake() debits server-side and returns the bucket the money came
-    // from ('clean' = the user's own OSTG, or a loan id). We record that bucket
-    // on the ticket so a settlement can return winnings to the SAME bucket -
-    // that is what keeps loan-funded winnings locked to their loan.
-    async function fundFromOstg() {
-      const src = (window.OST_OSTG_SOURCE && window.OST_OSTG_SOURCE.current)
-        ? window.OST_OSTG_SOURCE.current() : 'clean';
-      const res = await window.OST_PLAY.stake(stakeAmt, { bucket: src, reason: 'prediction-bet' });
-      if (!res || res.ok === false) {
-        const e = new Error(res && res.error === 'insufficient_bucket'
-          ? 'Not enough OSTG in that balance for this ticket.'
-          : ('Could not debit OSTG: ' + ((res && res.error) || 'unknown')));
-        e.code = res && res.error;
-        throw e;
-      }
-      const psig = 'ostg-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-      const rec = Object.assign({}, {
-        signature: psig, sig: psig, ts: Date.now(), status: 'open',
-        wallet: 'ostg', fundedBy: 'ostg', ostgBucket: res.bucket || src,
-        source: order.source, marketId: order.marketId, conditionId: order.conditionId || '',
-        title: order.title, side: order.side, topic: order.topic,
-        price: Number(order.price), yesPrice: Number(order.yesPrice), noPrice: Number(order.noPrice),
-        stake: stakeAmt,
-        shares: Number(order.shares) || (Number(order.price) > 0 ? stakeAmt / Number(order.price) : Number(order.potentialReturn || 0)),
-        potentialReturn: Number(order.potentialReturn),
-        closeAtMs: Number(order.closeAtMs || 0),
-        clobTokenIds: Array.isArray(order.clobTokenIds) ? order.clobTokenIds.slice(0, 4) : [],
-        sourceUrl: order.sourceUrl, outcomeKey: order.outcomeKey || '', outcomeLabel: order.outcomeLabel || '',
-        gammaMarketId: order.gammaMarketId || '',
-        quotedAt: Number(order.quotedAt || Date.now()), quoteSource: order.quoteSource || '',
-        openAt: Number(order.openAt || 0), closeAt: Number(order.closeAt || 0),
-        openPrice: Number(order.openPrice), priceToBeat: Number(order.priceToBeat), livePrice: Number(order.livePrice),
-        vaultFlow: 'ostg-stake', createdAt: Date.now()
-      });
-      storePredictionOrderRecord(rec);
-      try { window.dispatchEvent(new CustomEvent('ost:prediction-order-recorded', { detail: rec })); } catch (_) {}
-      try { if (typeof window.notifyOstTxHistory === 'function') window.notifyOstTxHistory(); } catch (_) {}
-      return { signature: psig, record: rec, fundedBy: 'ostg', bucket: rec.ostgBucket };
+    const buyerWallet = getPredictionWalletAddress();
+    if (!buyerWallet) {
+      const nw = new Error('Create or connect a wallet first — every ticket is funded from your own wallet.');
+      nw.code = 'no_wallet';
+      throw nw;
     }
 
     // OSTG-NATIVE PREDICTIONS — SERVER-AUTHORITATIVE (replaces the old client
@@ -3517,89 +3962,141 @@
     // (see prediction-ledger.js + /play/predict/*).
     //
     // Only BTC 5-min rounds (ost-btc5m-<openAt>) are server-resolvable today, so
-    // only those route through OSTG. Everything else — and ANY failure — falls
-    // through to the safe credits/wallet rail below. insufficient_bucket is the
-    // one error we surface instead of silently switching rails, so a user who
-    // meant to spend OSTG isn't quietly charged a different balance.
+    // only those use this rail — and ONLY this rail: any failure is reported to
+    // the user (the old code silently fell through to a client-settled wallet
+    // ticket, whose win the browser then claimed from the OST pool).
     async function fundFromOstgNative(walletAddr) {
       const src = (window.OST_OSTG_SOURCE && window.OST_OSTG_SOURCE.current)
         ? window.OST_OSTG_SOURCE.current() : 'clean';
       const base = getOstApiBase() || (window.OST_API_BASE || 'https://ost-api.nachogtavl.workers.dev');
-      // Hard timeout so a stalled worker never hangs the bet ("signature never
-      // arrives, data stale"). Fails fast -> the caller falls back or reverts.
+      let playBefore = NaN;
+      try { playBefore = Number(window.OST_PLAY && OST_PLAY.balance && OST_PLAY.balance()); } catch (_) {}
+      function humanOpenError(code, note) {
+        const c = String(code || '');
+        if (c === 'insufficient_bucket' || c === 'insufficient_play_balance' || c === 'insufficient_balance') return 'Not enough OSTG in your play balance for this ticket.';
+        if (c === 'price_unavailable') return 'No fresh BTC price right now — trading is paused for a moment. Try again shortly.';
+        if (c === 'round_closed') return 'This round just closed — the next 5-minute round is open now.';
+        if (c === 'round_open_price_unknown') return 'This round has no opening price yet — try again in a few seconds.';
+        if (c === 'predictions_not_live') return 'BTC 5-minute trading is paused on the OST server right now.';
+        if (c === 'wallet_auth_required' || c === 'unauthorized') return 'Your wallet sign-in expired — reconnect your wallet and try again.';
+        return note || 'The OST server could not open this position.';
+      }
+      // Hard timeout so a stalled worker never hangs the bet.
       const _ctrl = new AbortController();
-      const _to = setTimeout(() => { try { _ctrl.abort(); } catch (_) {} }, 12000);
-      let resp;
+      const _to = setTimeout(() => { try { _ctrl.abort(); } catch (_) {} }, 15000);
+      let resp, netErr = null;
       try {
         resp = await fetch(base + '/play/predict/open', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ wallet: walletAddr, marketId: order.marketId, side: order.side, stake: stakeAmt, bucket: src }),
           signal: _ctrl.signal
         });
-      } catch (e) {
-        clearTimeout(_to);
-        const te = new Error(e && e.name === 'AbortError' ? 'The bet is taking too long — try again in a moment.' : 'Could not reach the bet service.');
-        te.code = 'timeout'; throw te;
-      }
+      } catch (e) { netErr = e; }
       clearTimeout(_to);
-      const r = await resp.json().catch(() => ({ ok: false, error: 'bad_response' }));
-      if (!r || r.ok === false) {
-        const e = new Error(r && r.error === 'insufficient_bucket'
-          ? 'Not enough OSTG in that balance for this ticket.'
-          : ('Could not open OSTG position: ' + ((r && r.error) || 'unknown')));
-        e.code = r && r.error; throw e;
+      const r = netErr ? null : await resp.json().catch(() => null);
+      // C4: a 503 gate_reset / state_unknown (or anything marked retryable)
+      // means the server may ALREADY have opened the position and debited the
+      // stake — that is a lost answer, never "not placed" (a retry would open
+      // a second position).
+      const answerLost = !!(r && (r.error === 'gate_reset' || r.error === 'state_unknown' || r.code === 'gate_reset' || r.code === 'state_unknown' || (r.retryable === true && resp && resp.status >= 500)));
+      if (netErr || !r || answerLost || (resp && resp.status >= 500 && !(r && r.error))) {
+        // The answer was lost: the server may or may not have opened it. Its
+        // fill push (prediction.fill on our market) or the play balance tells.
+        const found = await new Promise(function (resolve) {
+          let done = false;
+          const finish = function (v) { if (done) return; done = true; try { window.removeEventListener('ost:prediction-update', onFill); } catch (_) {} clearTimeout(t); resolve(v); };
+          const onFill = function (ev) {
+            const d = ev && ev.detail; const p = d && d.payload;
+            if (!d || d.type !== 'prediction.fill' || !p || String(p.wallet || d.wallet) !== walletAddr) return;
+            if (String(p.marketId || d.marketId) !== String(order.marketId) || String(p.side) !== String(order.side) || Math.abs(Number(p.stake) - stakeAmt) > 1e-6) return;
+            finish({ id: p.id, entry: Number(p.entry), shares: Number(p.shares) });
+          };
+          try { window.addEventListener('ost:prediction-update', onFill); } catch (_) {}
+          const t = setTimeout(function () { finish(null); }, 20000);
+        });
+        if (!found) {
+          let playAfter = NaN;
+          try { playAfter = Number(await (window.OST_PLAY && OST_PLAY.refresh ? OST_PLAY.refresh(true) : NaN)); } catch (_) {}
+          const known = Number.isFinite(playBefore) && Number.isFinite(playAfter);
+          const debited = known && playAfter <= playBefore - stakeAmt + 1e-6;
+          const ue = new Error(debited
+            ? 'The OST server took your stake but its answer was lost. The position shows in your Portfolio once the server confirms it — do not buy again yet.'
+            : known ? 'The OST server did not answer, and your play balance is unchanged — nothing was taken. Try again in a moment.'
+            : 'The OST server did not answer and your play balance could not be read — check your Portfolio and play balance before buying again.');
+          ue.code = (debited || !known) ? 'state_unknown' : 'timeout';
+          throw ue;
+        }
+        return recordNative({ id: found.id, entry: found.entry, shares: found.shares }, null);
       }
-      const pos = r.position || {};
-      const psig = String(pos.id || '');
-      const rec = {
-        signature: psig, sig: psig, serverPositionId: psig, ts: Date.now(), status: 'open',
-        wallet: 'ostg', fundedBy: 'ostg-native', ostgBucket: pos.bucket || src,
-        source: order.source, marketId: order.marketId, conditionId: order.conditionId || '',
-        title: order.title, side: order.side, topic: order.topic,
-        // entry price + shares are the SERVER's numbers, not the client quote.
-        price: Number(pos.entry), yesPrice: Number(order.yesPrice), noPrice: Number(order.noPrice),
-        stake: stakeAmt, shares: Number(pos.shares), potentialReturn: Number(pos.shares), entry: Number(pos.entry),
-        closeAtMs: Number(pos.closeAt || order.closeAtMs || 0),
-        openAt: Number(pos.openAt || order.openAt || 0), closeAt: Number(pos.closeAt || order.closeAt || 0),
-        openPrice: Number(pos.openPrice || order.openPrice),
-        priceToBeat: Number(pos.priceToBeat || order.priceToBeat), livePrice: Number(order.livePrice),
-        vaultFlow: 'ostg-native-open', createdAt: Date.now()
-      };
-      storePredictionOrderRecord(rec);
-      try { window.dispatchEvent(new CustomEvent('ost:prediction-order-recorded', { detail: rec })); } catch (_) {}
-      try { if (window.OST_PLAY && OST_PLAY.refresh) OST_PLAY.refresh(); } catch (_) {}
-      try { window.dispatchEvent(new CustomEvent('ost:money:change')); } catch (_) {}
-      try { if (typeof window.notifyOstTxHistory === 'function') window.notifyOstTxHistory(); } catch (_) {}
-      return { signature: psig, record: rec, fundedBy: 'ostg-native', bucket: rec.ostgBucket };
+      if (r.ok === false || !r.position) {
+        const e = new Error(humanOpenError(r.error, r.note || r.message));
+        e.code = r.error || 'open_failed'; e.body = r;
+        throw e;
+      }
+      return recordNative(r.position, r.balance);
+
+      function recordNative(pos, newBalance) {
+        pos = pos || {};
+        const psig = String(pos.id || '');
+        const rec = {
+          signature: psig, sig: psig, serverPositionId: psig, ts: Date.now(), status: 'open',
+          // PRD-7: the real wallet, never the pseudo-wallet 'ostg'. The rail is
+          // recorded in fundedBy / rail / unit.
+          wallet: walletAddr, fundedBy: 'ostg-native', rail: 'play', unit: 'OSTG', serverSettled: true,
+          ostgBucket: pos.bucket || src,
+          source: order.source, marketId: order.marketId, conditionId: order.conditionId || '',
+          title: order.title, side: order.side, topic: order.topic,
+          // entry price + shares are the SERVER's numbers, not the client quote.
+          price: Number(pos.entry), fillPrice: Number(pos.entry), yesPrice: Number(order.yesPrice), noPrice: Number(order.noPrice),
+          stake: stakeAmt, shares: Number(pos.shares), potentialReturn: Number(pos.shares), entry: Number(pos.entry),
+          closeAtMs: Number(pos.closeAt || order.closeAtMs || 0),
+          openAt: Number(pos.openAt || order.openAt || 0), closeAt: Number(pos.closeAt || order.closeAt || 0),
+          openPrice: Number(pos.openPrice || order.openPrice),
+          priceToBeat: Number(pos.priceToBeat || order.priceToBeat), livePrice: Number(order.livePrice),
+          quotedPrice: Number(order.price), reference: order.reference || '',
+          vaultFlow: 'ostg-native-open', createdAt: Date.now()
+        };
+        storePredictionOrderRecord(rec);
+        try { window.dispatchEvent(new CustomEvent('ost:prediction-order-recorded', { detail: rec })); } catch (_) {}
+        if (Number.isFinite(Number(newBalance))) {
+          try { window.dispatchEvent(new CustomEvent('ost:play:balance', { detail: { balance: Number(newBalance) } })); } catch (_) {}
+        }
+        try { if (window.OST_PLAY && OST_PLAY.refresh) OST_PLAY.refresh(); } catch (_) {}
+        try { window.dispatchEvent(new CustomEvent('ost:money:change')); } catch (_) {}
+        try { if (typeof window.notifyOstTxHistory === 'function') window.notifyOstTxHistory(); } catch (_) {}
+        return { signature: psig, record: rec, fundedBy: 'ostg-native', rail: 'play', unit: 'OSTG', bucket: rec.ostgBucket };
+      }
     }
 
-    var isBtc5mRound = /^ost-btc5m-\d+$/.test(String(order.marketId || ''));
-    var ostgWalletAddr = getPredictionWalletAddress();
-    if (isBtc5mRound && ostgWalletAddr && window.OST_PLAY) {
-      try {
-        return await fundFromOstgNative(ostgWalletAddr);
-      } catch (err) {
-        // A real "not enough OSTG" is the user's decision to make — surface it.
-        // Any other failure quietly falls back to the credits/wallet rail so a
-        // transient server hiccup never blocks a bet.
-        if (err && err.code === 'insufficient_bucket') throw err;
+    if (isServerRound) {
+      if (!window.OST_PLAY) {
+        const pe = new Error('The play balance is still loading — try again in a moment.');
+        pe.code = 'play_loading';
+        throw pe;
       }
+      return await fundFromOstgNative(buyerWallet);
     }
 
-    const conn = getSolanaConnection();
-    const hasWallet = !!(connectedWalletSession && connectedWalletSession.publicKey && conn);
-    if (!hasWallet) return fundFromCredits();
+    if (!(connectedWalletSession && connectedWalletSession.publicKey)) {
+      const ns = new Error('Your wallet is not ready to sign — reconnect it and try again.');
+      ns.code = 'no_wallet';
+      throw ns;
+    }
 
     // OPTIMISTIC WALLET BUY — the ticket appears the instant the user taps; the
-    // OST transfer is signed, sent, and confirmed in the BACKGROUND. If funding
-    // fails it clears itself (or silently converts to a credits buy when the
-    // credits pool can cover it). This removes ~3 RPC round-trips + the
-    // confirmation wait from the click path, so the result shows before the tap
-    // even finishes. The stake still really moves on-chain — just not blockingly.
+    // OST transfer is signed, sent, and confirmed in the BACKGROUND. If the
+    // stake is refused before it is sent, the ticket clears and the user is
+    // told why. If the outcome is unknown (lost answer, 5xx, timeout) the ticket
+    // STAYS wallet-funded in state 'confirming' and is reconciled from the chain
+    // (SRV-2: it used to be silently converted into a worthless credits ticket
+    // while the 5 OST stake had in fact landed).
     const trader = connectedWalletSession.publicKey;
     const feeScale = 1;
     const vaultTokenAccount = window.OST_SWAP_POOL && window.OST_SWAP_POOL.ata ? String(window.OST_SWAP_POOL.ata) : '';
-    const ref = String(order.reference || ('ost-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7)));
+    // The reference rides in the on-chain memo (ref=…), which is how a stake
+    // whose answer was lost is found again on chain. Keep it ≤ 18 chars.
+    const ref = String(order.reference || ('ost-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7))).slice(0, 18);
+    order.reference = ref;
 
     var record = {
       reference: ref,
@@ -3607,8 +4104,11 @@
       ts: Date.now(),
       status: 'open',
       pending: true, optimistic: true,
+      fundingState: 'submitting',
       wallet: trader.toBase58(),
-      fundedBy: 'wallet',
+      fundedBy: 'wallet', rail: 'wallet', unit: 'OST',
+      fillPrice: Number(order.fillPrice) || 0,
+      quoteMid: Number(order.quoteMid) || Number(order.price) || 0,
       source: order.source,
       marketId: order.marketId,
       conditionId: order.conditionId || '',
@@ -3651,41 +4151,111 @@
     try { if (typeof window.notifyOstTxHistory === 'function') window.notifyOstTxHistory(); } catch (_) {}
 
     (function settleInBackground() {
+      // This tab is settling the stake itself: the page reconciler leaves it
+      // alone until this run had its chance (reconcilePendingStakes).
+      predictionStakeInFlight[ref] = Date.now();
       var memo;
       try { memo = buildPredictionOrderMemo(order); } catch (_) { memo = ''; }
+      var api = window.OST_PREDICTION_API || {};
+      var noteId = 'stake-' + ref;
+      function note(kind, title, body, sig) {
+        try { if (typeof window.OST_NOTIFY === 'function') window.OST_NOTIFY({ id: noteId, kind: kind, title: title, body: body || '', sig: sig || undefined }); } catch (_) {}
+      }
+      function emit(name, detail) { try { window.dispatchEvent(new CustomEvent(name, detail ? { detail: detail } : undefined)); } catch (_) {} }
+      function confirmed(sig) {
+        patchPredictionOrderByRef(ref, { signature: sig, sig: sig, pending: false, optimistic: false, fundingState: 'confirmed', confirmedAt: Date.now() });
+        // UX-1: the pending "confirming your stake" notice resolves in place.
+        note('ok', 'Ticket live — stake confirmed', stakeAmt.toFixed(2).replace(/\.?0+$/, '') + ' OST moved on-chain to the OST pool.', sig);
+        try { sharePredictionOrderRecord(Object.assign({}, record, { signature: sig, sig: sig, pending: false, optimistic: false, fundingState: 'confirmed' })); } catch (_) {}
+        // The market-maker spread is booked once, when the stake really landed.
+        try { if (window.OST_ARB && typeof window.OST_ARB.bookBuy === 'function' && record.quoteMid > 0) window.OST_ARB.bookBuy(stakeAmt, record.quoteMid, { marketId: order.marketId, side: order.side }); } catch (_) {}
+        try { if (window.OST_OPTIMISTIC) window.OST_OPTIMISTIC.balanceHint({ deltaOst: -stakeAmt, source: 'prediction-bet', settle: true, ref: ref }); } catch (_) {}
+        emit('ost:prediction-order-confirmed', { reference: ref, signature: sig });
+        emit('ost:prediction:order-changed');
+        emit('ost:wallet-changed');
+        try { if (typeof window.notifyOstTxHistory === 'function') window.notifyOstTxHistory(); } catch (_) {}
+      }
+      function failed(err, landedFailed) {
+        removePredictionOrderByRef(ref);
+        try { if (window.OST_OPTIMISTIC) window.OST_OPTIMISTIC.balanceHint({ deltaOst: stakeAmt, source: 'prediction-bet', rollback: true, ref: ref }); } catch (_) {}
+        var h = null;
+        try { if (window.OST_MONEY_ERRORS && typeof window.OST_MONEY_ERRORS.humanize === 'function') h = window.OST_MONEY_ERRORS.humanize(err, { stage: 'build', asset: 'OST' }); } catch (_) {}
+        var msg = (h && h.title) ? (h.title + (h.body ? ' — ' + h.body : '')) : ((err && err.message) || 'The stake could not be sent.');
+        if (landedFailed) msg = 'The stake transaction failed on chain — nothing left your wallet.';
+        emit('ost:prediction-order-failed', { reference: ref, error: msg, code: (err && err.code) || '' });
+        emit('ost:prediction:order-changed');
+        note('error', 'Ticket not placed', msg);
+      }
+      function confirming(sig) {
+        patchPredictionOrderByRef(ref, { signature: sig || '', sig: sig || '', pending: true, optimistic: true, fundingState: 'confirming', fundingCheckAt: Date.now() });
+        emit('ost:prediction:order-changed');
+        note('pending', 'Confirming your stake…', 'Still confirming — check your balance before retrying.', sig);
+      }
+      // Outcome unknown: look the stake up on chain — by signature when we have
+      // it, else by the ref= tag in its memo. A cosigned transaction can only
+      // land before its blockhash expires (~90 s), so 2 minutes of "not found"
+      // is a definite "it never left your wallet".
+      function reconcile(sig) {
+        var started = Date.now();
+        function byMemo() {
+          return (typeof api._findStakeByRef === 'function') ? api._findStakeByRef(trader.toBase58(), ref) : Promise.resolve(null);
+        }
+        function step() {
+          var probe = sig ? (typeof api._verifySig === 'function' ? api._verifySig(sig, 20000) : Promise.resolve('unknown')).then(function (v) { return { v: v, sig: sig }; })
+            : byMemo().then(function (hit) { return hit ? { v: hit.err ? 'failed' : 'confirmed', sig: hit.sig } : { v: 'unknown', sig: '' }; });
+          return probe.then(function (res) {
+            if (res.v === 'confirmed') { confirmed(res.sig); return; }
+            if (res.v === 'failed') { failed(null, true); return; }
+            if (res.v === 'expired') { failed(new Error('The stake never reached the chain — nothing left your wallet.')); return; }
+            if (Date.now() - started > 120000) {
+              if (sig) { patchPredictionOrderByRef(ref, { fundingState: 'confirming', fundingCheckAt: Date.now() }); note('warn', 'Still confirming your stake', 'Check your balance before retrying. This ticket updates by itself once the chain answers.', sig); return; }
+              failed(new Error('Your stake never reached the chain — nothing left your wallet. Try again.'));
+              return;
+            }
+            return new Promise(function (r) { setTimeout(r, 5000); }).then(step);
+          });
+        }
+        return step().catch(function () {});
+      }
+      function isRefusal(err) {
+        if (!err) return false;
+        var code = String(err.code || (err.body && err.body.error) || '');
+        var status = Number(err.status || (err.body && err.body.status) || 0);
+        if (err.sig || (err.body && err.body.sig) || err.pending) return false;
+        if (/^(no_wallet|user_rejected|insufficient_|no_token_account|below_rent_minimum|keep_rent_reserve|rate_limited|wallet_auth_required|unauthorized|invalid_|missing_|blockhash_expired|simulation_failed|price_moved|wallet_cannot_sign|recipient_needs_account|cosign_not_found|credits_retired|daily_wallet_cap|rail_loading|transaction_failed)/.test(code)) return true;
+        if (status >= 400 && status < 500 && !/unconfirmed|unknown|pending|in_progress/.test(code)) return true;
+        try {
+          if (window.OST_MONEY_ERRORS && typeof window.OST_MONEY_ERRORS.humanize === 'function') {
+            var h = window.OST_MONEY_ERRORS.humanize(err, { stage: 'submit', asset: 'OST' });
+            if (h && h.state === 'refused') return true;
+          }
+        } catch (_) {}
+        return false;
+      }
       Promise.resolve()
         .then(function () {
           if (!window.OST_RESCUE || typeof window.OST_RESCUE.userSendsOstToPool !== 'function') {
-            throw new Error('settlement vault loading');
+            var le = new Error('The payment rail is still loading — try again in a moment.');
+            le.code = 'rail_loading';
+            throw le;
           }
           return window.OST_RESCUE.userSendsOstToPool(stakeAmt, memo, { fast: true });
         })
         .then(function (settlement) {
-          var sig = (settlement && (settlement.sig || settlement.signature)) || '';
-          patchPredictionOrderByRef(ref, { signature: sig, sig: sig, pending: false, optimistic: false });
-          try { sharePredictionOrderRecord(Object.assign({}, record, { signature: sig, sig: sig, pending: false, optimistic: false })); } catch (_) {}
-          try { if (window.OST_OPTIMISTIC) window.OST_OPTIMISTIC.balanceHint({ deltaOst: -stakeAmt, source: 'prediction-bet', settle: true, ref: ref }); } catch (_) {}
-          try { window.dispatchEvent(new CustomEvent('ost:prediction-order-confirmed', { detail: { reference: ref, signature: sig } })); } catch (_) {}
-          try { window.dispatchEvent(new CustomEvent('ost:prediction:order-changed')); } catch (_) {}
-          try { window.dispatchEvent(new CustomEvent('ost:wallet-changed')); } catch (_) {}
-          try { if (typeof window.notifyOstTxHistory === 'function') window.notifyOstTxHistory(); } catch (_) {}
+          if (settlement && settlement.ok === false) { var se = new Error(settlement.message || settlement.error || 'Refused'); se.code = settlement.error; se.body = settlement; throw se; }
+          var sig = String((settlement && (settlement.sig || settlement.signature)) || '');
+          if (!sig) { confirming(''); return reconcile(''); }
+          if (settlement && settlement.pending) { confirming(sig); return reconcile(sig); }
+          confirmed(sig);
         })
         .catch(function (err) {
-          // Funding failed. Prefer a silent credits conversion (keep the ticket);
-          // otherwise CLEAR the optimistic ticket and hand the money back.
-          if (creditsAvailable() + 1e-9 >= stakeAmt && window.OST_MONEY && typeof window.OST_MONEY.spend === 'function' && window.OST_MONEY.spend(stakeAmt, 'prediction-bet')) {
-            var csig = 'credits-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-            patchPredictionOrderByRef(ref, { signature: csig, sig: csig, pending: false, optimistic: false, fundedBy: 'credits', wallet: 'credits', vaultFlow: 'credits-stake' });
-            try { if (window.OST_OPTIMISTIC) window.OST_OPTIMISTIC.balanceHint({ deltaOst: -stakeAmt, source: 'prediction-bet', settle: true, ref: ref }); } catch (_) {}
-            try { window.dispatchEvent(new CustomEvent('ost:prediction:order-changed')); } catch (_) {}
-            try { if (typeof window.notifyOstTxHistory === 'function') window.notifyOstTxHistory(); } catch (_) {}
-          } else {
-            removePredictionOrderByRef(ref);
-            try { if (window.OST_OPTIMISTIC) window.OST_OPTIMISTIC.balanceHint({ deltaOst: stakeAmt, source: 'prediction-bet', rollback: true, ref: ref }); } catch (_) {}
-            try { if (window.OST_OPTIMISTIC) window.OST_OPTIMISTIC.toast('Bet could not be funded — cleared and refunded.', 'error'); } catch (_) {}
-            try { window.dispatchEvent(new CustomEvent('ost:prediction-order-failed', { detail: { reference: ref, error: String(err && err.message || err) } })); } catch (_) {}
-            try { window.dispatchEvent(new CustomEvent('ost:prediction:order-changed')); } catch (_) {}
-          }
+          var sig = String((err && (err.sig || (err.body && err.body.sig))) || '');
+          // New rail: it landed but FAILED on chain (a failed tx moves nothing).
+          if (sig && err && !err.pending && err.code && err.code !== 'state_unknown' && err.code !== 'gate_reset') { failed(err, !err.expired); return; }
+          if (!sig && isRefusal(err)) { failed(err); return; }
+          // Unknown outcome: keep the wallet-funded ticket and find out.
+          confirming(sig);
+          return reconcile(sig);
         });
     })();
 
@@ -3694,6 +4264,8 @@
       pending: true,
       optimistic: true,
       reference: ref,
+      rail: 'wallet',
+      unit: 'OST',
       remainingBalance: undefined,
       vaultTokenAccount: vaultTokenAccount,
       record: record
@@ -3714,7 +4286,187 @@
     patchOrderByRef: patchPredictionOrderByRef,
     removeOrderByRef: removePredictionOrderByRef,
     syncOrders: syncPredictionOrdersFromRemote,
-    walletAddress: getPredictionWalletAddress
+    walletAddress: getPredictionWalletAddress,
+    // ---- C4 outcome helpers (buy + cash-out + page reconcile) --------------
+    // Read-only chain lookups through the wallet's failover RPC. They never
+    // build or send a transaction: an unknown outcome is FOUND, never retried
+    // blindly (contract C4).
+    _rpc: function (fn) {
+      try {
+        if (window.OST_WALLET && typeof window.OST_WALLET.rpcCall === 'function') return Promise.resolve(window.OST_WALLET.rpcCall(fn));
+        const c = getSolanaConnection();
+        return c ? Promise.resolve(fn(c)) : Promise.reject(new Error('rpc unavailable'));
+      } catch (e) { return Promise.reject(e); }
+    },
+    // -> 'confirmed' | 'failed' | 'expired' | 'unknown'
+    _verifySig: function (sig, timeoutMs) {
+      sig = String(sig || '');
+      if (!sig) return Promise.resolve('unknown');
+      const R = window.OST_RESCUE;
+      if (R && typeof R.confirmBySig === 'function') {
+        return Promise.resolve(R.confirmBySig(sig, { timeoutMs: timeoutMs || 30000 })).then(function (c) {
+          if (c && c.ok && !c.pending) return 'confirmed';
+          if (c && c.ok === false && !c.pending) return c.expired ? 'expired' : 'failed';
+          return 'unknown';
+        }).catch(function () { return 'unknown'; });
+      }
+      const self = window.OST_PREDICTION_API;
+      const deadline = Date.now() + (timeoutMs || 30000);
+      const once = function () {
+        return self._rpc(function (c) { return c.getSignatureStatuses([sig], { searchTransactionHistory: true }); }).then(function (r) {
+          const st = r && r.value && r.value[0];
+          if (!st) return '';
+          if (st.err) return 'failed';
+          return (st.confirmationStatus === 'confirmed' || st.confirmationStatus === 'finalized') ? 'confirmed' : '';
+        }).catch(function () { return ''; });
+      };
+      const loop = function () {
+        return once().then(function (v) {
+          if (v) return v;
+          if (Date.now() > deadline) return 'unknown';
+          return new Promise(function (r) { setTimeout(r, 2500); }).then(loop);
+        });
+      };
+      return loop();
+    },
+    // A stake whose answer was lost, found by the ref= tag in its memo.
+    _findStakeByRef: function (owner, ref) {
+      const tag = 'ref=' + String(ref || '').slice(0, 18);
+      if (!owner || tag.length < 8) return Promise.resolve(null);
+      return window.OST_PREDICTION_API._rpc(function (c) { return c.getSignaturesForAddress(new solanaWeb3.PublicKey(owner), { limit: 25 }); })
+        .then(function (list) {
+          const hit = (list || []).filter(function (s) { return s && s.memo && String(s.memo).indexOf(tag) >= 0; })[0];
+          return hit ? { sig: hit.signature, err: hit.err || null } : null;
+        }).catch(function () { return null; });
+    },
+    // Same lookup, but tells "searched and definitely absent" apart from "the
+    // RPC failed": -> { sig, err } | { none:true, complete } | null (unknown).
+    // `complete` = the search reached back past the ticket's creation time.
+    _searchStakeByRef: function (owner, ref, sinceMs) {
+      const tag = 'ref=' + String(ref || '').slice(0, 18);
+      if (!owner || tag.length < 8) return Promise.resolve(null);
+      return window.OST_PREDICTION_API._rpc(function (c) { return c.getSignaturesForAddress(new solanaWeb3.PublicKey(owner), { limit: 50 }); })
+        .then(function (list) {
+          if (!Array.isArray(list)) return null;
+          const hit = list.filter(function (s) { return s && s.memo && String(s.memo).indexOf(tag) >= 0; })[0];
+          if (hit) return { sig: hit.signature, err: hit.err || null };
+          const oldest = list.length ? Number(list[list.length - 1].blockTime || 0) * 1000 : 0;
+          return { none: true, complete: list.length < 50 || (oldest > 0 && oldest < Number(sinceMs || 0) - 120000) };
+        }).catch(function () { return null; });
+    },
+    // A pool payout into the wallet's OST account, found by its
+    // 'payoutId:<id>' memo (the owner address is not in that transaction, so
+    // the token account is what gets searched).
+    _findPayoutByMemo: function (owner, payoutId) {
+      if (!owner || !payoutId || !window.OST_SWAP_POOL || !window.OST_SWAP_POOL.mint) return Promise.resolve(null);
+      let ata;
+      try {
+        const T22 = new solanaWeb3.PublicKey('TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb');
+        const ATA = new solanaWeb3.PublicKey('ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL');
+        const ownerPk = new solanaWeb3.PublicKey(owner);
+        ata = solanaWeb3.PublicKey.findProgramAddressSync([ownerPk.toBuffer(), T22.toBuffer(), new solanaWeb3.PublicKey(window.OST_SWAP_POOL.mint).toBuffer()], ATA)[0];
+      } catch (_) { return Promise.resolve(null); }
+      const tag = 'payoutId:' + payoutId;
+      // -> { sig } found · { none:true } searched and definitely absent · null unknown (RPC failed)
+      return window.OST_PREDICTION_API._rpc(function (c) { return c.getSignaturesForAddress(ata, { limit: 25 }); })
+        .then(function (list) {
+          if (!Array.isArray(list)) return null;
+          const hit = list.filter(function (s) { return s && !s.err && s.memo && String(s.memo).indexOf(tag) >= 0; })[0];
+          return hit ? { sig: hit.signature } : { none: true };
+        }).catch(function () { return null; });
+    },
+    // The payoutId a wallet-ticket cash-out uses (devnet-rescue keys it per
+    // ticket: 'prediction-cashout:<ticket id>', cleaned + capped at 72 chars).
+    predictionPayoutId: function (orderRecord, amount) {
+      try { if (window.OST_RESCUE && typeof window.OST_RESCUE.predictionPayoutId === 'function') return window.OST_RESCUE.predictionPayoutId(orderRecord, amount); } catch (_) {}
+      const orderId = orderRecord && (orderRecord.signature || orderRecord.sig || orderRecord.remoteId || orderRecord.id || '');
+      const clean = function (v) { return String(v || '').replace(/[^a-z0-9_.:-]/gi, '-').slice(0, 72); };
+      const perTicket = clean('prediction-cashout:' + orderId);
+      // Older clients appended the amount; for a signature id the 72-char cap
+      // drops it, so both schemes give the same id.
+      return perTicket;
+    },
+    // On reload / wallet attach: finish every wallet stake the last session
+    // left 'submitting' (tab closed during cosign build / sign / submit) or
+    // 'confirming'. Found by its signature, by the signature devnet-rescue
+    // saved before submit, or by the ref= tag in its memo. A record is removed
+    // only when the chain says it failed, or a COMPLETE search finds nothing
+    // 3 minutes after creation (past the blockhash lifetime) — never because
+    // an RPC call failed.
+    reconcilePendingStakes: function () {
+      const self = window.OST_PREDICTION_API;
+      const owner = getPredictionWalletAddress();
+      if (!owner) return Promise.resolve(0);
+      const list = readPredictionOrderRecords().filter(function (o) {
+        if (!o || o.fundedBy !== 'wallet' || !o.reference) return false;
+        if (o.wallet && o.wallet !== owner) return false;
+        if (predictionStakeInFlight[o.reference] && Date.now() - predictionStakeInFlight[o.reference] < 150000) return false;   // this tab is settling it
+        return o.fundingState === 'confirming' || o.fundingState === 'submitting' || (!!o.pending && !o.signature);
+      });
+      if (!list.length) return Promise.resolve(0);
+      let saved = {};
+      try { saved = (window.OST_RESCUE && typeof window.OST_RESCUE.pendingCosigns === 'function') ? (window.OST_RESCUE.pendingCosigns() || {}) : {}; } catch (_) { saved = {}; }
+      function savedSigFor(o) {
+        const created = Number(o.createdAt || o.ts || 0);
+        const hits = Object.keys(saved).map(function (k) { return saved[k]; }).filter(function (c) {
+          return c && c.sig && (!c.wallet || c.wallet === owner) && Math.abs(Number(c.amount) - Number(o.stake)) < 1e-6 && Math.abs(Number(c.at || 0) - created) < 120000;
+        });
+        return hits.length === 1 ? String(hits[0].sig) : '';
+      }
+      return Promise.all(list.map(function (o) {
+        const age = Date.now() - Number(o.createdAt || o.ts || 0);
+        let probe;
+        if (o.signature) {
+          probe = self._verifySig(o.signature, 8000).then(function (v) { return { v: v, sig: o.signature }; });
+        } else {
+          const cand = savedSigFor(o);
+          probe = (cand ? self._verifySig(cand, 8000) : Promise.resolve('unknown')).then(function (v) {
+            if (v === 'confirmed' || v === 'failed') return { v: v, sig: cand };
+            return self._searchStakeByRef(owner, o.reference, Number(o.createdAt || o.ts || 0)).then(function (h) {
+              if (h && h.sig) return { v: h.err ? 'failed' : 'confirmed', sig: h.sig };
+              // A landed stake (even one whose saved signature we could not
+              // read) is in the wallet's history with its ref= memo.
+              if (h && h.none && h.complete) return { v: 'absent' };
+              return { v: 'unknown' };
+            });
+          });
+        }
+        return probe.then(function (res) {
+          if (res.v === 'confirmed') {
+            patchPredictionOrderByRef(o.reference, { signature: res.sig, sig: res.sig, pending: false, optimistic: false, fundingState: 'confirmed', confirmedAt: Date.now() });
+            try { sharePredictionOrderRecord(Object.assign({}, o, { signature: res.sig, sig: res.sig, pending: false, optimistic: false, fundingState: 'confirmed' })); } catch (_) {}
+            try { if (typeof window.OST_NOTIFY === 'function') window.OST_NOTIFY({ id: 'stake-' + String(o.reference).slice(0, 18), kind: 'ok', title: 'Ticket live — stake confirmed', body: Number(o.stake || 0).toFixed(2).replace(/\.?0+$/, '') + ' OST reached the OST pool.', sig: res.sig, background: true }); } catch (_) {}
+            return true;
+          }
+          if (res.v === 'failed' || res.v === 'expired' || (res.v === 'absent' && age > 180000)) {
+            removePredictionOrderByRef(o.reference);
+            try { if (typeof window.OST_NOTIFY === 'function') window.OST_NOTIFY({ id: 'stake-' + String(o.reference).slice(0, 18), kind: 'error', title: 'Ticket not placed', body: res.v === 'failed' ? 'The stake transaction failed on chain — nothing left your wallet.' : 'The stake never reached the chain — nothing left your wallet.', background: true }); } catch (_) {}
+            return true;
+          }
+          // Still unknown: a 'submitting' record becomes 'confirming' (the UI
+          // says so) and is looked at again on the next reload / attach.
+          if (o.fundingState === 'submitting' && age > 180000) patchPredictionOrderByRef(o.reference, { fundingState: 'confirming', fundingCheckAt: Date.now() });
+          return false;
+        });
+      })).then(function (r) {
+        if (r.some(Boolean)) { try { window.dispatchEvent(new CustomEvent('ost:prediction:order-changed')); } catch (_) {} }
+        // Something is still unknown: look again shortly (a stake submitted
+        // just before the reload is usually confirmed seconds later).
+        const left = r.filter(function (x) { return !x; }).length;
+        const n = self._stakeRecheckN || 0;
+        if (left && n < 8) {
+          self._stakeRecheckN = n + 1;
+          clearTimeout(self._stakeRecheckT);
+          self._stakeRecheckT = setTimeout(function () { try { self.reconcilePendingStakes(); } catch (_) {} }, n < 3 ? 20000 : 60000);
+        } else if (!left) self._stakeRecheckN = 0;
+        return r.filter(Boolean).length;
+      }).catch(function () { return 0; });
+    },
+    // One rule for every surface (see predictionTicketTrust).
+    ticketTrust: function (o) { try { return predictionTicketTrust(o); } catch (_) { return null; } },
+    verifyStake: function (o) { return verifyPredictionStakeOnChain(o); },
+    verifyImported: function () { try { return verifyImportedPredictionRecords(); } catch (_) { return Promise.resolve(0); } },
+    migrateLegacy: function () { try { return migrateLegacyPredictionRecords(); } catch (_) { return false; } }
   });
 
   window.OST_TRADE = Object.assign(window.OST_TRADE || {}, {
@@ -3754,7 +4506,7 @@
     if (!conn) throw new Error('Solana RPC unavailable');
 
     const requester = connectedWalletSession.publicKey;
-    const ostBalance = await getOstBalanceForAddress(requester);
+    const ostBalance = await getOstBalanceForAddress(requester, { fresh: true });   // spend gate: never a memo
     // FAIL CLOSED. `undefined` means we could not read the balance, and this is a
     // spend gate — guessing here is how you approve a payment the wallet cannot
     // cover. Note NaN's trap: `undefined + 1e-9 < x` evaluates to FALSE, so
@@ -3777,7 +4529,7 @@
     // its token account — it derives the ATA itself the same way the worker
     // will, so this stays correct even if the vault account didn't exist yet.
     const signature = await window.OST_RESCUE.sendPeerOst(deskAccounts.treasuryAuthority.toBase58(), Number(request.ostAmount), memo);
-    const remainingBalance = await getOstBalanceForAddress(requester);
+    const remainingBalance = await getOstBalanceForAddress(requester, { fresh: true });
     storeInterchangeRequestRecord({
       signature,
       merchant: request.merchant,
@@ -3822,21 +4574,34 @@
   //
   // A genuine on-chain zero (no ATA / empty account) still returns 0 via
   // decodeTokenBalance — that one is the truth.
-  async function getOstBalanceForAddress(pubkeyInput) {
+  // NET-3: several surfaces ask for the same balance within a second or two
+  // (dashboard, journey, faucet, desk). A 6 s memo per address (successful reads
+  // only) collapses them into one RPC call. Money decisions that must be fresh
+  // pass { fresh: true }.
+  const _ostBalMemo = new Map();
+  async function getOstBalanceForAddress(pubkeyInput, opts) {
     try {
       if (!getSolanaConnection()) return undefined;   // not "zero" — "not known yet"
       const owner = toPublicKey(pubkeyInput);
+      const key = owner.toBase58();
+      const memo = _ostBalMemo.get(key);
+      if (!(opts && opts.fresh) && memo && Date.now() - memo.at < 6000) return memo.value;
       const mintPk = new solanaWeb3.PublicKey(OST_CONFIG.mint);
       const ata = getAssociatedTokenAddressSync(mintPk, owner, false, TOKEN_2022_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID);
       // Failover across RPCs so a flaky provider returns UNKNOWN (kept last-known
       // by callers) at worst — never a false zero, never a fake "disconnected".
       const ataInfo = await rpcCall(function (c) { return c.getAccountInfo(ata); });
-      return decodeTokenBalance(ataInfo);
+      const value = decodeTokenBalance(ataInfo);
+      _ostBalMemo.set(key, { at: Date.now(), value: value });
+      return value;
     } catch (err) {
       console.warn('[balance] OST read failed — reporting UNKNOWN, not zero:', err && err.message);
       return undefined;
     }
   }
+  // Any money move makes every memoized balance stale (a "Wallet balance: 0.00
+  // OST" right after "100 OST arrived" came from this memo).
+  window.addEventListener('ost:wallet-tx', function () { _ostBalMemo.clear(); });
 
   async function signAndSendTransaction(transaction, opts) {
     opts = opts || {};
@@ -3906,6 +4671,7 @@
     }
 
     if (!signature) throw new Error('Active wallet cannot sign transactions');
+    _ostBalMemo.clear();   // money moved: no memoized pre-send balance may be shown
     if (!latest) {
       try { latest = await conn.getLatestBlockhash('confirmed'); } catch (_) {}
     }
@@ -3949,6 +4715,45 @@
   // "no record of a prior credit" false-positive right after ATA creation).
   // Also calls getLogs() on SendTransactionError for real program logs.
   // ---------------------------------------------------------------------------
+  // SRV-6: a REJECTED simulation is a real refusal (not enough OST, no token
+  // account, below rent minimum…). It used to be re-broadcast with
+  // skipPreflight — the doomed tx landed as a failed transaction and the user got
+  // raw JSON seconds later. Only the two known false positives (state not yet
+  // visible: "no record of a prior credit"; a just-expired blockhash) may skip
+  // preflight. Everything else is refused here, in plain words, before broadcast.
+  function humanizeSimulationError(e, logs) {
+    var raw = String((e && e.message) || e || '') + '\n' + (Array.isArray(logs) ? logs.join('\n') : '');
+    var code = 'simulation_failed', message = 'The network rejected this transaction before sending it. Nothing was sent.';
+    if (/custom program error: 0x1\b|"Custom":\s*1\b|insufficient funds/i.test(raw) && /Token|token|spl/i.test(raw)) { code = 'insufficient_balance'; message = 'Not enough OST in this wallet for that. Nothing was sent.'; }
+    else if (/IncorrectProgramId|invalid account owner|AccountNotFound|could not find account/i.test(raw)) { code = 'no_token_account'; message = 'This wallet has no OST account yet — claim free OST first. Nothing was sent.'; }
+    else if (/InsufficientFundsForRent|insufficient funds for rent/i.test(raw)) { code = 'below_rent_minimum'; message = 'Solana needs a minimum SOL balance (rent) in this account. Nothing was sent.'; }
+    else if (/insufficient lamports|Attempt to debit an account but found no record|insufficient funds for fee/i.test(raw)) { code = 'insufficient_sol'; message = 'Not enough SOL for this. OST actions never need SOL — this one does. Nothing was sent.'; }
+    var err = new Error(message);
+    err.code = code; err.refused = true; err.logs = logs || []; err.raw = raw.slice(0, 600);
+    try { if (window.OST_MONEY_ERRORS && typeof OST_MONEY_ERRORS.humanize === 'function') { var h = OST_MONEY_ERRORS.humanize({ error: code, message: message }); if (h && h.title) err.message = h.title + (h.body ? ' ' + h.body : ''); } } catch (_) {}
+    return err;
+  }
+  // Review fix: a re-broadcast after a lost answer ("Failed to fetch" while the
+  // first RPC had already accepted the tx) is simulated by the next RPC as
+  // "This transaction has already been processed". That is SUCCESS for these
+  // exact bytes — never "Nothing was sent". Return the tx's own signature.
+  function isAlreadyProcessedError(e) {
+    var raw = String((e && e.message) || e || '') + ' ' + (Array.isArray(e && e.logs) ? e.logs.join(' ') : '');
+    return /already been processed|AlreadyProcessed/i.test(raw);
+  }
+  function signatureOfSerialized(serialized) {
+    try {
+      var b = serialized instanceof Uint8Array ? serialized : new Uint8Array(serialized);
+      var off = (b[0] & 0x80) ? 2 : 1;   // compact-u16 signature count, then 64-byte signatures
+      var sigBytes = b.slice(off, off + 64);
+      if (sigBytes.length !== 64 || sigBytes.every(function (x) { return x === 0; })) return '';
+      return window.OST_BASE58 ? window.OST_BASE58.encode(sigBytes) : '';
+    } catch (_) { return ''; }
+  }
+  function alreadyProcessedSig(e, serialized) {
+    if (!isAlreadyProcessedError(e)) return '';
+    return signatureOfSerialized(serialized);
+  }
   async function _sendRaw(conn, serialized) {
     try {
       return await conn.sendRawTransaction(serialized, {
@@ -3957,35 +4762,62 @@
       });
     } catch (e) {
       var msg = (e && e.message) || '';
-      // Simulation false-positive: account state not yet visible at confirmed.
-      // The balance checks above already verified funds — retry without preflight.
-      if (msg.includes('no record of a prior credit') ||
-          msg.includes('simulation failed') ||
-          msg.includes('Simulation failed')) {
+      var dupSig = alreadyProcessedSig(e, serialized);
+      if (dupSig) return dupSig;
+      // Known false positives only: account state not yet visible at
+      // 'confirmed', or the blockhash just rolled. Retry without preflight.
+      if (/no record of a prior credit|blockhash not found/i.test(msg)) {
         try {
           return await conn.sendRawTransaction(serialized, { skipPreflight: true });
         } catch (e2) {
+          var dupSig2 = alreadyProcessedSig(e2, serialized);
+          if (dupSig2) return dupSig2;
           if (isRpcEndpointError(e2)) return await _sendRawResilient(serialized, true);
           throw e2;
         }
       }
+      if (/simulation failed/i.test(msg)) {
+        var logs = [];
+        try { if (typeof e.getLogs === 'function') logs = await e.getLogs(); else if (Array.isArray(e.logs)) logs = e.logs; } catch (_) {}
+        if (isAlreadyProcessedError({ message: msg, logs: logs })) { var dupSig4 = signatureOfSerialized(serialized); if (dupSig4) return dupSig4; }
+        throw humanizeSimulationError(e, logs);
+      }
       // RESILIENCE FLOOR: the endpoint itself is throttled/down (401/403/429/
-      // network). Rotate across the other browser RPCs, and if they're ALL dead,
-      // submit through the worker relay so the signed tx still lands.
+      // network) — submit through the worker relay so the signed tx still lands.
       if (isRpcEndpointError(e)) return await _sendRawResilient(serialized, false);
       throw e;
     }
   }
-  // Try each remaining browser RPC, then the worker relay. A tx broadcast is
-  // idempotent by signature, so re-sending the same signed bytes to several RPCs
-  // never double-spends — the cluster dedups on the signature.
+  // NET-1: after the first endpoint failure, go to the worker relay (it rotates
+  // the dedicated keys server-side) instead of walking every throttled browser
+  // RPC. A broadcast is idempotent by signature, so re-sending the same signed
+  // bytes never double-spends. One healthy alternate is tried first, if any.
   async function _sendRawResilient(serialized, skipPreflight) {
-    for (var i = 0; i < RPC_LIST.length; i++) {
-      if (!rotateRpc()) break;
+    var now = Date.now();
+    var alt = healthyRpcSeq().filter(function (i) { return i !== RPC_INDEX && !(RPC_COOLDOWN[RPC_LIST[i]] > now); })[0];
+    if (alt !== undefined) {
+      useRpcIndex(alt);
       try { return await getSolanaConnection().sendRawTransaction(serialized, { skipPreflight: !!skipPreflight, preflightCommitment: 'confirmed' }); }
-      catch (e) { if (!isRpcEndpointError(e)) throw e; markRpcCooldown(currentRpcUrl(), e); }
+      catch (e) {
+        var dupSig = alreadyProcessedSig(e, serialized);
+        if (dupSig) return dupSig;
+        if (/simulation failed/i.test((e && e.message) || '') && !skipPreflight) {
+          var logs = [];
+          try { if (typeof e.getLogs === 'function') logs = await e.getLogs(); else if (Array.isArray(e.logs)) logs = e.logs; } catch (_) {}
+          if (isAlreadyProcessedError({ message: (e && e.message) || '', logs: logs })) { var s2 = signatureOfSerialized(serialized); if (s2) return s2; }
+          throw humanizeSimulationError(e, logs);
+        }
+        if (!isRpcEndpointError(e)) throw e;
+        markRpcCooldown(currentRpcUrl(), e);
+      }
     }
-    return await serverSendRaw(serialized, skipPreflight);   // worker rotates all 4 dedicated keys
+    try {
+      return await serverSendRaw(serialized, skipPreflight);   // worker rotates its dedicated keys
+    } catch (e) {
+      var dupSig3 = alreadyProcessedSig(e, serialized);
+      if (dupSig3) return dupSig3;
+      throw e;
+    }
   }
 
   // Unpack a SendTransactionError: call getLogs() if available so the error
@@ -4100,10 +4932,17 @@
     }
     if (Number(remoteState.lastDailyClaimAt || 0) > 0) next.lastDailyClaimAt = Number(remoteState.lastDailyClaimAt);
     if (Number(remoteState.dailyClaimCount || 0) > Number(current.dailyClaimCount || 0)) next.dailyClaimCount = Number(remoteState.dailyClaimCount || 0);
-    if (remoteState.pendingReservation && Number(remoteState.pendingReservation.expiresAt || 0) > Date.now()) {
+    // SRV-1 (new worker): a PAYING reservation never expires until its outcome is
+    // known — keep it (button stays "Confirming…") even past expiresAt.
+    if (remoteState.pendingReservation && (remoteState.pendingReservation.paying === true || Number(remoteState.pendingReservation.expiresAt || 0) > faucetNow())) {
       next.pendingReservation = remoteState.pendingReservation;
     } else {
       delete next.pendingReservation;
+    }
+    // A local "unconfirmed claim" hold ends once the server records a claim.
+    if (next.unconfirmedClaim && (Number(next.welcomeClaimedAt || 0) > 0 && next.unconfirmedClaim.kind === 'welcome' ||
+        Number(next.lastDailyClaimAt || 0) > Number(next.unconfirmedClaim.at || 0))) {
+      delete next.unconfirmedClaim;
     }
     claims[walletKey] = next;
     saveRewardClaims(claims);
@@ -4202,16 +5041,28 @@
     return faucetGateRequest('/faucet/v1/cancel', { wallet: walletAddress, reservationId }).catch(function() { return false; });
   }
 
+  // C11: cooldowns are compared with the SERVER-corrected clock (a device that
+  // runs fast used to enable the daily claim early and then show "00:00").
+  function faucetNow() {
+    try { if (window.OST_AUTH && typeof window.OST_AUTH.now === 'function') { const n = Number(window.OST_AUTH.now()); if (Number.isFinite(n) && n > 0) return n; } } catch (_) {}
+    return Date.now();
+  }
   function getRewardClaimForWallet(walletAddress) {
     const claims = loadRewardClaims();
     const key = String(walletAddress || '').trim();
     const claim = key && claims[key] ? claims[key] : {};
+    const now = faucetNow();
     const welcomeClaimedAt = Number(claim.welcomeClaimedAt || 0);
     const lastDailyClaimAt = Number(claim.lastDailyClaimAt || welcomeClaimedAt || 0);
     const nextDailyClaimAt = welcomeClaimedAt ? lastDailyClaimAt + OST_DAILY_DROP_MS : 0;
-    const pendingReservation = claim.pendingReservation && Number(claim.pendingReservation.expiresAt || 0) > Date.now()
+    // SRV-1: a PAYING reservation stays pending past expiresAt (the server only
+    // ends it once the payout's outcome is known).
+    const pendingReservation = claim.pendingReservation && (claim.pendingReservation.paying === true || Number(claim.pendingReservation.expiresAt || 0) > now)
       ? claim.pendingReservation
       : null;
+    // A claim whose outcome we could not confirm holds this wallet locally (no
+    // second claim while the first may still land — SRV-1 on the old worker).
+    const hold = claim.unconfirmedClaim && Number(claim.unconfirmedClaim.until || 0) > Date.now() ? claim.unconfirmedClaim : null;
     return {
       key,
       raw: claim,
@@ -4220,10 +5071,27 @@
       lastDailyClaimAt,
       nextDailyClaimAt,
       pendingReservation,
-      dailyReady: welcomeClaimedAt > 0 && Date.now() >= nextDailyClaimAt,
+      hold,
+      dailyReady: welcomeClaimedAt > 0 && now >= nextDailyClaimAt,
       totalClaimed: Number(claim.totalClaimed || 0),
       dailyClaimCount: Number(claim.dailyClaimCount || 0)
     };
+  }
+  function setFaucetHold(walletAddress, info) {
+    const claims = loadRewardClaims();
+    const cur = claims[walletAddress] || { walletAddress: walletAddress };
+    if (info) cur.unconfirmedClaim = Object.assign({ at: Date.now(), until: Date.now() + 15 * 60000 }, info);
+    else delete cur.unconfirmedClaim;
+    claims[walletAddress] = cur;
+    saveRewardClaims(claims);
+  }
+  function dropLocalPendingReservation(walletAddress, reservationId) {
+    const claims = loadRewardClaims();
+    const cur = claims[walletAddress];
+    if (!cur || !cur.pendingReservation) return;
+    if (reservationId && cur.pendingReservation.id && cur.pendingReservation.id !== reservationId) return;
+    delete cur.pendingReservation;
+    saveRewardClaims(claims);
   }
 
   function formatDropCooldown(ms) {
@@ -4259,54 +5127,279 @@
     return next;
   }
 
+  // FCT-3: the faucet card is a state machine, and the status line ALWAYS says
+  // what the current branch is (it used to be written only when empty, so
+  // "Sending your OST now" never cleared). A fresh result (claimed / refused /
+  // still confirming) stays visible for 30 s before the branch text returns.
+  let faucetResultUntil = 0;
+  function setFaucetStatus(text, state, opts) {
+    if (!faucetStatus) return;
+    const settings = opts || {};
+    faucetStatus.textContent = String(text || '');
+    faucetStatus.setAttribute('data-state', state || 'info');
+    faucetStatus.setAttribute('aria-live', 'polite');
+    if (settings.result) faucetResultUntil = Date.now() + 30000;
+    if (settings.html) faucetStatus.innerHTML = settings.html;
+  }
+  function faucetNextLabel(ms) {
+    return 'Next free OST in ' + formatDropCooldown(ms);
+  }
   function refreshFaucetRewardUi() {
     if (!faucetBtn) return;
     const label = faucetBtn.querySelector('[data-i18n="getost.faucetbtn"]') || faucetBtn;
+    const showBranch = Date.now() > faucetResultUntil;
+    // A claim in flight owns the button and the status line (no mid-claim re-enable).
+    if (faucetRunning) {
+      faucetBtn.disabled = true;
+      faucetBtn.setAttribute('aria-busy', 'true');
+      label.textContent = 'Claiming…';
+      return;
+    }
+    faucetBtn.removeAttribute('aria-busy');
     if (!connectedWalletSession || !connectedWalletSession.publicKey) {
+      // WAL-8: no wallet = a real "create" button, never a fake "+100 queued".
       faucetBtn.disabled = false;
-      label.textContent = 'Claim 100 OST Head Start';
+      label.textContent = 'Create a free devnet wallet';
       if (faucetAmount && !faucetTotal) faucetAmount.textContent = OST_WELCOME_DROP_AMOUNT.toFixed(2);
-      if (faucetStatus) {
-        faucetStatus.textContent = 'Create or connect a wallet to claim 100 OST. After that, manually claim 1 OST per day.';
-      }
+      if (showBranch) setFaucetStatus('Free devnet OST needs a wallet. Create one in one tap (it lives in this browser), then claim 100 OST. OST pays the network fee.', 'info');
       return;
     }
     const walletAddress = connectedWalletSession.publicKey.toBase58();
-    syncRewardClaimsFromRemote(walletAddress);
+    // NET-3: this runs every second; only the VISIBLE faucet card refreshes the
+    // server state (throttled to once a minute). Claims and wallet changes force it.
+    if (faucetBtn.offsetParent !== null) syncRewardClaimsFromRemote(walletAddress);
     const state = getRewardClaimForWallet(walletAddress);
     if (state.pendingReservation) {
       faucetBtn.disabled = true;
-      label.textContent = 'Claim Syncing...';
-      // This state is the NORMAL in-flight moment of every claim (the server pays within
-      // seconds). The old copy read like an error on the happy path. Say what is
-      // happening; only mention the auto-unlock once it has clearly taken too long.
-      var _resAt = Number(state.pendingReservation.createdAt || state.pendingReservation.reservedAt || state.pendingReservation.ts || 0);
-      var _slow = _resAt > 0 && Date.now() - _resAt > 45000;
-      if (faucetStatus) faucetStatus.textContent = _slow
-        ? 'Your claim is taking longer than usual. It will finish or unlock by itself - you do not need to do anything.'
-        : 'Sending your OST now - this takes a few seconds.';
+      label.textContent = 'Confirming…';
+      const pr = state.pendingReservation;
+      const resAt = Number(pr.reservedAt || pr.createdAt || 0);   // reservedAt: new worker field (C4)
+      const slow = resAt > 0 && faucetNow() - resAt > 45000;
+      if (showBranch) setFaucetStatus(slow
+        ? 'Your claim is taking longer than usual. It finishes or unlocks by itself — check your balance before claiming again.'
+        : 'A claim for this wallet is being confirmed — it usually lands in a few seconds.', 'pending');
+      ensureFaucetPendingWatch();
+      return;
+    }
+    if (state.hold && !(state.hold.kind === 'welcome' ? state.welcomeClaimed : false)) {
+      // The last claim's outcome is unknown: never offer a second claim on top.
+      faucetBtn.disabled = true;
+      label.textContent = 'Check your balance';
+      if (showBranch) setFaucetStatus('We couldn\'t confirm your last claim — it may still land. Check your balance before claiming again; the button unlocks in ' + formatDropCooldown(Number(state.hold.until) - Date.now()) + '.', 'pending');
+      ensureFaucetPendingWatch();
       return;
     }
     if (!state.welcomeClaimed) {
       faucetBtn.disabled = false;
       label.textContent = 'Claim 100 OST Head Start';
       if (faucetAmount && !faucetTotal) faucetAmount.textContent = OST_WELCOME_DROP_AMOUNT.toFixed(2);
-      if (faucetStatus && !faucetStatus.textContent) faucetStatus.textContent = 'First claim: 100 OST. Daily manual claims unlock after 24 hours.';
+      if (showBranch) setFaucetStatus('First claim: 100 devnet OST, paid on-chain in a few seconds. OST pays the network fee.', 'info');
       return;
     }
     if (state.dailyReady) {
       faucetBtn.disabled = false;
-      label.textContent = 'Claim Today\'s 1 OST';
+      label.textContent = 'Claim today\'s 1 OST';
       if (faucetAmount && !faucetTotal) faucetAmount.textContent = OST_DAILY_DROP_AMOUNT.toFixed(2);
-      if (faucetStatus && !faucetStatus.textContent) faucetStatus.textContent = 'Daily drop ready. Click the button to manually claim 1 OST.';
+      if (showBranch) setFaucetStatus('Daily drop ready: claim 1 devnet OST.', 'info');
       return;
     }
     faucetBtn.disabled = true;
-    label.textContent = 'Daily Claim in ' + formatDropCooldown(state.nextDailyClaimAt - Date.now());
+    label.textContent = faucetNextLabel(state.nextDailyClaimAt - faucetNow());
     if (faucetAmount && !faucetTotal) faucetAmount.textContent = OST_DAILY_DROP_AMOUNT.toFixed(2);
+    if (showBranch) setFaucetStatus('Claimed today. ' + faucetNextLabel(state.nextDailyClaimAt - faucetNow()) + '.', 'info');
   }
 
-  async function claimOstFaucetForActiveWallet() {
+  // After a reload (or from another tab) a claim can still be PAYING: keep
+  // reading /faucet/v1/state until it settles — every 5 s for the first 3 min,
+  // then every 20 s — only while the page is visible and no claim runs here.
+  // When it lands, say so once (from the server's record, never a guess).
+  let faucetWatchTimer = 0, faucetWatchLast = 0, faucetWatchBusy = false;
+  function ensureFaucetPendingWatch() {
+    if (faucetWatchTimer) return;
+    faucetWatchTimer = setInterval(faucetPendingTick, 5000);
+  }
+  function faucetPendingTick() {
+    const w = currentRewardWalletAddress();
+    const st = w ? getRewardClaimForWallet(w) : null;
+    if (!st || (!st.pendingReservation && !st.hold)) { clearInterval(faucetWatchTimer); faucetWatchTimer = 0; return; }
+    if (document.hidden || faucetRunning || faucetWatchBusy) return;
+    const startedAt = Number((st.pendingReservation && (st.pendingReservation.reservedAt || st.pendingReservation.payingAt)) || (st.hold && st.hold.at) || 0);
+    const every = startedAt && Date.now() - startedAt > 180000 ? 20000 : 5000;
+    if (Date.now() - faucetWatchLast < every - 200) return;
+    faucetWatchLast = Date.now();
+    faucetWatchBusy = true;
+    const before = { welcome: st.welcomeClaimedAt, daily: st.lastDailyClaimAt, pr: st.pendingReservation, hold: st.hold };
+    syncRewardClaimsFromRemote(w, { force: true }).catch(function () { return false; }).then(async function () {
+      let after = getRewardClaimForWallet(w);
+      const amount = Number((before.pr && before.pr.amount) || (before.hold && before.hold.amount) || OST_WELCOME_DROP_AMOUNT);
+      let landed = (before.pr || before.hold) && (after.welcomeClaimedAt > before.welcome || after.lastDailyClaimAt > before.daily);
+      let sig = (after.raw && after.raw.lastSignature) || '';
+      // Old worker: an unconfirmed claim is never recorded server-side — the
+      // balance rising by the claim amount is the proof it landed.
+      if (!landed && after.hold && after.hold.balanceBefore != null) {
+        const bal = await getOstBalanceForAddress(w, { fresh: true });
+        if (bal != null && bal + 1e-6 >= Number(after.hold.balanceBefore) + amount) {
+          writeRewardClaim(w, { kind: after.hold.kind || 'welcome', amount: amount, signature: after.hold.sig || '' });
+          setFaucetHold(w, null);
+          landed = true; sig = after.hold.sig || '';
+        }
+      }
+      if (landed) {
+        setFaucetHold(w, null);
+        faucetNotify(w, { kind: 'ok', title: amount + ' OST arrived', body: 'Your free devnet OST claim landed.', sig: sig });
+        setFaucetStatus(amount + ' OST arrived.', 'ok', { result: true });
+        try { window.dispatchEvent(new CustomEvent('ost:wallet-tx', { detail: { sig: sig, asset: 'OST', amount: amount, direction: 'in', status: 'confirmed', source: 'faucet' } })); } catch (_) {}
+      }
+      refreshFaucetRewardUi();
+      try { window.dispatchEvent(new CustomEvent('ost:faucet-state-synced', { detail: {} })); } catch (_) {}
+    }).finally(function () { faucetWatchBusy = false; });
+  }
+
+  // ---- Faucet outcome helpers (SRV-1 client half, AUTH-1) -------------------
+  // C4: a 5xx / network error / 202 / gate_reset AFTER commit may mean the OST
+  // already landed. Never call that "failed": re-commit the SAME reservation,
+  // then watch /faucet/v1/state and the balance for up to 60 s.
+  function faucetSleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+  function isTransientGate(g) {
+    if (!g) return true;
+    if (g.unreachable) return true;
+    if (g.pending === true) return true;
+    const err = String(g.error || '');
+    // New worker: a payout_failed that carries a `code` (and `retryable`) means
+    // the gate RELEASED the reservation — nothing was sent. That is a definitive
+    // answer (e.g. 409 insufficient_pool): never re-commit it. The old worker's
+    // bare 502 payout_failed may follow a broadcast, so it stays "unknown".
+    if (err === 'payout_failed' && (g.code || g.retryable === false)) return false;
+    const status = Number(g.httpStatus || 0);
+    if (status === 202 || status >= 500) return true;
+    return /^(gate_reset|state_unknown|internal_error|payout_failed|gate_unreachable|auth_unavailable)$/.test(err);
+  }
+  function clockSkewMinutes() {
+    try { if (window.OST_AUTH && typeof OST_AUTH.clockOffset === 'function') return Math.round(Math.abs(OST_AUTH.clockOffset()) / 60000); } catch (_) {}
+    return 0;
+  }
+  // Server code -> human copy. OST_MONEY_ERRORS (rails, C3) when loaded; this is
+  // the faucet-specific floor. Never shows raw JSON, DO strings or bare codes.
+  function faucetHuman(g) {
+    const body = g || {};
+    const err = String(body.error || '');
+    const code = String(body.code || '');
+    const status = Number(body.httpStatus || 0);
+    const msg = String(body.message || '');
+    // Faucet-specific answers first (the shared copy is written for sends and
+    // says things like "try a smaller amount" — the faucet amount is fixed).
+    if (err === 'insufficient_pool' || code === 'insufficient_pool' || code === 'insufficient_pool_sol') {
+      return { state: 'refused', title: 'The faucet pool is empty right now.', body: 'It is being refilled — try again later. Nothing was sent.', retryable: false };
+    }
+    if (err === 'already_claimed' || code === 'already_paid') return { state: 'refused', title: 'This wallet already received its free OST.', body: 'Check your balance.', retryable: false };
+    if (err === 'claim_released') return { state: 'refused', title: 'The faucet released this claim without sending it.', body: 'Nothing was sent. Try again in a minute.', retryable: true };
+    if (err === 'payout_failed' && (code || body.retryable === false)) {
+      // New worker: released before broadcast — nothing was sent (authoritative).
+      const reason = code === 'rpc_unavailable' ? 'Solana could not be reached.' : (code === 'gate_reset' ? 'The payout service restarted.' : 'The payout was refused.');
+      return { state: 'refused', title: 'The faucet could not send this claim.', body: reason + ' Nothing was sent.' + (body.retryable === false ? ' Try again later.' : ' Try again in a minute.'), retryable: body.retryable !== false };
+    }
+    if (window.OST_MONEY_ERRORS && typeof OST_MONEY_ERRORS.humanize === 'function' && body.error && !/^(cooldown|claim_in_progress)$/.test(body.error)) {
+      try {
+        const h = OST_MONEY_ERRORS.humanize(body);
+        const strip = function (s) { return String(s || '').replace(/\s*Try a smaller amount[^.]*\.?/ig, '').trim(); };
+        if (h && h.title) return { state: h.state || 'failed', title: strip(h.title), body: strip(h.body), retryable: !!h.retryable };
+      } catch (_) {}
+    }
+    if (status === 401 || err === 'wallet_auth_required') {
+      if (body.reason === 'stale_timestamp') {
+        const n = clockSkewMinutes();
+        return { state: 'refused', title: 'Your device clock is ' + (n ? n + ' minutes' : 'more than 5 minutes') + ' off.', body: 'Turn on automatic date & time, then try again. Nothing was taken.', retryable: true };
+      }
+      if (body.reason === 'replay') return { state: 'refused', title: 'That request was already used.', body: 'Tap claim again. Nothing was taken.', retryable: true };
+      return { state: 'refused', title: 'Your wallet could not sign this claim.', body: 'Reconnect the wallet and try again. Nothing was taken.', retryable: true };
+    }
+    if (err === 'insufficient_pool') return { state: 'refused', title: 'The faucet pool is refilling.', body: 'Try again later. Nothing was taken.', retryable: false };
+    if (err === 'daily_cap' || err === 'cf_1027' || /daily request budget|over its daily/i.test(msg)) return { state: 'refused', title: 'OST is over its daily request budget.', body: 'Claims are back at 00:00 UTC. Nothing was taken.', retryable: false };
+    if (status === 429 || err === 'rate_limited') return { state: 'refused', title: 'Too many requests right now.', body: 'Wait a minute and try again. Nothing was taken.', retryable: true };
+    if (err === 'cooldown' || err === 'daily_cooldown') return { state: 'refused', title: 'Already claimed today.', body: '', retryable: false };
+    if (err === 'claim_in_progress' || err === 'payout_in_progress') return { state: 'pending', title: 'A claim for this wallet is already being sent.', body: 'Check your balance before claiming again.', retryable: false };
+    if (isTransientGate(body)) return { state: 'failed', title: 'The faucet is temporarily unavailable.', body: 'Nothing was taken. Try again in a minute.', retryable: true };
+    return { state: 'failed', title: 'The faucet could not take this claim.', body: 'Nothing was taken. Try again in a minute.', retryable: true };
+  }
+  function faucetError(gate) {
+    const h = faucetHuman(gate);
+    return Object.assign(new Error(h.title), { gate: gate || {}, human: h, code: (gate && gate.error) || 'faucet_error' });
+  }
+  // Confirm one payout signature. true = confirmed, false = executed and FAILED
+  // on chain, null = still unknown (never "not paid" just because it is slow).
+  async function confirmFaucetSig(sig, timeoutMs) {
+    if (!sig) return null;
+    try {
+      if (window.OST_RESCUE && typeof window.OST_RESCUE.confirmBySig === 'function') {
+        const r = await window.OST_RESCUE.confirmBySig(sig, { timeoutMs: timeoutMs || 30000 });
+        if (r && r.ok && !r.pending) return true;
+        if (r && r.ok === false && r.err) return false;
+        return null;
+      }
+    } catch (_) {}
+    const deadline = Date.now() + (timeoutMs || 30000);
+    do {
+      try {
+        const res = await rpcCall(function (c) { return c.getSignatureStatuses([sig], { searchTransactionHistory: true }); });
+        const st = res && res.value && res.value[0];
+        if (st && st.err) return false;
+        if (st && (st.confirmationStatus === 'confirmed' || st.confirmationStatus === 'finalized')) return true;
+      } catch (_) {}
+      if (Date.now() + 2000 >= deadline) break;
+      await faucetSleep(2000);
+    } while (Date.now() < deadline);
+    return null;
+  }
+  // Watch for the outcome of a reservation whose commit answer was lost/unknown.
+  // Review fix: this used to stop at the first state read that no longer showed
+  // the reservation and report "Nothing was taken" — but the old worker deletes
+  // the reservation after a post-broadcast error while the payout can still land
+  // a minute later, and the balance reads hit a 6 s memo. Now it watches the
+  // FULL window with fresh balance reads, and an unknown outcome is reported as
+  // pending (never as "nothing was taken").
+  async function waitForFaucetOutcome(walletAddress, reservationId, balanceBefore, amount, timeoutMs, opts) {
+    const settings = opts || {};
+    const deadline = Date.now() + (timeoutMs || 60000);
+    let lastState = null;
+    let sig = settings.sig || '';
+    while (Date.now() < deadline) {
+      await faucetSleep(3000);
+      const payload = await faucetGateRequest('/faucet/v1/state/' + encodeURIComponent(walletAddress));
+      if (payload && payload.state) {
+        lastState = payload.state;
+        applyRemoteRewardClaimState(walletAddress, payload.state);
+        if (reservationId && payload.state.lastReservationId === reservationId) {
+          return { paid: true, sig: payload.state.lastSignature || sig };
+        }
+        if (settings.kind === 'welcome' && payload.state.welcomeClaimed && !settings.welcomeClaimedBefore) {
+          return { paid: true, sig: payload.state.lastSignature || sig };
+        }
+        // New worker: the reservation reports the broadcast signature while paying.
+        const pr0 = payload.state.pendingReservation;
+        const prSig = pr0 && pr0.id === reservationId ? (pr0.sig || payload.state.pendingSignature || '') : '';
+        if (prSig) sig = prSig;
+      }
+      if (sig) {
+        const c = await confirmFaucetSig(sig, 4000);
+        if (c === true) return { paid: true, sig: sig };
+      }
+      const bal = await getOstBalanceForAddress(walletAddress, { fresh: true });
+      if (balanceBefore != null && bal != null && bal + 1e-6 >= balanceBefore + amount) {
+        return { paid: true, sig: sig || (lastState && lastState.lastSignature) || '', byBalance: true, balance: bal };
+      }
+    }
+    // Still unknown. Release it only when the server says it is NOT paying (C4
+    // field; older workers don't send it, and then we never cancel blindly).
+    const pr = lastState && lastState.pendingReservation;
+    if (pr && pr.id === reservationId && pr.paying === false && !sig) {
+      const c = await cancelRemoteFaucetClaim(walletAddress, reservationId);
+      if (c && c.ok !== false) return { released: true, cancelled: true };
+    }
+    return { pending: true, sig: sig };
+  }
+
+  async function claimOstFaucetForActiveWallet(hooks) {
+    const onStage = (hooks && typeof hooks.onStage === 'function') ? hooks.onStage : function () {};
     if (!connectedWalletSession || !connectedWalletSession.publicKey) {
       throw new Error(t('pay.deskNeedWallet', 'Create or connect your OST wallet first'));
     }
@@ -4334,65 +5427,114 @@
       return null;   // clear to claim
     };
 
-    let gateDown = false;
-    if (getOstApiBase()) {
-      const gate = await reserveRemoteFaucetClaim(walletAddress);
-      if (gate && gate.ok !== false) {
-        reservation = gate;
-        kind = gate.kind || kind;
-        amount = Number(gate.amount || amount);
-      } else if (gate && gate.error === 'cooldown') {
-        const remoteState = getRewardClaimForWallet(walletAddress);
-        return { claimed: false, cooldown: true, nextDailyClaimAt: remoteState.nextDailyClaimAt, balance: await getOstBalanceForAddress(claimer) };
-      } else if (gate && gate.error === 'claim_in_progress') {
-        throw new Error('A faucet claim is already syncing for this wallet. Wait a minute and refresh on any device.');
-      } else if (faucetGateIsDown(gate)) {
-        // Gate is DOWN (DO quota exhausted / 5xx / unreachable). Do not punish
-        // legitimate users: fall back to the local cooldown record. Cross-device
-        // dedup is degraded until the gate recovers — that is the honest,
-        // deliberate trade vs. denying every claim.
-        gateDown = true;
-        console.warn('[OST] Faucet gate unavailable', gate);
-        // The server pays the faucet now; without the gate there is no claim. Say so.
-        throw new Error('The faucet is temporarily unavailable (claim service offline). Try again in a minute — nothing was taken.');
-      } else {
-        throw new Error('Faucet gate refused this claim.');
-      }
-    } else {
+    if (!getOstApiBase()) {
       const blocked = await applyLocalCooldown();
       if (blocked) return blocked;
+      throw faucetError({ error: 'api_not_configured' });
+    }
+    // Balance BEFORE the claim: if the commit answer is lost, a rise of `amount`
+    // is proof the OST landed (FaucetGate may not have recorded it — SRV-1).
+    // Fresh read: the 6 s memo must never stand in for "before".
+    const balanceBefore = await getOstBalanceForAddress(claimer, { fresh: true });
+
+    // 1) Reserve (pre-broadcast: safe to retry once on a transient failure).
+    let gate = await reserveRemoteFaucetClaim(walletAddress);
+    if (gate && gate.ok === false && isTransientGate(gate)) {
+      await faucetSleep(2000);
+      gate = await reserveRemoteFaucetClaim(walletAddress);
+    }
+    if (gate && gate.ok !== false && gate.reservationId) {
+      reservation = gate;
+      kind = gate.kind || kind;
+      amount = Number(gate.amount || amount);
+    } else if (gate && gate.error === 'cooldown') {
+      const remoteState = getRewardClaimForWallet(walletAddress);
+      return { claimed: false, cooldown: true, nextDailyClaimAt: Number(gate.nextDailyClaimAt || remoteState.nextDailyClaimAt || 0), balance: balanceBefore };
+    } else if (gate && gate.error === 'claim_in_progress') {
+      // This wallet already holds a reservation (an earlier attempt whose answer
+      // was lost, or another tab). Only this wallet can reserve for itself, so
+      // resume THAT reservation instead of telling the user to wait blindly.
+      const pr = (gate.state && gate.state.pendingReservation) || getRewardClaimForWallet(walletAddress).pendingReservation;
+      if (!pr || !pr.id) throw faucetError(gate);
+      reservation = { reservationId: pr.id, kind: pr.kind || kind, amount: Number(pr.amount || amount), resumed: true };
+      kind = reservation.kind;
+      amount = reservation.amount;
+    } else {
+      throw faucetError(gate);
     }
 
-    if (!window.OST_RESCUE || typeof window.OST_RESCUE.payoutOst !== 'function') {
-      throw new Error('Reward vault is still loading. Refresh the page and try again.');
+    // 2) Commit — the FaucetGate pays the reservation server-side. Only now does
+    //    the UI say "Sending…" (FCT-3: nothing optimistic before reserve = 200).
+    onStage('sending', { amount: amount, kind: kind });
+    const reservationId = reservation.reservationId;
+    let committed = await commitRemoteFaucetClaim(walletAddress, reservationId);
+    // C4: only a 200 {ok, sig} is "paid". A 202 {ok, pending:true, sig} means
+    // SENT, NOT CONFIRMED — it must be confirmed by signature before any
+    // "arrived" (it used to be reported as success straight away).
+    const paidNow = function (c) { return !!(c && c.ok !== false && c.sig && c.pending !== true); };
+    const backoff = [2000, 4000, 8000];
+    for (let i = 0; i < backoff.length && !paidNow(committed); i++) {
+      if (committed && committed.ok !== false && committed.pending) { onStage('confirming', { amount: amount, sig: committed.sig || '' }); break; }   // 202: sent, not confirmed
+      if (committed && /^(payout_in_progress|claim_in_progress)$/.test(String(committed.error || ''))) { onStage('confirming', { amount: amount }); break; }
+      if (!isTransientGate(committed)) break;
+      onStage('confirming', { amount: amount });
+      await faucetSleep(backoff[i]);
+      committed = await commitRemoteFaucetClaim(walletAddress, reservationId);   // SAME reservation: idempotent
     }
 
-    // NO client-side pool pre-check. The SERVER (/wallet/payout) is the only
-    // solvency authority and answers insufficient_pool if the vault is truly low.
-    // The old pre-check turned a failed RPC read into "vault is being refilled"
-    // while the pool held billions — the #1 reason the faucet "didn't drop".
-
-    // SERVER-SIDE PAYOUT: the faucet gate pays the reservation's amount itself
-    // (PayoutGate no longer accepts client faucet payouts). No reservation -> no claim.
-    if (!reservation || !reservation.reservationId) {
-      throw new Error('The faucet is temporarily unavailable (claim service offline). Try again in a minute — nothing was taken.');
+    let sig = paidNow(committed) ? committed.sig : '';
+    let landedBalance = null;
+    if (!sig) {
+      const definitive = committed && committed.ok === false && !isTransientGate(committed) &&
+        !/^(payout_in_progress|claim_in_progress|reservation_not_active|reservation_expired)$/.test(String(committed.error || ''));
+      if (definitive) {
+        // Refused before anything was sent: drop the local reservation so the
+        // button does not stay on "Confirming…" when the answer had no state.
+        if (!committed.state) dropLocalPendingReservation(walletAddress, reservationId);
+        throw faucetError(committed);
+      }
+      // Unknown outcome: confirm the broadcast signature if we have one, then
+      // watch the gate state + a FRESH balance (never build a new claim).
+      const pendingSig = (committed && committed.ok !== false && committed.sig) || (committed && committed.sig) || '';
+      onStage('confirming', { amount: amount, sig: pendingSig });
+      if (pendingSig) {
+        const c = await confirmFaucetSig(pendingSig, 30000);
+        if (c === true) sig = pendingSig;
+      }
+      if (!sig) {
+        const outcome = await waitForFaucetOutcome(walletAddress, reservationId, balanceBefore, amount, 60000,
+          { sig: pendingSig, kind: kind, welcomeClaimedBefore: state.welcomeClaimed });
+        if (outcome.paid) { sig = outcome.sig || pendingSig || ''; landedBalance = outcome.balance != null ? outcome.balance : null; }
+        else if (outcome.released && outcome.cancelled) {
+          // The server said this reservation was NOT paying and we cancelled it.
+          throw faucetError({ error: 'claim_released', released: true });
+        } else {
+          // Still unknown: hold this wallet locally so a second claim cannot pay
+          // twice while the first may still land; the watcher settles it.
+          setFaucetHold(walletAddress, { id: reservationId, kind: kind, amount: amount, sig: outcome.sig || pendingSig || '', balanceBefore: balanceBefore == null ? null : balanceBefore });
+          ensureFaucetPendingWatch();
+          return { claimed: false, pending: true, amount: amount, rewardKind: kind, signature: outcome.sig || pendingSig || '' };
+        }
+      }
     }
-    const committed = await commitRemoteFaucetClaim(walletAddress, reservation.reservationId);
-    if (!committed || committed.ok === false || !committed.sig) {
-      const msg = (committed && (committed.message || committed.error)) || 'Faucet payout failed';
-      throw new Error(/daily request budget|over its daily/i.test(msg) ? msg : ('Faucet payout failed: ' + msg));
-    }
-    const actualAmount = Number(committed.amount || amount);
-    const payout = { sig: committed.sig, ost: actualAmount };
-    writeRewardClaim(walletAddress, { kind, amount: actualAmount, signature: committed.sig });
+    const actualAmount = Number((committed && committed.amount) || amount);
+    writeRewardClaim(walletAddress, { kind, amount: actualAmount, signature: sig });
+    dropLocalPendingReservation(walletAddress, reservationId);
+    setFaucetHold(walletAddress, null);
     // The payout already landed on-chain. A failed balance read here must NEVER
     // turn a successful claim into an error the user sees — degrade to null.
-    let finalBalance = null;
-    try { finalBalance = await getOstBalanceForAddress(claimer); } catch (_) { finalBalance = null; }
-    return { claimed: true, rewardKind: kind, amount: actualAmount, signature: payout && payout.sig, balance: finalBalance };
+    // Fresh read: the 6 s memo still holds the pre-claim balance.
+    let finalBalance = landedBalance;
+    if (finalBalance == null) { try { finalBalance = await getOstBalanceForAddress(claimer, { fresh: true }); } catch (_) { finalBalance = null; } }
+    // Devnet RPCs can lag the payout by a slot: never print a balance that does
+    // not include the claim we just confirmed.
+    if (finalBalance != null && balanceBefore != null && finalBalance + 1e-6 < balanceBefore + actualAmount) finalBalance = null;
+    return { claimed: true, rewardKind: kind, amount: actualAmount, signature: sig, balance: finalBalance };
   }
 
-  function openWalletModal() { if (walletModal) walletModal.classList.add('open'); }
+  // WAL-1/C9: the legacy connect modal is retired — every caller goes to the
+  // wallet home start view (Create / Restore / Phantom / Solflare / Backpack).
+  function openWalletModal() { requireWallet({ reason: 'start' }); }
   function closeWalletModal() { if (walletModal) walletModal.classList.remove('open'); }
 
   // Check Solana network connectivity & update status dot
@@ -4402,7 +5544,8 @@
     try {
       const conn = getSolanaConnection();
       if (!conn) { if (dot) dot.style.background = '#ef4444'; return; }
-      const slot = await conn.getSlot();
+      // NET-1: through rpcCall (rotation + cooldown), not the raw connection.
+      const slot = await rpcCall(function (c) { return c.getSlot(); });
       if (dot) dot.style.background = '#22c55e';
       if (label) label.textContent = 'Devnet (Slot ' + slot.toLocaleString() + ')';
     } catch {
@@ -4410,9 +5553,14 @@
       if (label) label.textContent = 'Devnet (Offline)';
     }
   }
-  // Check network on load and every 30s
+  // NET-3: on load, then every 120 s — only while the tab is visible and the
+  // user is not idle (was every 30 s in every open tab).
   setTimeout(checkNetworkStatus, 2000);
-  setInterval(checkNetworkStatus, 30000);
+  setInterval(function () {
+    if (document.hidden) return;
+    if (window.OST_IDLE_GUARD && typeof OST_IDLE_GUARD.isGated === 'function' && OST_IDLE_GUARD.isGated()) return;
+    checkNetworkStatus();
+  }, 120000);
 
   // Verify wallet account exists on-chain
   async function verifyWalletAccount(pubkeyStr) {
@@ -4420,121 +5568,344 @@
       const conn = getSolanaConnection();
       if (!conn) return { verified: false, balance: 0 };
       const pubkey = new solanaWeb3.PublicKey(pubkeyStr);
-      const accountInfo = await conn.getAccountInfo(pubkey);
-      const lamports = await conn.getBalance(pubkey);
+      const accountInfo = await rpcCall(function (c) { return c.getAccountInfo(pubkey); });
+      const lamports = await rpcCall(function (c) { return c.getBalance(pubkey); });
       return { verified: accountInfo !== null || lamports > 0, balance: lamports / 1e9 };
     } catch {
       return { verified: false, balance: 0 };
     }
   }
 
-  if (walletBtn) walletBtn.addEventListener('click', () => {
-    if (connectedWallet) {
-      disconnectConnectedWallet();
-      return;
-    }
-    openWalletModal();
-  });
-  if (walletClose) walletClose.addEventListener('click', closeWalletModal);
-  if (walletOverlay) walletOverlay.addEventListener('click', closeWalletModal);
-
-  $$('.wallet-option').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const walletType = btn.getAttribute('data-wallet');
-      connectWallet(walletType);
-    });
+  // WAL-3: the header wallet button never disconnects. Connected -> it opens the
+  // wallet home (account card: copy / open / disconnect-with-confirm). Not
+  // connected -> the single get-started path (C9).
+  if (walletBtn) walletBtn.addEventListener('click', (event) => {
+    if (event) event.preventDefault();
+    if (connectedWallet) { openWalletHome('home'); return; }
+    requireWallet({ reason: 'start' });
   });
 
-  function connectWallet(type) {
-    closeWalletModal();
-    const providers = {
-      phantom: async () => {
-        if (window.solana && window.solana.isPhantom) {
-          const response = await window.solana.connect();
-          return {
-            kind: 'extension',
-            type: 'phantom',
-            label: 'Phantom',
-            provider: window.solana,
-            publicKey: response.publicKey || window.solana.publicKey
-          };
-        }
-        window.open('https://phantom.app/', '_blank');
-        throw 'Install Phantom';
-      },
-      solflare: async () => {
-        if (window.solflare && window.solflare.isSolflare) {
-          await window.solflare.connect();
-          return {
-            kind: 'extension',
-            type: 'solflare',
-            label: 'Solflare',
-            provider: window.solflare,
-            publicKey: window.solflare.publicKey
-          };
-        }
-        window.open('https://solflare.com/', '_blank');
-        throw 'Install Solflare';
-      },
-      backpack: async () => {
-        if (window.backpack) {
-          const response = await window.backpack.connect();
-          return {
-            kind: 'extension',
-            type: 'backpack',
-            label: 'Backpack',
-            provider: window.backpack,
-            publicKey: response.publicKey || window.backpack.publicKey
-          };
-        }
-        window.open('https://www.backpack.app/', '_blank');
-        throw 'Install Backpack';
-      },
-      ledger: () => {
-        toast('💳', 'Ledger: Use Phantom or Solflare with Ledger connected');
-        return Promise.reject('Use Phantom');
-      },
-      walletconnect: () => {
-        toast('🔗', 'WalletConnect: Coming soon');
-        return Promise.reject('Coming soon');
-      },
-      local: async () => {
-        let keypair = loadLocalWalletKeypair();
-        const isNewWallet = !keypair;
-        if (!keypair) {
-          keypair = solanaWeb3.Keypair.generate();
-          persistLocalWallet(keypair);
-        }
-        return {
-          kind: 'local',
-          type: 'local',
-          label: 'OST Browser Wallet',
-          publicKey: keypair.publicKey,
-          keypair,
-          created: isNewWallet
-        };
+  /* ======================================================================
+   * C1 · WALLET ACCESS API (money plan §6) + C9 single get-started path.
+   * ----------------------------------------------------------------------
+   * OST_WALLET.connect(type)       -> Promise<address>; rejects {code:'cancelled'|
+   *                                   'not_installed'|'failed', message}
+   * OST_WALLET.createLocal()       -> new browser wallet, opens the backup step,
+   *                                   NEVER downloads anything by itself (WAL-2)
+   * OST_WALLET.disconnect({confirm}) -> Promise<boolean>
+   * OST_WALLET.address()           -> base58 | null (see addressHandle below)
+   * OST_WALLET.requireWallet({reason, label?, resume?}) -> Promise<address>.
+   *     Connected: resolves now (resume NOT called — continue in .then).
+   *     Not connected: opens the wallet home start view with the reason; when a
+   *     wallet connects it calls resume(address) AND resolves. Use one of the two.
+   *     A brand-new browser wallet resumes after its backup / first-OST steps.
+   * Events: ost:wallet-changed {address, kind, type}, ost:wallet-connect-failed
+   *         {type, code, message}.
+   * Nobody clicks #walletBtn / .wallet-option programmatically any more.
+   * ==================================================================== */
+  const WALLET_LAST_KEY = 'ost.wallet.last';
+  const WALLET_USER_DISCONNECTED_KEY = 'ost.wallet.userDisconnected';
+  const WALLET_LABELS = { phantom: 'Phantom', solflare: 'Solflare', backpack: 'Backpack', local: 'OST Browser Wallet' };
+  const WALLET_REASON_LABELS = {
+    start: '', faucet: 'claim your free devnet OST', perps: 'open a perps position', market: 'place your market order',
+    buy: 'place your market order', bridge: 'convert OST ⇄ OSTG', convert: 'convert', send: 'send OST',
+    'apple-tap': 'use tap-to-pay', games: 'play', jupiter: 'use the swap tools', topup: 'top up'
+  };
+  function readWalletLast() {
+    try { const j = JSON.parse(localStorage.getItem(WALLET_LAST_KEY) || 'null'); return j && j.kind ? j : null; } catch { return null; }
+  }
+  function rememberWalletLast(session) {
+    try {
+      localStorage.setItem(WALLET_LAST_KEY, JSON.stringify({ kind: session.kind, type: session.type || session.kind, at: Date.now() }));
+      localStorage.removeItem(WALLET_USER_DISCONNECTED_KEY);
+    } catch {}
+  }
+  function walletUserDisconnected() {
+    try { return localStorage.getItem(WALLET_USER_DISCONNECTED_KEY) === '1'; } catch { return false; }
+  }
+  // WAL-6: Phantom can live ONLY at window.phantom.solana (window.solana may be
+  // another wallet or absent); prefer it.
+  function getPhantom() {
+    try {
+      if (window.phantom && window.phantom.solana && window.phantom.solana.isPhantom) return window.phantom.solana;
+      if (window.solana && window.solana.isPhantom) return window.solana;
+    } catch (_) {}
+    return null;
+  }
+  function getWalletProvider(type) {
+    try {
+      if (type === 'phantom') return getPhantom();
+      if (type === 'solflare') return (window.solflare && window.solflare.isSolflare) ? window.solflare : null;
+      if (type === 'backpack') {
+        const b = window.backpack;
+        if (!b) return null;
+        return typeof b.connect === 'function' ? b : (b.solana && typeof b.solana.connect === 'function' ? b.solana : null);
       }
-    };
-
-    const fn = providers[type];
-    if (!fn) return;
-
-    Promise.resolve()
-      .then(() => fn())
-      .then(session => {
-        setConnectedWalletSession(session, {
-          announce: true,
-          backup: !!session.created
-        });
-      })
-      .catch(err => {
-        if (typeof err === 'string' && err !== 'Redirect') {
-          toast('⚠️', err);
+    } catch (_) {}
+    return null;
+  }
+  function isPhoneDevice() {
+    try { return window.matchMedia('(max-width: 820px), (pointer: coarse) and (max-width: 1024px)').matches || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent); } catch (_) { return false; }
+  }
+  function walletUniversalLink(type, url) {
+    const u = encodeURIComponent(url), r = encodeURIComponent(location.origin);
+    if (type === 'phantom') return 'https://phantom.app/ul/browse/' + u + '?ref=' + r;
+    if (type === 'solflare') return 'https://solflare.com/ul/v1/browse/' + u + '?ref=' + r;
+    if (type === 'backpack') return 'https://backpack.app/ul/v1/browse/' + u + '?ref=' + r;
+    return '';
+  }
+  function walletConnectFailed(type, code, message) {
+    const err = Object.assign(new Error(message), { code: code, type: type });
+    try { window.dispatchEvent(new CustomEvent('ost:wallet-connect-failed', { detail: { type: type, code: code, message: message } })); } catch (_) {}
+    return err;
+  }
+  function mapProviderConnectError(type, e) {
+    const label = WALLET_LABELS[type] || 'the wallet';
+    const code = e && (e.code || (e.error && e.error.code));
+    const msg = String((e && (e.message || e)) || '');
+    if (code === 4001 || /reject|cancel|denied|declin|closed|abort/i.test(msg)) {
+      return walletConnectFailed(type, 'cancelled', 'Connection cancelled in ' + label + '.');
+    }
+    return walletConnectFailed(type, 'failed', label + ' could not connect' + (msg ? ': ' + msg.slice(0, 120) : '.'));
+  }
+  async function connectExtensionWallet(type, opts) {
+    const settings = opts || {};
+    const label = WALLET_LABELS[type] || type;
+    const provider = getWalletProvider(type);
+    if (!provider) {
+      if (!settings.silent && isPhoneDevice()) {
+        // Regular phone browser: hand this page to the wallet's in-app browser
+        // (universal link) — it injects the provider there. Never a vendor homepage.
+        const link = walletUniversalLink(type, location.href.split('#')[0] + '#wallet');
+        if (link) {
+          toast('↗', 'Opening ' + label + ' — connect from inside its app browser.');
+          setTimeout(function () { try { window.location.href = link; } catch (_) {} }, 60);
         }
-      });
+        throw walletConnectFailed(type, 'not_installed', 'Opening ' + label + ' — connect from inside its app browser.');
+      }
+      throw walletConnectFailed(type, 'not_installed', label + ' is not installed in this browser.');
+    }
+    let response;
+    try {
+      response = await (settings.onlyIfTrusted ? provider.connect({ onlyIfTrusted: true }) : provider.connect());
+    } catch (e) {
+      if (settings.silent) throw Object.assign(new Error('not trusted'), { code: 'cancelled' });
+      throw mapProviderConnectError(type, e);
+    }
+    const pk = (response && response.publicKey) || provider.publicKey;
+    if (!pk) throw settings.silent ? Object.assign(new Error('no key'), { code: 'failed' }) : walletConnectFailed(type, 'failed', label + ' did not return an address.');
+    let pkObj;
+    try { pkObj = pk.toBase58 ? toPublicKey(pk.toBase58()) : toPublicKey(String(pk)); }
+    catch (_) { throw walletConnectFailed(type, 'failed', label + ' returned an invalid address.'); }
+    return { kind: 'extension', type: type, label: label, provider: provider, publicKey: pkObj };
   }
 
-  const restoredLocalWalletSession = getLocalWalletSession();
+  function connectWalletApi(type) {
+    const kind = String(type || '').toLowerCase();
+    if (kind === 'local') {
+      const existing = getLocalWalletSession();
+      if (!existing) return createLocalWallet();
+      setConnectedWalletSession(existing, { announce: true });
+      return Promise.resolve(connectedWallet);
+    }
+    if (!WALLET_LABELS[kind]) return Promise.reject(walletConnectFailed(kind, 'failed', 'Unknown wallet type.'));
+    return connectExtensionWallet(kind).then(function (session) {
+      setConnectedWalletSession(session, { announce: true });
+      return connectedWallet;
+    });
+  }
+
+  // Creates a NEW browser wallet only when none exists in this browser (an
+  // existing one is reopened, never overwritten). Opens the backup step; no
+  // automatic download and no "backed up" flag until the user downloads/copies.
+  function createLocalWallet() {
+    if (typeof solanaWeb3 === 'undefined') return Promise.reject(walletConnectFailed('local', 'failed', 'Wallet core is still loading — try again in a second.'));
+    const existing = getLocalWalletSession();
+    if (existing) {
+      setConnectedWalletSession(existing, { announce: true });
+      openWalletHome('home');
+      return Promise.resolve(connectedWallet);
+    }
+    const keypair = solanaWeb3.Keypair.generate();
+    if (!persistLocalWallet(keypair)) return Promise.reject(walletConnectFailed('local', 'failed', 'This browser blocked saving the wallet (storage full or private mode).'));
+    setConnectedWalletSession({ kind: 'local', type: 'local', label: 'OST Browser Wallet', keypair: keypair, publicKey: keypair.publicKey, created: true }, { announce: true, created: true });
+    openWalletHome('backup', { onboarding: true });
+    return Promise.resolve(connectedWallet);
+  }
+
+  // Small in-page confirm (no native dialog: phones and automation handle those badly).
+  function ostConfirm(message, okLabel) {
+    return new Promise(function (resolve) {
+      const wrap = document.createElement('div');
+      wrap.className = 'ost-confirm-overlay';
+      wrap.setAttribute('role', 'dialog');
+      wrap.setAttribute('aria-modal', 'true');
+      wrap.style.cssText = 'position:fixed;inset:0;z-index:2147482000;background:rgba(3,7,18,.6);display:flex;align-items:center;justify-content:center;padding:16px';
+      wrap.innerHTML = '<div style="background:#0f172a;color:#e5e7eb;border:1px solid rgba(255,255,255,.14);border-radius:16px;max-width:380px;width:100%;padding:18px;font:500 14px/1.45 system-ui,sans-serif;box-shadow:0 20px 50px -20px #000">' +
+        '<div class="ost-confirm-msg" style="margin-bottom:14px"></div>' +
+        '<div style="display:flex;gap:10px;justify-content:flex-end"><button type="button" data-v="0" style="padding:9px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.2);background:transparent;color:#e5e7eb;font-weight:700;cursor:pointer">Cancel</button>' +
+        '<button type="button" data-v="1" style="padding:9px 14px;border-radius:10px;border:0;background:#dc2626;color:#fff;font-weight:700;cursor:pointer"></button></div></div>';
+      wrap.querySelector('.ost-confirm-msg').textContent = String(message || 'Are you sure?');
+      wrap.querySelector('[data-v="1"]').textContent = okLabel || 'Confirm';
+      const done = function (v) { try { wrap.remove(); } catch (_) {} resolve(v); };
+      wrap.addEventListener('click', function (e) {
+        const b = e.target.closest('[data-v]');
+        if (b) done(b.getAttribute('data-v') === '1');
+        else if (e.target === wrap) done(false);
+      });
+      document.body.appendChild(wrap);
+      try { wrap.querySelector('[data-v="0"]').focus(); } catch (_) {}
+    });
+  }
+
+  function disconnectWalletApi(opts) {
+    const settings = opts || {};
+    if (!connectedWallet) return Promise.resolve(false);
+    const go = function () { disconnectConnectedWallet({ user: true }); return true; };
+    if (!settings.confirm) return Promise.resolve(go());
+    const isLocal = connectedWalletSession && connectedWalletSession.kind === 'local';
+    return ostConfirm('Disconnect ' + shortAddress(connectedWallet) + ' from OST?' + (isLocal ? ' Your browser wallet stays saved in this browser.' : ''), 'Disconnect')
+      .then(function (ok) { return ok ? go() : false; });
+  }
+
+  // OST_WALLET.address — back-compatible with the ~15 modules that read it as a
+  // PROPERTY (`if (OST_WALLET.address) …`): it is null while disconnected, and
+  // while connected it is a callable handle that also behaves like the address
+  // string (String(), template literals, JSON, `new PublicKey(handle)`).
+  // C1 callers use OST_WALLET.address() — guard it when you may be disconnected:
+  // `OST_WALLET.address && OST_WALLET.address()`, or use OST_WALLET.pubkey().
+  let _addressHandle = null;
+  function addressHandle() {
+    const addr = connectedWallet;
+    if (!addr) return null;
+    if (_addressHandle && _addressHandle.__addr === addr) return _addressHandle;
+    const h = function address() { return connectedWallet || null; };
+    h.__addr = addr;
+    h.toString = h.valueOf = h.toJSON = function () { return addr; };
+    try { h[Symbol.toPrimitive] = function () { return addr; }; } catch (_) {}
+    try { Object.defineProperty(h, 'length', { value: addr.length }); } catch (_) {}
+    ['slice', 'substring', 'trim', 'toLowerCase', 'startsWith', 'endsWith', 'indexOf', 'charAt', 'split', 'replace'].forEach(function (m) {
+      h[m] = function () { return String.prototype[m].apply(addr, arguments); };
+    });
+    try { h._bn = new solanaWeb3.PublicKey(addr)._bn; } catch (_) {}
+    _addressHandle = h;
+    return h;
+  }
+
+  let _walletRequirement = null;
+  function openWalletHome(view, opts) {
+    try {
+      if (window.OST_WALLET_HOME && typeof window.OST_WALLET_HOME.open === 'function') { window.OST_WALLET_HOME.open(view, opts); return; }
+    } catch (_) {}
+    // Wallet home not mounted yet (it loads deferred): leave the request for it
+    // and bring the wallet section up now.
+    window.__ostWalletHomeWant = { view: view, opts: opts || {} };
+    try { if (window.OST_COMPARTMENTS && typeof window.OST_COMPARTMENTS.activate === 'function') window.OST_COMPARTMENTS.activate('wallet', false); } catch (_) {}
+    try { if (typeof window.setWalletPanel === 'function') window.setWalletPanel('access', { scroll: true }); } catch (_) {}
+  }
+  function requireWallet(opts) {
+    const settings = opts || {};
+    if (connectedWallet) {
+      if (_walletRequirement && Date.now() - _walletRequirement.at > 10 * 60000) _walletRequirement = null;
+      return Promise.resolve(connectedWallet);
+    }
+    const reason = String(settings.reason || 'start');
+    // A free-text reason ("Cash out OST to SOL") doubles as the label.
+    const label = settings.label || WALLET_REASON_LABELS[reason] ||
+      (/\s/.test(reason) ? reason.charAt(0).toLowerCase() + reason.slice(1) : '');
+    // Where the gate was (section + the tapped control), so the resumed action
+    // lands the user back on the card they started from, not in the wallet.
+    let returnTo = null, anchor = null, panel = null, hash = '';
+    try { const C = window.OST_COMPARTMENTS; if (C && C.active && C.active !== 'wallet') returnTo = C.active; } catch (_) {}
+    // WAL-8: markets (#markets -> 'predict') and the bridge ('convert') live
+    // INSIDE the wallet compartment. Opening the wallet home switches the panel
+    // to 'access', so remember the panel too and restore it before resuming.
+    try {
+      const C = window.OST_COMPARTMENTS;
+      if ((!C || !C.active || C.active === 'wallet') && typeof window.getWalletPanel === 'function') {
+        const p = window.getWalletPanel();
+        if (p && p !== 'access') { panel = p; returnTo = 'wallet'; }
+      }
+    } catch (_) {}
+    try { hash = String(location.hash || ''); } catch (_) {}
+    try { const ae = document.activeElement; if (ae && ae !== document.body && !(ae.closest && ae.closest('#ostWalletHome'))) anchor = ae; } catch (_) {}
+    return new Promise(function (resolve) {
+      // A newer gate replaces an older pending one (the older promise just never settles).
+      _walletRequirement = { reason: reason, label: label, resume: typeof settings.resume === 'function' ? settings.resume : null, resolve: resolve, at: Date.now(), returnTo: returnTo, anchor: anchor, panel: panel, hash: hash };
+      openWalletHome('start', { reason: reason, label: label });
+    });
+  }
+  function resumeWalletRequirement() {
+    const req = _walletRequirement;
+    if (!req || !connectedWallet) return false;
+    _walletRequirement = null;
+    const addr = connectedWallet;
+    let restoredPanel = false;
+    setTimeout(function () {
+      // A plain "Start" stays in the wallet; a gate goes back to its own card.
+      if (req.resume && req.reason !== 'start') {
+        try { const C = window.OST_COMPARTMENTS; if (req.returnTo && C && C.active !== req.returnTo) C.activate(req.returnTo, false); } catch (_) {}
+        // WAL-8: back to the wallet panel the gate was opened from (markets /
+        // convert), so the resumed sheet or card is actually on screen.
+        if (req.panel && typeof window.setWalletPanel === 'function') {
+          const anchorShown = !!(req.anchor && req.anchor.isConnected && req.anchor.offsetParent !== null);
+          try { window.setWalletPanel(req.panel, { scroll: !anchorShown }); restoredPanel = true; } catch (_) {}
+          try { if (req.panel === 'predict' && /^#(markets|live-bet|predictions|wallet-panel-predict)\b/.test(req.hash || '')) history.replaceState(null, '', '#markets'); } catch (_) {}
+        }
+        try { if (req.anchor && req.anchor.isConnected && req.anchor.offsetParent !== null) req.anchor.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (_) {}
+      }
+      // Let a just-restored panel lay out before the resumed action opens on it.
+      setTimeout(function () {
+        try { if (req.resume) req.resume(addr); } catch (e) { console.warn('[OST] wallet gate resume failed', e); }
+        try { req.resolve(addr); } catch (_) {}
+      }, restoredPanel ? 140 : 0);
+    }, 0);
+    return true;
+  }
+  function pendingWalletRequirement() {
+    const req = _walletRequirement;
+    return req ? { reason: req.reason, label: req.label, hasResume: !!req.resume, at: req.at } : null;
+  }
+
+  // Legacy internal entry points now route to the single path.
+  function connectWallet(type) {
+    if (type === 'local' && !readStoredLocalWallet()) return createLocalWallet().catch(function (e) { toast('⚠️', e && e.message); });
+    return connectWalletApi(type).catch(function (e) {
+      if (e && e.code === 'not_installed' && isPhoneDevice()) return;
+      toast(e && e.code === 'cancelled' ? 'ℹ️' : '⚠️', (e && e.message) || 'Could not connect the wallet.');
+    });
+  }
+
+  // ---- BOOT: restore the wallet the user actually chose (WAL-4) -------------
+  //  - explicit disconnect last time      -> stay disconnected
+  //  - last used an extension (Phantom…)  -> silently re-adopt ONLY that provider;
+  //                                          if it isn't trusted, stay disconnected
+  //                                          (never fall back to the browser wallet)
+  //  - last used the browser wallet, or no record yet (older installs) -> restore it
+  const bootWalletLast = readWalletLast();
+  const bootUserDisconnected = walletUserDisconnected();
+  const restoredLocalWalletSession = (!bootUserDisconnected && !(bootWalletLast && bootWalletLast.kind === 'extension'))
+    ? getLocalWalletSession() : null;
+  // Re-announce for modules that load after app.js (they miss the first event).
+  var reannounceWallet = function () {
+    if (!connectedWallet) return;   // only ever re-syncs an EXISTING session
+    try { window.dispatchEvent(new CustomEvent('ost:wallet-changed', { detail: walletStateSnapshot() })); } catch (_) {}
+    try { if (typeof window.syncConnectedWalletUi === 'function') window.syncConnectedWalletUi(); } catch (_) {}
+    try { if (typeof window.syncPredictionMarketTradeWallet === 'function') window.syncPredictionMarketTradeWallet(); } catch (_) {}
+    try { if (typeof window.syncWalletJourneyUi === 'function') window.syncWalletJourneyUi(); } catch (_) {}
+    try { setWalletButtonState(connectedWallet); } catch (_) {}
+  };
+  var reannounceWired = false;
+  var scheduleWalletReannounce = function () {
+    if (document.readyState === 'complete') setTimeout(reannounceWallet, 0);
+    else window.addEventListener('load', reannounceWallet, { once: true });
+    [300, 900, 1800, 3500, 6000].forEach(function (d) { setTimeout(reannounceWallet, d); });
+    if (reannounceWired) return;
+    reannounceWired = true;
+    window.addEventListener('pageshow', function () { reannounceWallet(); });
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) reannounceWallet(); });
+    window.addEventListener('focus', function () { reannounceWallet(); });
+  };
   if (restoredLocalWalletSession) {
     setConnectedWalletSession(restoredLocalWalletSession, { announce: false });
 
@@ -4549,52 +5920,36 @@
     //
     // Re-announce once the page has fully loaded, when every module is listening.
     // Idempotent: it only re-syncs UI from the session that already exists.
-    var reannounceWallet = function () {
-      if (!connectedWallet) return;   // only ever re-syncs an EXISTING session
-      try { window.dispatchEvent(new CustomEvent('ost:wallet-changed')); } catch (_) {}
-      try { if (typeof window.syncConnectedWalletUi === 'function') window.syncConnectedWalletUi(); } catch (_) {}
-      try { if (typeof window.syncPredictionMarketTradeWallet === 'function') window.syncPredictionMarketTradeWallet(); } catch (_) {}
-      try { if (typeof window.syncWalletJourneyUi === 'function') window.syncWalletJourneyUi(); } catch (_) {}
-      try { setWalletButtonState(connectedWallet); } catch (_) {}
-    };
-    if (document.readyState === 'complete') setTimeout(reannounceWallet, 0);
-    else window.addEventListener('load', reannounceWallet, { once: true });
-    // Late-loaded modules (wallet-extras, ost-card, topup, appbar…) register their
-    // listeners AFTER app.js and miss the first announce — fire several more times
-    // so NONE render "disconnected" over a live session. Idempotent.
-    [300, 900, 1800, 3500, 6000].forEach(function (d) { setTimeout(reannounceWallet, d); });
-    // The exact moment users hit the bug: coming BACK (PWA foreground, tab switch,
-    // bfcache restore, refresh). Re-sync on every re-show/visible.
-    window.addEventListener('pageshow', function () { reannounceWallet(); });
-    document.addEventListener('visibilitychange', function () { if (!document.hidden) reannounceWallet(); });
-    window.addEventListener('focus', function () { reannounceWallet(); });
-  } else {
-    // EAGER EXTENSION RECONNECT — the other half of "wallet not detected on
-    // refresh". A tester who already linked Phantom/Solflare/Backpack should not
-    // have to reconnect every reload. connect({onlyIfTrusted:true}) re-adopts an
-    // ALREADY-authorized extension with NO popup (it rejects silently if the site
-    // isn't pre-approved). Providers can inject after our script, so retry briefly.
+    scheduleWalletReannounce();
+  } else if (!bootUserDisconnected) {
+    // EAGER EXTENSION RECONNECT (no popup): connect({onlyIfTrusted:true}) re-adopts
+    // an ALREADY-authorized extension. WAL-6: probe ONLY the last-used provider
+    // (older installs with no record probe the detected ones once). Providers can
+    // inject after our script, so retry a few times; on failure stay disconnected.
     (function eagerReconnectExtension() {
-      var tryOne = function (provider, type, label) {
-        if (!provider || connectedWallet || typeof provider.connect !== 'function') return Promise.resolve(false);
-        return Promise.resolve().then(function () { return provider.connect({ onlyIfTrusted: true }); })
-          .then(function (resp) {
-            var pkObj = (resp && resp.publicKey) || provider.publicKey;
-            if (!pkObj || connectedWallet) return false;
-            setConnectedWalletSession({ kind: 'extension', type: type, label: label, provider: provider, publicKey: pkObj }, { announce: false });
+      var types = !bootWalletLast ? ['phantom', 'solflare', 'backpack']
+        : (bootWalletLast.kind === 'extension' && WALLET_LABELS[bootWalletLast.type] ? [bootWalletLast.type] : []);
+      if (!types.length) return;
+      var tried = {};
+      var tryOne = function (type) {
+        if (connectedWallet || tried[type] || !getWalletProvider(type)) return Promise.resolve(false);
+        tried[type] = true;   // one silent probe per provider per page load
+        return connectExtensionWallet(type, { onlyIfTrusted: true, silent: true })
+          .then(function (session) {
+            if (connectedWallet) return false;
+            setConnectedWalletSession(session, { announce: false });
+            scheduleWalletReannounce();
             return true;
           })
-          .catch(function () { return false; });   // not pre-approved / user never linked -> stay disconnected, no popup
+          .catch(function () { return false; });   // not pre-approved -> stay disconnected, no popup
       };
       var attempt = function () {
         if (connectedWallet) return;
-        tryOne(window.solana && window.solana.isPhantom ? window.solana : null, 'phantom', 'Phantom')
-          .then(function (ok) { return ok || tryOne(window.solflare && window.solflare.isSolflare ? window.solflare : null, 'solflare', 'Solflare'); })
-          .then(function (ok) { return ok || tryOne(window.backpack || null, 'backpack', 'Backpack'); });
+        types.reduce(function (chain, type) { return chain.then(function (ok) { return ok || tryOne(type); }); }, Promise.resolve(false));
       };
       attempt();
       var tries = 0;
-      var iv = setInterval(function () { if (connectedWallet || ++tries > 6) { clearInterval(iv); return; } attempt(); }, 500);
+      var iv = setInterval(function () { if (connectedWallet || ++tries > 6 || types.every(function (t) { return tried[t]; })) { clearInterval(iv); return; } attempt(); }, 500);
       window.addEventListener('load', attempt, { once: true });
     })();
   }
@@ -5258,7 +6613,9 @@
         localStorage.setItem('ost_prefs', JSON.stringify(prefs));
       } catch (_) {}
     }
-    ['calcCurrency', 'transferFrom', 'paCurrency', 'gc2Currency', 'smBrokerCurrency'].forEach(function(id) {
+    // SOL-2: the Convert tab's "From" is NOT tied to the display currency (it
+    // opened on "$ US Dollar", a quote-only route). It defaults to Solana.
+    ['calcCurrency', 'paCurrency', 'gc2Currency', 'smBrokerCurrency'].forEach(function(id) {
       setCurrencySelectValue(id, curr);
     });
     try { updateProductOSTPrices(); } catch (_) {}
@@ -5631,6 +6988,11 @@
   setTimeout(updateCharts, 500);
   syncOstDevnetMetrics({ force: true });
   setInterval(function() {
+    if (document.hidden) return;   // NET-3: visible tabs only
+    if (window.OST_IDLE_GUARD && typeof OST_IDLE_GUARD.isGated === 'function' && OST_IDLE_GUARD.isGated()) return;
+    // NET-3: 4 RPC reads per refresh — only while the metrics are on screen.
+    const shown = ['#ostMarketVolume', '#chart-ost', '#ostLivePrice'].some(function (sel) { const el = $(sel); return !!(el && el.offsetParent !== null); });
+    if (!shown) return;
     syncOstDevnetMetrics();
   }, OST_DEVNET_METRICS_REFRESH_MS);
 
@@ -5991,36 +7353,66 @@
     }
   }
 
+  // C7: money paths price from ONE source — OST_CONVERT_PRICE (wallet-extras):
+  // the fixed devnet conversion rate and the /topup/config SOL price. Never the
+  // display index (`ostPrice`) and never a fallback constant (`prices.solana ||
+  // 170` made a 0.0084 SOL entry sign 0.011861 SOL). Unknown -> 0 (no order).
+  function convertSolUsd() {
+    try { const v = Number(window.OST_CONVERT_PRICE && window.OST_CONVERT_PRICE.solUsd()); if (Number.isFinite(v) && v > 0) return v; } catch (_) {}
+    return 0;
+  }
+  function convertOstUsd() {
+    try { const v = Number(window.OST_CONVERT_PRICE && window.OST_CONVERT_PRICE.ostUsd()); if (Number.isFinite(v) && v > 0) return v; } catch (_) {}
+    return 0;
+  }
   function getConvertUsdValue(amountValue, currencyValue) {
     const amount = Number(amountValue) || 0;
     const curr = String(currencyValue || '').toUpperCase();
     if (amount <= 0) return 0;
     if (curr === 'BTC') return amount * (prices.bitcoin || 105000);
     if (curr === 'ETH') return amount * (prices.ethereum || 3800);
-    if (curr === 'SOL') return amount * (prices.solana || 170);
+    // Rounded to cents exactly like the quote line (wallet-extras), so the order,
+    // the quote and the signed SOL agree.
+    if (curr === 'SOL') { const s = convertSolUsd(); return s ? Math.round(amount * s * 100) / 100 : 0; }
     if (curr === 'BNB') return amount * 650;
     if (curr === 'USDC' || curr === 'USDT' || curr === 'USD') return amount;
     return amount / (fiatRates[curr] || 1);
   }
 
+  // SOL-2 / SOL-3: the detailed quote (rate, fee, "You will sign …", minimum) is
+  // written under the amount by ONE writer — wallet-extras for SOL/USDC,
+  // swap-resilient for OST. The To box only names the asset you receive and
+  // mirrors that same number (same price source), never a second quote.
   function updateTransferPreview() {
     if (!transferAmount || !transferFrom || !transferResult) return;
     const amount = parseFloat(transferAmount.value) || 0;
-    const curr = transferFrom.value;
+    const curr = String(transferFrom.value || '').toUpperCase();
+    const toName = document.querySelector('.ct-to .ct-ost-name');
+    if (toName) toName.textContent = curr === 'OST' ? 'Devnet SOL' : 'Devnet OST';
     if (amount <= 0) {
-      transferResult.textContent = translations[currentLang]?.['transfer.result'] || 'Private & Instant';
+      transferResult.textContent = curr === 'OST' ? 'Cash out OST to devnet SOL' : 'Delivered on-chain';
       resetConvertStepState();
       return;
     }
+    if (curr === 'OST') {
+      let q = null;
+      try { q = window.OST_SWAP_RESILIENT && window.OST_SWAP_RESILIENT.quoteOstToSol ? window.OST_SWAP_RESILIENT.quoteOstToSol(amount) : null; } catch (_) { q = null; }
+      transferResult.textContent = q && Number.isFinite(q.sol) ? '≈ ' + Number(q.sol).toLocaleString(undefined, { maximumFractionDigits: 6 }) + ' SOL' : 'SOL quote loading…';
+      return;
+    }
     const usdValue = getConvertUsdValue(amount, curr);
-    const ostOut = usdValue / ostPrice;
+    const ostUsd = convertOstUsd();
+    if (!(usdValue > 0) || !ostUsd) { transferResult.textContent = 'Quote loading…'; return; }
+    const ostOut = usdValue / ostUsd;
     let formatted;
     if (ostOut >= 1e9) formatted = (ostOut / 1e9).toFixed(2) + 'B';
     else if (ostOut >= 1e6) formatted = (ostOut / 1e6).toFixed(2) + 'M';
     else if (ostOut >= 1e3) formatted = (ostOut / 1e3).toFixed(1) + 'K';
     else formatted = ostOut.toFixed(2);
-    transferResult.textContent = `≈ ${formatted} OST (${formatFiatFromUsd(usdValue)})`;
+    const quoteOnly = !['SOL', 'USDC'].includes(curr);
+    transferResult.textContent = (quoteOnly ? 'Quote only ≈ ' : '≈ ') + formatted + ' OST';
   }
+  window.addEventListener('ost:convert-price', function () { try { updateTransferPreview(); } catch (_) {} });
 
   const convertProviders = $('#convertProviders');
   const convertProvidersLabel = convertProviders ? convertProviders.querySelector('.ct-prov-label') : null;
@@ -6063,6 +7455,16 @@
     }
 
     const intent = convertPendingOrder.intent;
+    // SOL-4: the payment rail saves the signature the moment it exists (before
+    // any confirm). Adopt it, so this desk can never offer a second payment.
+    try {
+      const saved = window.OST_TOPUP && typeof window.OST_TOPUP.getPending === 'function' ? window.OST_TOPUP.getPending() : null;
+      if (saved && saved.id === intent.id && saved.paymentRef && !convertPendingOrder.paymentRef) {
+        convertPendingOrder.paymentRef = saved.paymentRef;
+        convertPendingOrder.paymentAsset = saved.paymentAsset || convertPendingOrder.paymentAsset;
+        convertPendingOrder.paymentAmount = Number(saved.paymentAmount || convertPendingOrder.paymentAmount || 0);
+      }
+    } catch (_) {}
     const settlementAsset = convertPendingOrder.settlementAsset || getConvertSettlementAsset(convertPendingOrder.sourceCurrency);
     let settlement = null;
     try {
@@ -6078,13 +7480,13 @@
     convertTopupPayBtn.textContent = convertPendingOrder.claimPending
       ? 'Retry final claim sync'
       : verificationPending
-      ? 'Verification pending (use Refresh)'
+      ? 'Payment sent — verifying'
       : convertPendingOrder.mode === 'stripe'
       ? 'Open card checkout'
       : settlementAsset === 'USDC'
         ? 'Pay exact USDC from wallet'
         : 'Pay exact SOL from wallet';
-    convertTopupPayBtn.disabled = convertPendingOrder.claimPending
+    convertTopupPayBtn.disabled = convertBusy ? true : convertPendingOrder.claimPending
       ? !connectedWalletSession || !window.OST_TOPUP
       : verificationPending
       ? true
@@ -6101,7 +7503,7 @@
     if (convertPendingOrder.claimPending) {
       lines.push('OST was already delivered locally. Retry the final claim sync below. Do not pay again.');
     } else if (verificationPending) {
-      lines.push('Treasury payment already submitted. Verification is pending; use Refresh status below and do not sign another payment.');
+      lines.push('Payment sent' + (convertPendingOrder.paymentRef ? ' (tx ' + summarizeConvertValue(convertPendingOrder.paymentRef, 6, 4) + ')' : '') + ' — verifying. Use Refresh status below; do not sign another payment.');
     } else if (convertPendingOrder.mode === 'stripe') {
       lines.push('Complete the live card checkout, then return here and refresh status if delivery does not finish automatically.');
     } else if (fiatCurrencies.includes(String(convertPendingOrder.sourceCurrency || '').toUpperCase())) {
@@ -6119,10 +7521,13 @@
     return (network === 'mainnet-beta' || network === 'mainnet') ? 'Solana mainnet' : 'Solana devnet';
   }
 
-  function clearConvertPendingOrder() {
+  function clearConvertPendingOrder(opts) {
+    // Delivered orders are cleared BY ID (rails keeps a sent-but-unverified
+    // payment on a blanket clear — SOL-4); an unpaid order clears either way.
+    const deliveredId = opts && opts.delivered && convertPendingOrder && convertPendingOrder.intent ? convertPendingOrder.intent.id : '';
     convertPendingOrder = null;
     if (window.OST_TOPUP && typeof window.OST_TOPUP.clearPending === 'function') {
-      window.OST_TOPUP.clearPending();
+      window.OST_TOPUP.clearPending(deliveredId || undefined);
     }
     setConvertTopupStatus('No active payment order.', 'neutral');
     renderConvertTopupDesk();
@@ -6147,6 +7552,7 @@
           settlementAsset: order.settlementAsset || 'SOL',
           sourceCurrency: order.sourceCurrency || '',
           sourceAmount: Number(order.sourceAmount || 0),
+          solAmount: Number(order.solAmount || 0) > 0 ? Number(order.solAmount) : undefined,
           checkoutUrl: order.checkoutUrl || '',
           claimPending: !!order.claimPending,
           deliverySignature: order.deliverySignature || ''
@@ -6177,7 +7583,7 @@
     launchConfetti();
     updateWalletBalance(connectedWallet);
     maybePromptConvertBackup();
-    clearConvertPendingOrder();
+    clearConvertPendingOrder({ delivered: true });
     updateConvertProviders();
   }
 
@@ -6234,12 +7640,18 @@
     } catch (_) {}
   }
 
+  // Editing the form drops an UNPAID order only. An order whose payment was
+  // already sent stays (SOL-4): forgetting it would allow paying twice.
+  function convertOrderIsUnpaid() {
+    return !!(convertPendingOrder && convertPendingOrder.intent && !convertPendingOrder.claimPending &&
+      !convertPendingOrder.paymentRef && !convertPendingOrder.deliverySignature && !convertPaymentVerifying());
+  }
   if (transferAmount) transferAmount.addEventListener('input', () => {
-    if (convertPendingOrder && convertPendingOrder.intent && !convertPendingOrder.claimPending) clearConvertPendingOrder();
+    if (convertOrderIsUnpaid()) clearConvertPendingOrder();
     updateTransferPreview();
   });
   if (transferFrom) transferFrom.addEventListener('change', () => {
-    if (convertPendingOrder && convertPendingOrder.intent && !convertPendingOrder.claimPending) clearConvertPendingOrder();
+    if (convertOrderIsUnpaid()) clearConvertPendingOrder();
     updateTransferPreview();
     updateConvertProviders();
   });
@@ -6253,9 +7665,17 @@
       try { topupConfig = await window.OST_TOPUP.loadConfig(); } catch (_) { topupConfig = null; }
     }
 
+    // SOL-3: OST -> SOL cash-out is owned by swap-resilient (quote + action);
+    // this only keeps the label/route honest and never offers a payment order.
+    if (curr === 'OST') {
+      if (transferBtnLabel) transferBtnLabel.textContent = 'Cash out to SOL';
+      convertProviders.style.display = 'none';
+      setConvertRouteMessage('Cash out devnet OST to devnet SOL from the pool. You sign the OST amount; the network fee is paid by OST. Solana keeps at least 0.00089 SOL in a new account, so a first cash-out is at least ~9.2 OST.');
+      return;
+    }
     if (transferBtnLabel) {
       if (!connectedWalletSession || !connectedWalletSession.publicKey) {
-        transferBtnLabel.textContent = 'Connect wallet to buy';
+        transferBtnLabel.textContent = 'Create free wallet / Connect';
       } else if (curr === 'SOL') {
         transferBtnLabel.textContent = 'Pay SOL for OST';
       } else if (curr === 'USDC') {
@@ -6287,8 +7707,8 @@
 
     if (curr === 'SOL') {
       setConvertRouteMessage(connectedWalletSession
-        ? 'This is a real SOL treasury payment on ' + getConvertRailNetworkLabel() + '. The connected wallet signs the payment and receives devnet OST back after verification.'
-        : 'Connect a wallet first. The same wallet address signs the treasury payment on ' + getConvertRailNetworkLabel() + ' and receives devnet OST delivery.');
+        ? 'Devnet test rail: your wallet sends devnet SOL to the OST treasury on ' + getConvertRailNetworkLabel() + ' and receives devnet OST back after verification. No real money.'
+        : 'Create or connect a wallet first. The same wallet signs the devnet SOL payment on ' + getConvertRailNetworkLabel() + ' and receives devnet OST.');
     } else if (curr === 'USDC') {
       setConvertRouteMessage(connectedWalletSession
         ? 'This is a real USDC treasury payment on ' + getConvertRailNetworkLabel() + '. The connected wallet signs the token transfer and receives devnet OST back after verification.'
@@ -6304,8 +7724,52 @@
     }
   }
 
+  // SOL-4 (review): ONE in-flight lock for both payment buttons. A double tap
+  // used to create two orders and sign two SOL payments (a browser wallet signs
+  // without a prompt). Both buttons are disabled from the first tap until the
+  // attempt settles, and a click while busy does nothing.
+  var convertBusy = false;   // var: renderConvertTopupDesk (defined above) reads it
+  function setConvertBusy(on) {
+    convertBusy = !!on;
+    [transferBtn, convertTopupPayBtn].forEach(function (b) {
+      if (!b) return;
+      if (on) { b.disabled = true; b.setAttribute('aria-busy', 'true'); }
+      else b.removeAttribute('aria-busy');
+    });
+    if (!on) {
+      if (transferBtn) transferBtn.disabled = false;
+      renderConvertTopupDesk();   // the desk decides its own enabled state
+    }
+  }
+  // A payment that was SENT (signature saved before submit) and not delivered
+  // yet. While one exists, no new SOL/USDC order may be paid on top of it.
+  function convertPaymentVerifying() {
+    try {
+      const saved = window.OST_TOPUP && typeof window.OST_TOPUP.getPending === 'function' ? window.OST_TOPUP.getPending() : null;
+      if (saved && saved.id && saved.paymentRef && !saved.claimPending) return saved;
+    } catch (_) {}
+    if (convertPendingOrder && convertPendingOrder.intent && !convertPendingOrder.claimPending && (convertPendingOrder.paymentRef || convertPendingOrder.deliverySignature)) {
+      return { id: convertPendingOrder.intent.id, paymentRef: convertPendingOrder.paymentRef || convertPendingOrder.deliverySignature };
+    }
+    return null;
+  }
+  function convertErrorText(error, stage) {
+    try {
+      if (window.OST_MONEY_ERRORS && typeof window.OST_MONEY_ERRORS.text === 'function') {
+        const t0 = window.OST_MONEY_ERRORS.text(error, { stage: stage || 'submit' });
+        if (t0) return String(t0);
+      }
+      if (window.OST_MONEY_ERRORS && typeof window.OST_MONEY_ERRORS.humanize === 'function') {
+        const h = window.OST_MONEY_ERRORS.humanize(error);
+        if (h && h.title) return h.title + (h.body ? ' ' + h.body : '');
+      }
+    } catch (_) {}
+    return (error && error.message) || String(error || 'Something went wrong');
+  }
+
   if (convertTopupPayBtn) {
     convertTopupPayBtn.addEventListener('click', async () => {
+      if (convertBusy) return;
       if (!convertPendingOrder || !convertPendingOrder.intent || !convertPendingOrder.intent.id) return;
       if (convertPendingOrder.mode === 'stripe') {
         if (convertPendingOrder.checkoutUrl) {
@@ -6315,8 +7779,8 @@
         return;
       }
       if (!connectedWalletSession || !connectedWalletSession.publicKey) {
-        if (window.setWalletPanel) window.setWalletPanel('access', { scroll: true });
         setConvertTopupStatus('Connect the payout wallet first, then settle the order.', 'error');
+        requireWallet({ reason: 'convert', label: 'settle this OST order', resume: function () { try { if (typeof window.setWalletPanel === 'function') window.setWalletPanel('convert', { scroll: true }); renderConvertTopupDesk(); } catch (_) {} } });
         return;
       }
       if (!window.OST_TOPUP || typeof window.OST_TOPUP.settleIntent !== 'function') {
@@ -6331,6 +7795,8 @@
       }
 
       const settlementAsset = convertPendingOrder.settlementAsset || 'SOL';
+      const orderId = convertPendingOrder.intent.id;
+      setConvertBusy(true);
       try {
         if (convertPendingOrder.claimPending) {
           setConvertTopupStatus('Retrying final claim sync...', 'warning');
@@ -6339,8 +7805,9 @@
           setConvertTopupStatus('Signing ' + settlementAsset + ' treasury payment on ' + getConvertRailNetworkLabel() + '...', 'warning');
           transferResult.textContent = 'Submitting ' + settlementAsset + ' treasury payment...';
         }
+        setConvertRouteMessage('Paying order ' + summarizeConvertValue(orderId, 8, 6) + ' — keep this page open.');
         await pulseConvertSteps(2);
-        const result = await window.OST_TOPUP.settleIntent(convertPendingOrder.intent.id, settlementAsset);
+        const result = await window.OST_TOPUP.settleIntent(orderId, settlementAsset);
         if (result && result.pendingVerification) {
           convertPendingOrder.paymentRef = (result.payment && result.payment.signature) || convertPendingOrder.paymentRef || '';
           convertPendingOrder.paymentAsset = (result.payment && result.payment.asset) || convertPendingOrder.paymentAsset || settlementAsset;
@@ -6355,11 +7822,24 @@
         await pulseConvertSteps(3);
         handleConvertTopupSuccess(result, settlementAsset);
       } catch (error) {
-        const message = (error && error.message) || String(error || 'Treasury payment failed');
+        const message = convertErrorText(error, 'submit');
+        // A signature saved before submit means the payment may be on chain:
+        // lock the order as "verifying", never "failed — pay again".
+        const sent = convertPaymentVerifying();
+        if (sent && sent.id === orderId) {
+          if (convertPendingOrder && convertPendingOrder.intent && convertPendingOrder.intent.id === orderId && !convertPendingOrder.paymentRef) convertPendingOrder.paymentRef = sent.paymentRef;
+          renderConvertTopupDesk();
+          transferResult.textContent = 'Payment sent — verifying';
+          setConvertRouteMessage('Your payment was sent. OST is checking it on devnet; delivery completes automatically. Do not pay again — use Refresh status.');
+          setConvertTopupStatus('Payment sent — verifying. Do not pay again.', 'warning');
+          return;
+        }
         transferResult.textContent = 'Payment failed: ' + message;
         setConvertRouteMessage('Could not settle the live OST order. ' + message);
         setConvertTopupStatus(message, 'error');
         toast('⚠', message);
+      } finally {
+        setConvertBusy(false);
       }
     });
   }
@@ -6377,7 +7857,17 @@
   }
 
   if (transferBtn) {
+    // SOL-4: one attempt at a time (see setConvertBusy). The lock is taken
+    // synchronously on the click, before the first await, and released when
+    // the attempt settles.
     transferBtn.addEventListener('click', async () => {
+      if (convertBusy) return;
+      setConvertBusy(true);
+      try { await runTransferAttempt(); } finally { setConvertBusy(false); }
+    });
+  }
+  async function runTransferAttempt() {
+    {
       const amount = parseFloat(transferAmount?.value) || 0;
       const curr = String(transferFrom?.value || 'SOL').toUpperCase();
       const isFiat = fiatCurrencies.includes(curr);
@@ -6391,12 +7881,44 @@
       }
 
       if (!connectedWalletSession || !connectedWalletSession.publicKey) {
-        if (window.setWalletPanel) window.setWalletPanel('access', { scroll: true });
-        transferResult.textContent = 'Connect a wallet first to create a live OST order.';
-        setConvertRouteMessage('The converter now ties every live order to a real wallet address. Create or connect the delivery wallet first.');
-        toast('👛', 'Create or connect the payout wallet first');
         resetConvertStepState();
+        // WAL-8 / C9: the real create/connect path, then back to this form.
+        requireWallet({
+          reason: 'convert', label: 'convert to OST',
+          resume: function () {
+            try { if (typeof window.setWalletPanel === 'function') window.setWalletPanel('convert', { scroll: true }); } catch (_) {}
+            try { updateConvertProviders(); updateTransferPreview(); } catch (_) {}
+          }
+        });
         return;
+      }
+
+      if (curr === 'SOL' && !(convertSolUsd() > 0)) {
+        transferResult.textContent = 'SOL price loading…';
+        setConvertRouteMessage('The devnet SOL price has not loaded yet, so no order was created. Try again in a few seconds.');
+        toast('⚠️', 'The SOL price is still loading — nothing was created. Try again in a few seconds.');
+        return;
+      }
+
+      // SOL-1 / SOL-2: check the SOL balance BEFORE creating an order (a 0-SOL
+      // wallet used to get an order and a stale "Pay exact SOL" desk).
+      if (curr === 'SOL') {
+        let lamports = null;
+        try { lamports = await rpcCall(function (c) { return c.getBalance(connectedWalletSession.publicKey); }); } catch (_) { lamports = null; }
+        const need = Math.round(amount * 1e9);
+        if (typeof lamports === 'number' && lamports < need) {
+          const have = lamports / 1e9;
+          transferResult.textContent = 'Need ' + amount + ' SOL';
+          setConvertRouteMessage('Need ' + amount + ' SOL — this wallet has ' + have.toFixed(6) + ' SOL. Nothing was created. OST actions never need SOL; to get devnet SOL, cash out at least 10 OST → SOL.');
+          try {
+            if (typeof window.OST_NOTIFY === 'function') {
+              window.OST_NOTIFY({ kind: 'warn', title: 'Need ' + amount + ' SOL — you have ' + have.toFixed(4) + ' SOL.', body: 'Nothing was created. Get devnet SOL by cashing out OST.',
+                action: { label: 'Get SOL: cash out 10 OST', run: function () { if (window.OST_GET_SOL && typeof window.OST_GET_SOL.open === 'function') window.OST_GET_SOL.open(10); } } });
+            } else toast('⚠️', 'Need ' + amount + ' SOL — you have ' + have.toFixed(4) + ' SOL. Nothing was created.');
+          } catch (_) {}
+          resetConvertStepState();
+          return;
+        }
       }
 
       if (!window.OST_TOPUP || typeof window.OST_TOPUP.createIntent !== 'function') {
@@ -6406,22 +7928,42 @@
         return;
       }
 
+      // SOL-4: a payment that was already sent and is still being verified
+      // blocks every new order (a late landing would be a second payment, and a
+      // new order would also overwrite the saved record of the first one).
+      const verifying = convertPaymentVerifying();
+      if (verifying) {
+        if (!convertPendingOrder || !convertPendingOrder.intent || convertPendingOrder.intent.id !== verifying.id) {
+          try { await syncStoredConvertOrder(); } catch (_) {}
+        } else renderConvertTopupDesk();
+        transferResult.textContent = 'Payment sent — verifying';
+        setConvertRouteMessage('Your last payment (tx ' + summarizeConvertValue(verifying.paymentRef, 6, 4) + ') is still being verified. Use Refresh status below — do not pay again.');
+        setConvertTopupStatus('Payment sent — verifying. Use Refresh status; do not pay again.', 'warning');
+        try { if (convertProviders) convertProviders.style.display = 'block'; } catch (_) {}
+        return;
+      }
+
       try {
         const walletAddress = connectedWalletSession.publicKey.toBase58();
         const settlementAsset = curr === 'USDC' ? 'USDC' : 'SOL';
+        // A new attempt starts clean: no "Nothing was paid." from an earlier one.
+        setConvertRouteMessage('Creating your order…');
 
         if (curr === 'SOL' || curr === 'USDC') {
           await pulseConvertSteps(1);
-          const intent = await window.OST_TOPUP.createIntent({ usd: usdValue, method: 'crypto', wallet: walletAddress });
+          // Rails request: pass the typed SOL so the order is priced from it.
+          const intent = await window.OST_TOPUP.createIntent({ usd: usdValue, method: 'crypto', wallet: walletAddress, solAmount: curr === 'SOL' ? amount : undefined });
           rememberConvertPendingOrder({
             intent: Object.assign({}, intent, { usd: usdValue }),
             mode: 'crypto',
             settlementAsset: curr,
             sourceCurrency: curr,
             sourceAmount: amount,
+            solAmount: curr === 'SOL' ? amount : undefined,
             usdValue: usdValue,
             paymentRef: ''
           });
+          setConvertRouteMessage('Paying ' + amount + ' ' + curr + ' for order ' + summarizeConvertValue(intent.id, 8, 6) + ' — keep this page open.');
           setConvertTopupStatus('Signing ' + curr + ' treasury payment on ' + getConvertRailNetworkLabel() + '...', 'warning');
           transferResult.textContent = 'Authorizing ' + amount + ' ' + curr + ' on ' + getConvertRailNetworkLabel() + '...';
           await pulseConvertSteps(2);
@@ -6488,13 +8030,29 @@
         setConvertTopupStatus('Payment order created. The memo and delivery wallet are now locked.', 'warning');
         updateConvertProviders();
       } catch (error) {
-        const message = (error && error.message) || String(error || 'Could not create the live OST order');
-        transferResult.textContent = 'Purchase failed: ' + message;
-        setConvertRouteMessage('OST could not create or settle the live payment order. ' + message);
-        setConvertTopupStatus(message, 'error');
-        toast('⚠', message);
+        const message = convertErrorText(error, 'submit');
+        // SOL-2 / SOL-4: a failure BEFORE any payment was sent leaves no stale
+        // "Pay exact SOL" desk. Once a signature exists, the order stays locked
+        // as "Payment sent — verifying" (never a second payment).
+        let paid = !!(convertPendingOrder && convertPendingOrder.paymentRef);
+        try {
+          const saved = window.OST_TOPUP && typeof window.OST_TOPUP.getPending === 'function' ? window.OST_TOPUP.getPending() : null;
+          if (saved && convertPendingOrder && convertPendingOrder.intent && saved.id === convertPendingOrder.intent.id && saved.paymentRef) paid = true;
+        } catch (_) {}
+        if (paid) {
+          renderConvertTopupDesk();
+          transferResult.textContent = 'Payment sent — verifying';
+          setConvertRouteMessage('Your payment was sent. OST is checking it on devnet; delivery completes automatically. Do not pay again — use Refresh status.');
+          setConvertTopupStatus('Payment sent — verifying. Do not pay again.', 'warning');
+          toast('⏳', 'Payment sent — verifying. Do not pay again.');
+          return;
+        }
+        if (convertPendingOrder && convertPendingOrder.intent && !convertPendingOrder.claimPending) clearConvertPendingOrder();
+        transferResult.textContent = 'Not converted';
+        setConvertRouteMessage(message + (/nothing was (paid|sent|signed)/i.test(message) ? '' : ' Nothing was paid.'));
+        toast('⚠️', message);
       }
-    });
+    }
   }
 
   window.addEventListener('ost:topup-ready', function() {
@@ -6511,130 +8069,59 @@
   // ---------- CONVERT-PANEL WALLET BACKUP / RESTORE ----------
   // Surface persistence controls right in the convert panel so users never lose
   // their browser-generated wallet on a hard refresh or storage clear.
+  // WAL-5: the raw "Import wallet / Restore from file" box that lived here
+  // silently overwrote an un-backed-up browser wallet (funds lost). It is gone:
+  // backup and restore happen ONLY in the wallet home, which has the
+  // replace-confirmation and backup-first guard. This bar just links there.
   const convertBackupBar = $('#convertWalletBackupBar');
   const convertBackupBarMsg = $('#convertBackupBarMsg');
-  const convertBackupBtn = $('#convertBackupBtn');
-  const convertRestoreInput = $('#convertRestoreInput');
-  const convertPasteKeyInput = $('#convertPasteKeyInput');
-  const convertPasteKeyBtn = $('#convertPasteKeyBtn');
 
   function refreshConvertBackupBar() {
     if (!convertBackupBar) return;
     const isLocal = connectedWalletSession && connectedWalletSession.kind === 'local' && connectedWalletSession.keypair;
+    const backedUp = !!readLocalWalletBackupExportedAt();
     if (convertBackupBarMsg) {
       convertBackupBarMsg.innerHTML = isLocal
-        ? '<strong>⚠ Save your browser wallet.</strong> If you clear this browser\'s storage, your devnet wallet is lost. Download the backup file once and keep it offline.'
-        : '<strong>🔑 Import or back up a browser wallet.</strong> Paste a secret key below to access an existing wallet, or create a new browser wallet to download a backup file.';
+        ? (backedUp ? '<strong>Browser wallet backed up.</strong> Keep the backup offline.' : '<strong>⚠ This browser wallet has no backup yet.</strong> Clearing site data loses it — back it up in the wallet home.')
+        : '<strong>Restore a browser wallet</strong> from its backup in the wallet home (it never overwrites another wallet without asking).';
     }
-    if (convertBackupBtn) convertBackupBtn.disabled = !isLocal;
+    const backupBtn = convertBackupBar.querySelector('[data-ost-wallet-home="backup"]');
+    if (backupBtn) backupBtn.hidden = !isLocal;
   }
 
-  // Parse a pasted secret key — accepts JSON array of 64 numbers, comma-separated
-  // numbers, hex (128 chars), or base58. Returns Uint8Array(64) or throws.
-  function parsePastedSecretKey(raw) {
-    const trimmed = (raw || '').trim();
-    if (!trimmed) throw new Error('Paste a secret key first.');
-
-    // JSON array form: [12,34,...]
-    if (trimmed.startsWith('[')) {
-      const arr = JSON.parse(trimmed);
-      if (!Array.isArray(arr) || arr.length !== 64) {
-        throw new Error('JSON key must be an array of 64 numbers.');
-      }
-      return Uint8Array.from(arr);
+  // C9 entry points, wired once by delegation (works for markup added later):
+  //   [data-ost-start="<reason>"]        -> OST_WALLET.requireWallet({reason})
+  //   [data-ost-wallet-home="<view>"]    -> OST_WALLET_HOME.open(view)
+  //   [data-ost-bridge-open]             -> the real OST ⇄ OSTG bridge (BRG-5)
+  document.addEventListener('click', function (event) {
+    const el = event.target && event.target.closest ? event.target.closest('[data-ost-start],[data-ost-wallet-home],[data-ost-bridge-open]') : null;
+    if (!el) return;
+    event.preventDefault();
+    if (el.hasAttribute('data-ost-start')) {
+      if (connectedWallet) openWalletHome('home');
+      else requireWallet({ reason: el.getAttribute('data-ost-start') || 'start' });
+      return;
     }
-
-    // Bare comma-separated numbers
-    if (trimmed.includes(',')) {
-      const arr = trimmed.split(',').map(s => parseInt(s.trim(), 10));
-      if (arr.length !== 64 || arr.some(n => !Number.isFinite(n))) {
-        throw new Error('Comma-separated key must be 64 integers.');
-      }
-      return Uint8Array.from(arr);
+    if (el.hasAttribute('data-ost-wallet-home')) {
+      const view = el.getAttribute('data-ost-wallet-home') || 'home';
+      if (view === 'backup' && !(connectedWalletSession && connectedWalletSession.kind === 'local')) { requireWallet({ reason: 'start' }); return; }
+      openWalletHome(view);
+      return;
     }
-
-    // Hex
-    if (/^[0-9a-fA-F]+$/.test(trimmed) && trimmed.length === 128) {
-      const out = new Uint8Array(64);
-      for (let i = 0; i < 64; i++) out[i] = parseInt(trimmed.substr(i * 2, 2), 16);
-      return out;
-    }
-
-    // Base58 (Phantom export format)
-    if (solanaWeb3.utils && solanaWeb3.utils.bytes && solanaWeb3.utils.bytes.bs58) {
-      const decoded = solanaWeb3.utils.bytes.bs58.decode(trimmed);
-      if (decoded.length === 64) return decoded;
-      throw new Error('Base58 key must decode to 64 bytes.');
-    }
-    // Fallback base58 decoder using Keypair.fromSecretKey via bs58 if exposed elsewhere
-    if (typeof window.bs58 !== 'undefined' && typeof window.bs58.decode === 'function') {
-      const decoded = window.bs58.decode(trimmed);
-      if (decoded.length === 64) return Uint8Array.from(decoded);
-      throw new Error('Base58 key must decode to 64 bytes.');
-    }
-
-    throw new Error('Unrecognized format. Paste a 64-number JSON array, comma list, 128-char hex, or base58 string.');
+    openOstBridge();
+  });
+  function openOstBridge() {
+    try {
+      if (window.OST_BRIDGE_UI && typeof window.OST_BRIDGE_UI.open === 'function') { window.OST_BRIDGE_UI.open(); return; }
+    } catch (_) {}
+    try { if (window.OST_COMPARTMENTS && typeof window.OST_COMPARTMENTS.activate === 'function') window.OST_COMPARTMENTS.activate('wallet', false); } catch (_) {}
+    if (typeof window.setWalletPanel === 'function') window.setWalletPanel('convert', { scroll: true });
+    setTimeout(function () {
+      const card = document.querySelector('.ostb-wrap');
+      if (card && card.offsetParent !== null) card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 350);
   }
-
-  function importPastedWallet(secretBytes) {
-    const restored = solanaWeb3.Keypair.fromSecretKey(secretBytes);
-    persistLocalWallet(restored);
-    setConnectedWalletSession({
-      kind: 'local',
-      type: 'local',
-      label: 'OST Browser Wallet',
-      keypair: restored,
-      publicKey: restored.publicKey
-    }, { announce: true });
-    refreshConvertBackupBar();
-    return restored.publicKey.toBase58();
-  }
-
-  if (convertBackupBtn) {
-    convertBackupBtn.addEventListener('click', () => {
-      if (connectedWalletSession && connectedWalletSession.kind === 'local' && connectedWalletSession.keypair) {
-        exportLocalWalletBackup(connectedWalletSession.keypair);
-        toast('🧾', 'Wallet backup downloaded. Keep it offline.');
-      } else {
-        toast('ℹ️', 'Create a browser wallet first to download a backup.');
-      }
-    });
-  }
-
-  if (convertRestoreInput) {
-    convertRestoreInput.addEventListener('change', async (event) => {
-      const file = event.target.files && event.target.files[0];
-      event.target.value = '';
-      if (!file) return;
-      try {
-        const text = await file.text();
-        const parsed = JSON.parse(text);
-        const secret = Array.isArray(parsed) ? parsed : (parsed && parsed.secretKey);
-        if (!Array.isArray(secret) || secret.length < 32) {
-          throw new Error('Invalid wallet backup file.');
-        }
-        const address = importPastedWallet(Uint8Array.from(secret));
-        toast('✅', `Wallet restored: ${address.slice(0, 6)}…${address.slice(-4)}`);
-      } catch (err) {
-        console.warn('[OST] Wallet restore failed', err);
-        toast('⚠️', 'Could not restore that file — make sure it is a valid OST wallet backup.');
-      }
-    });
-  }
-
-  if (convertPasteKeyBtn && convertPasteKeyInput) {
-    convertPasteKeyBtn.addEventListener('click', () => {
-      try {
-        const secretBytes = parsePastedSecretKey(convertPasteKeyInput.value);
-        const address = importPastedWallet(secretBytes);
-        convertPasteKeyInput.value = '';
-        toast('✅', `Wallet imported: ${address.slice(0, 6)}…${address.slice(-4)}`);
-      } catch (err) {
-        console.warn('[OST] Paste-key import failed', err);
-        toast('⚠️', err && err.message ? err.message : 'Could not parse the pasted secret key.');
-      }
-    });
-  }
+  window.OST_OPEN_BRIDGE = openOstBridge;
 
   // Refresh the backup bar whenever the connected wallet changes
   if (typeof window.addEventListener === 'function') {
@@ -6687,27 +8174,20 @@
     return Number(fallbackAmount) > 0 ? Number(fallbackAmount) : OST_WELCOME_DROP_AMOUNT;
   }
 
-  function showOptimisticFaucetClaim(options) {
-    const settings = options || {};
-    const amount = visibleFaucetClaimAmount(settings.amount);
-    const message = settings.message || ('+' + amount.toFixed(2) + ' OST queued. Vault confirmation syncs in the background.');
-    if (window.OST_OPTIMISTIC && typeof window.OST_OPTIMISTIC.faucetClaim === 'function') {
-      try {
-        return window.OST_OPTIMISTIC.faucetClaim({
-          amount,
-          message,
-          source: settings.source || 'app-faucet',
-          notify: settings.notify !== false,
-          debounceMs: settings.debounceMs || 1200
-        });
-      } catch (e) {}
-    }
-    if (faucetAmount) faucetAmount.textContent = amount.toFixed(2);
-    if (faucetStatus) faucetStatus.textContent = message;
-    if (settings.notify !== false && window.OST_OPTIMISTIC) {
-      try { window.OST_OPTIMISTIC.balanceHint({ deltaOst: amount, source: settings.source || 'app-faucet', pending: true }); } catch (e) {}
-    }
-    return amount;
+  // FCT-3: the optimistic "+100.00 OST queued" flash is gone — it showed before
+  // any check, even with no wallet. The card says "Sending 100 OST…" only after
+  // the reservation is granted (see runOstFaucetFlow).
+  function faucetNotify(walletAddress, opts) {
+    try {
+      if (typeof window.OST_NOTIFY === 'function') return window.OST_NOTIFY(Object.assign({ id: 'faucet-' + String(walletAddress || '').slice(0, 8) }, opts));
+    } catch (_) {}
+    toast(opts.kind === 'error' ? '⚠️' : (opts.kind === 'ok' ? '✅' : 'ℹ️'), opts.title + (opts.body ? ' ' + opts.body : ''));
+    return null;
+  }
+  function revealFaucetCard() {
+    const card = $('#faucetSection');
+    if (!card || card.offsetParent === null) return;
+    try { card.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (_) {}
   }
 
   async function animateFaucetCoins() {
@@ -6723,75 +8203,94 @@
     }
   }
 
+  // FCT-3 / SRV-1 client: returns { ok, state, message, ... } where state is one
+  // of 'claimed' | 'cooldown' | 'pending' | 'refused' | 'failed' | 'no-wallet' | 'busy'.
+  // Every user-initiated outcome is VISIBLE (one notice, updated in place) and
+  // `notified: true` tells callers (wallet home) not to toast it again.
   async function runOstFaucetFlow(options) {
     const settings = options || {};
-    if (faucetRunning) return { ok: false, busy: true };
+    if (faucetRunning) return { ok: false, state: 'busy', reason: 'busy', busy: true, message: 'A claim is already running.' };
+    if (!connectedWalletSession || typeof solanaWeb3 === 'undefined') {
+      if (faucetAmount && !faucetTotal) faucetAmount.textContent = OST_WELCOME_DROP_AMOUNT.toFixed(2);
+      setFaucetStatus('Free devnet OST needs a wallet. Create one in one tap, then claim 100 OST.', 'info');
+      return { ok: false, state: 'no-wallet', reason: 'no-wallet', message: 'Create or connect a wallet first.' };
+    }
     faucetRunning = true;
-    if (faucetBtn) faucetBtn.disabled = true;
+    refreshFaucetRewardUi();
+    if (settings.reveal) revealFaucetCard();
+    const walletAddress = connectedWalletSession.publicKey.toBase58();
 
     try {
-      if (settings.animate !== false) {
-        await animateFaucetCoins();
-      }
-
-      if (!connectedWalletSession || typeof solanaWeb3 === 'undefined') {
-        if (faucetAmount && !faucetTotal) faucetAmount.textContent = OST_WELCOME_DROP_AMOUNT.toFixed(2);
-        if (faucetStatus) faucetStatus.textContent = 'Create or connect a wallet to claim 100 OST. After that, manually claim 1 OST per day.';
-        toast('👛', 'Create or connect your OST wallet first');
-        return { ok: false, reason: 'no-wallet' };
-      }
-
       try {
-        const walletAddress = connectedWalletSession.publicKey.toBase58();
         const rewardState = getRewardClaimForWallet(walletAddress);
-        if (rewardState.welcomeClaimed && !rewardState.dailyReady) {
-          const waitText = formatDropCooldown(rewardState.nextDailyClaimAt - Date.now());
-          if (faucetStatus) faucetStatus.textContent = 'Daily 1 OST claim unlocks in ' + waitText + '. Claims are manual, so come back and press the button.';
-          refreshFaucetRewardUi();
-          return { ok: false, reason: 'daily-cooldown', nextDailyClaimAt: rewardState.nextDailyClaimAt };
+        if (rewardState.welcomeClaimed && !rewardState.dailyReady && !rewardState.pendingReservation) {
+          const nextMsg = faucetNextLabel(rewardState.nextDailyClaimAt - Date.now());
+          setFaucetStatus('Already claimed today. ' + nextMsg + '.', 'info', { result: true });
+          faucetNotify(walletAddress, { kind: 'info', title: nextMsg + '.', body: 'Daily claims are manual: come back and press the button.' });
+          return { ok: false, state: 'cooldown', reason: 'daily_cooldown', nextDailyClaimAt: rewardState.nextDailyClaimAt, message: nextMsg, notified: true };
         }
 
         clearWalletFundingState();
-        const optimisticClaimAmount = rewardState.welcomeClaimed ? OST_DAILY_DROP_AMOUNT : OST_WELCOME_DROP_AMOUNT;
-        showOptimisticFaucetClaim({ amount: optimisticClaimAmount, source: 'run-faucet-flow' });
+        setFaucetStatus('Checking your claim…', 'pending');
 
         maybeRecordSeedlessOnboard().catch(function (recordError) {
           console.warn('[OST] Seedless profile record skipped', recordError);
         });
 
-        if (faucetStatus) faucetStatus.textContent = '+' + optimisticClaimAmount.toFixed(2) + ' OST queued. Vault confirmation syncs in the background.';
-        const faucetResult = await claimOstFaucetForActiveWallet();
+        const faucetResult = await claimOstFaucetForActiveWallet({
+          onStage: function (stage, info) {
+            const amt = Number((info && info.amount) || OST_WELCOME_DROP_AMOUNT);
+            if (stage === 'sending') {
+              setFaucetStatus('Sending ' + amt + ' OST… (a few seconds)', 'pending');
+              faucetNotify(walletAddress, { kind: 'pending', title: 'Sending ' + amt + ' devnet OST…' });
+            } else if (stage === 'confirming') {
+              setFaucetStatus('Confirming your claim… this can take up to a minute. Don\'t claim again.', 'pending');
+              faucetNotify(walletAddress, { kind: 'pending', title: 'Confirming your ' + amt + ' OST claim…', body: 'Checking whether it landed. Don\'t claim again.', sig: (info && info.sig) || '' });
+            }
+            // Callers (the wallet home's Step 3) mirror the stage on their own button.
+            try { if (typeof settings.onStage === 'function') settings.onStage(stage, info || {}); } catch (_) {}
+          }
+        });
+        if (faucetResult.pending) {
+          const amt = Number(faucetResult.amount || OST_WELCOME_DROP_AMOUNT);
+          setFaucetStatus('We couldn\'t confirm your ' + amt + ' OST claim yet — it may still land. Check your balance before retrying.', 'pending', { result: true });
+          faucetNotify(walletAddress, { kind: 'warn', title: 'We couldn\'t confirm your ' + amt + ' OST claim yet.', body: 'It may still land. Check your balance before retrying.', sig: faucetResult.signature || '' });
+          return { ok: false, state: 'pending', reason: 'state_unknown', message: 'We couldn\'t confirm your claim yet — check your balance before retrying.', signature: faucetResult.signature || '', notified: true };
+        }
         // `||` also swallows a legitimate 0 balance, so read it explicitly, and
         // fall back to the on-screen figure when the chain cannot be reached —
-        // never to a fabricated number.
+        // never to a fabricated number. Fresh: the memo predates the claim.
         var ostBalance = faucetResult.balance;
-        if (ostBalance == null) ostBalance = await getOstBalanceForAddress(connectedWalletSession.publicKey);
+        if (ostBalance == null && !faucetResult.claimed) ostBalance = await getOstBalanceForAddress(connectedWalletSession.publicKey, { fresh: true });
         faucetTotal = ostBalance;
         if (faucetAmount && ostBalance != null) faucetAmount.textContent = ostBalance.toFixed(2);
 
         if (faucetResult.cooldown) {
-          const waitText = formatDropCooldown(faucetResult.nextDailyClaimAt - Date.now());
-          if (faucetStatus) faucetStatus.textContent = 'Daily 1 OST claim unlocks in ' + waitText + '.';
-          refreshFaucetRewardUi();
-          return { ok: false, reason: 'daily-cooldown', nextDailyClaimAt: faucetResult.nextDailyClaimAt, balance: ostBalance };
+          const nextMsg = faucetNextLabel(Number(faucetResult.nextDailyClaimAt || 0) - Date.now());
+          setFaucetStatus('Already claimed today. ' + nextMsg + '.', 'info', { result: true });
+          faucetNotify(walletAddress, { kind: 'info', title: nextMsg + '.', body: 'Daily claims are manual: come back and press the button.' });
+          return { ok: false, state: 'cooldown', reason: 'daily_cooldown', nextDailyClaimAt: faucetResult.nextDailyClaimAt, balance: ostBalance, message: nextMsg, notified: true };
         }
 
         const claimedAmount = Number(faucetResult.amount || 0);
-        const humanKind = faucetResult.rewardKind === 'daily' ? 'daily manual drop' : 'head start';
+        const humanKind = faucetResult.rewardKind === 'daily' ? 'daily drop' : 'welcome drop';
         // The claim itself is confirmed; only the follow-up balance read may be
         // unknown. Report the claim, and stay silent about a balance we could not
         // verify rather than printing one we made up.
-        if (faucetStatus) faucetStatus.textContent = claimedAmount.toFixed(2) + ' OST ' + humanKind + ' claimed.'
-          + (ostBalance != null ? ' Wallet balance: ' + ostBalance.toFixed(2) + ' OST.' : '');
-        toast('🎉', '+' + claimedAmount.toFixed(2) + ' OST ' + humanKind + ' claimed');
+        window.__ostLastOwnMoneyTxAt = Date.now();
+        setFaucetStatus(claimedAmount + ' OST arrived (' + humanKind + ').' + (ostBalance != null ? ' Wallet balance: ' + ostBalance.toFixed(2) + ' OST.' : ''), 'ok', { result: true });
+        faucetNotify(walletAddress, { kind: 'ok', title: claimedAmount + ' OST arrived', body: humanKind === 'welcome drop' ? 'Your free devnet OST is in your wallet. OST pays every network fee.' : 'Daily devnet drop claimed.', sig: faucetResult.signature || '' });
+        if (settings.animate !== false) animateFaucetCoins();
+        try { window.dispatchEvent(new CustomEvent('ost:wallet-tx', { detail: { sig: faucetResult.signature || '', asset: 'OST', amount: claimedAmount, direction: 'in', status: 'confirmed', source: 'faucet' } })); } catch (_) {}
         try {
           if (typeof window.recordOstSnapshot === 'function') {
-            const conn = getSolanaConnection();
-            const solBalance = conn ? (await conn.getBalance(connectedWalletSession.publicKey)) / solanaWeb3.LAMPORTS_PER_SOL : 0;
+            // NET-3 / C6: SOL from OST_BALANCE (no extra RPC); unknown stays unknown.
+            let solBalance;
+            try { if (window.OST_BALANCE && typeof window.OST_BALANCE.sol === 'function') solBalance = window.OST_BALANCE.sol(); } catch (_) {}
             window.recordOstSnapshot({
               ts: Date.now(),
-              ostBalance,
-              solBalance,
+              ostBalance: ostBalance == null ? undefined : ostBalance,
+              solBalance: solBalance == null ? undefined : solBalance,
               kind: faucetResult.rewardKind === 'daily' ? 'faucet-daily' : 'faucet-welcome',
               amount: claimedAmount,
               sig: faucetResult.signature || '',
@@ -6810,28 +8309,18 @@
           window.syncPredictionMarketTradeWallet();
         }
         refreshFaucetRewardUi();
-        return { ok: true, claimed: true, balance: ostBalance, amount: claimedAmount, rewardKind: faucetResult.rewardKind };
+        return { ok: true, state: 'claimed', claimed: true, balance: ostBalance, amount: claimedAmount, rewardKind: faucetResult.rewardKind, signature: faucetResult.signature || '', message: claimedAmount + ' OST arrived', notified: true };
       } catch (e) {
-        const errorText = (e && e.message) || String(e || 'OST faucet failed');
-        const isTreasuryEmpty = /treasury is empty|refill the treasury|vault.*refill|vault.*empty/i.test(errorText);
-        const isDailyCap = (e && e.code === 'daily_cap') || /daily request budget/i.test(errorText);
-        if (isDailyCap) {
-          if (faucetStatus) faucetStatus.textContent = errorText;
-          toast('⚠️', 'OST is over its daily request budget — back at 00:00 UTC.');
-        } else if (isTreasuryEmpty) {
-          if (faucetStatus) faucetStatus.textContent = 'The OST reward vault is being refilled. Please try the claim again soon.';
-          toast('⚠️', 'OST reward vault is being refilled.');
-        } else if (/faucet gate|claim is already syncing|duplicate farming/i.test(errorText)) {
-          if (faucetStatus) faucetStatus.textContent = errorText;
-          toast('⚠️', errorText);
-        } else if (/fee vault|vault keypair|OST_RESCUE|still loading/i.test(errorText)) {
-          if (faucetStatus) faucetStatus.textContent = 'The OST fee vault is still loading. Please wait a moment and click claim again.';
-          toast('⚠️', 'OST fee vault is still loading.');
-        } else {
-          if (faucetStatus) faucetStatus.textContent = 'Could not claim OST right now. Make sure Devnet is reachable and try again.';
-          toast('⚠️', errorText);
-        }
-        return { ok: false, reason: 'error', error: e };
+        // Human copy only: never raw JSON, a DO string, or a bare code.
+        const h = (e && e.human) || faucetHuman((e && e.gate) || { error: 'client_error', message: e && e.message });
+        setFaucetStatus(h.title + (h.body ? ' ' + h.body : ''), h.state === 'pending' ? 'pending' : (h.state === 'refused' ? 'warn' : 'error'), { result: true });
+        faucetNotify(walletAddress, {
+          kind: h.state === 'pending' ? 'warn' : (h.state === 'refused' ? 'warn' : 'error'),
+          title: h.title, body: h.body,
+          action: h.retryable ? { label: 'Try again', run: function () { runOstFaucetFlow(Object.assign({}, settings, { animate: false })); } } : null
+        });
+        if (!e || !e.human) console.warn('[OST] faucet claim error', e);
+        return { ok: false, state: h.state, reason: (e && e.code) || 'error', message: h.title, body: h.body, retryable: !!h.retryable, notified: true };
       }
     } finally {
       faucetRunning = false;
@@ -6850,7 +8339,20 @@
   // Expose primitives needed by wallet-extras.js (real send/receive/portfolio)
   window.OST_WALLET = {
     get session() { return connectedWalletSession; },
-    get address() { return connectedWallet; },
+    // C1: OST_WALLET.address() -> base58 | null. Also readable as a property by
+    // older modules (null when disconnected) — see addressHandle().
+    get address() { return addressHandle(); },
+    // C1 wallet access API (money plan §6).
+    connect: connectWalletApi,
+    createLocal: createLocalWallet,
+    disconnect: disconnectWalletApi,
+    requireWallet: requireWallet,
+    pendingRequirement: pendingWalletRequirement,
+    resumePending: resumeWalletRequirement,
+    openHome: openWalletHome,
+    getProvider: getWalletProvider,
+    isPhone: isPhoneDevice,
+    kind: function () { return (connectedWalletSession && connectedWalletSession.kind) || null; },
     // V2 race-proof detection: synchronous identity + replay-on-subscribe.
     pubkey: function () { return connectedWallet || null; },
     ready: function () { return !!connectedWallet; },
@@ -6873,9 +8375,6 @@
     // rotating server-side RPC when every client endpoint is throttled.
     serverBlockhash: serverBlockhash,
     sendRawResilient: function (serialized, skipPreflight) { return _sendRawResilient(serialized, skipPreflight); },
-    // Synchronous getter for the currently-warm blockhash (or null). The pool-
-    // paid tx builder uses this to skip a live getLatestBlockhash on every buy.
-    warmBlockhashValue: function () { return cachedBlockhash(); },
     // The warm blockhash value (or null), so other modules — e.g. the custodial
     // pool path in devnet-rescue — can stamp a tx without their own round-trip.
     warmBlockhashValue: function () {
@@ -6898,18 +8397,30 @@
 
   if (faucetBtn) {
     faucetBtn.addEventListener('click', () => {
-      const optimisticAmount = showOptimisticFaucetClaim({ source: 'claimFaucetBtn' });
-      runOstFaucetFlow({ animate: true }).then(function (result) {
-        if (window.OST_OPTIMISTIC && (!result || result.ok === false)) {
-          const rollbackAmount = result && Number(result.amount) > 0 ? Number(result.amount) : optimisticAmount;
-          try { window.OST_OPTIMISTIC.balanceHint({ deltaOst: -rollbackAmount, source: 'faucet-claim', rollback: true }); } catch (e) {}
-        }
-      });
+      if (faucetRunning) return;
+      // WAL-8 / C9: no wallet -> the real create/connect path, then come BACK to
+      // this card and claim (the gate resumes the action it interrupted).
+      if (!connectedWalletSession || !connectedWalletSession.publicKey) {
+        requireWallet({
+          reason: 'faucet',
+          label: 'claim your free devnet OST',
+          resume: function () {
+            try { if (window.OST_COMPARTMENTS && OST_COMPARTMENTS.activate) OST_COMPARTMENTS.activate('new-here', false); } catch (_) {}
+            setTimeout(function () { runOstFaucetFlow({ animate: true, reveal: true }); }, 250);
+          }
+        });
+        return;
+      }
+      runOstFaucetFlow({ animate: true, reveal: true });
     });
     refreshFaucetRewardUi();
-    setInterval(refreshFaucetRewardUi, 1000);
+    // The countdown label ticks every second; it never touches a running claim.
+    setInterval(function () { if (!document.hidden) refreshFaucetRewardUi(); }, 1000);
     window.addEventListener('ost:wallet-changed', function() {
-      syncRewardClaimsFromRemote(currentRewardWalletAddress(), { force: true }).then(refreshFaucetRewardUi);
+      // NET-3: the boot re-announces wallet-changed ~6 times; only a NEW wallet
+      // forces a state read, the rest respect the 60 s throttle.
+      const addr = currentRewardWalletAddress();
+      syncRewardClaimsFromRemote(addr, { force: !!addr && faucetRemoteSync.wallet !== addr }).then(refreshFaucetRewardUi);
     });
     window.addEventListener('ost:faucet-state-synced', refreshFaucetRewardUi);
   }
@@ -7085,222 +8596,12 @@
     showStep(1);
   })();
 
-  /* ---------- DEPIN FAUCET — Real Verification System ---------- */
-  (function initDepinFaucet() {
-    const depinBtn = $('#depinClaimBtn');
-    const depinStatus = $('#depinClaimStatus');
-    const depinVerify = $('#depinVerifyStatus');
-    const resSelect = $('#depinResourceType');
-    const dynFields = $('#depinDynFields');
-    const proofSec = $('#depinProofSection');
-    const walletSec = $('#depinWalletSection');
-    const locSec = $('#depinLocationSection');
-    const checklist = $('#depinChecklist');
-    if (!depinBtn || !resSelect) return;
-
-    // Modal open/close
-    var overlay = document.getElementById('depinModalOverlay');
-    var openBtn = document.getElementById('depinOpenModal');
-    var closeBtn = document.getElementById('depinModalClose');
-    function openModal() { if (overlay) { overlay.classList.add('ost-modal-open'); document.body.style.overflow = 'hidden'; } }
-    function closeModal() { if (overlay) { overlay.classList.remove('ost-modal-open'); document.body.style.overflow = ''; } }
-    if (openBtn) openBtn.addEventListener('click', openModal);
-    if (closeBtn) closeBtn.addEventListener('click', closeModal);
-    if (overlay) overlay.addEventListener('click', function(e) { if (e.target === overlay) closeModal(); });
-
-    var resourceSpecs = {
-      bandwidth: {
-        label: 'Bandwidth Details',
-        fields: [
-          { id: 'dpBwSpeed', label: 'Upload Speed (Mbps)', type: 'number', placeholder: 'e.g. 100', min: 1 },
-          { id: 'dpBwIsp', label: 'ISP Name', type: 'text', placeholder: 'e.g. Comcast, AT&T' },
-          { id: 'dpBwUptime', label: 'Daily Uptime (hours)', type: 'number', placeholder: '24', min: 1, max: 24 }
-        ],
-        reward: 500, verify: 'Speed test URL or screenshot from fast.com / speedtest.net'
-      },
-      gpu: {
-        label: 'GPU Details',
-        fields: [
-          { id: 'dpGpuModel', label: 'GPU Model', type: 'text', placeholder: 'e.g. RTX 4090, A100' },
-          { id: 'dpGpuVram', label: 'VRAM (GB)', type: 'number', placeholder: 'e.g. 24', min: 1 },
-          { id: 'dpGpuCount', label: 'Number of GPUs', type: 'number', placeholder: '1', min: 1, max: 1000 }
-        ],
-        reward: 2500, verify: 'nvidia-smi output, GPU-Z screenshot, or CUDA benchmark result'
-      },
-      cpu: {
-        label: 'CPU Details',
-        fields: [
-          { id: 'dpCpuModel', label: 'CPU Model', type: 'text', placeholder: 'e.g. Ryzen 9 7950X, Xeon W-3375' },
-          { id: 'dpCpuCores', label: 'Core Count', type: 'number', placeholder: 'e.g. 16', min: 1 },
-          { id: 'dpCpuThreads', label: 'Thread Count', type: 'number', placeholder: 'e.g. 32', min: 1 }
-        ],
-        reward: 1000, verify: 'lscpu output, Task Manager screenshot, or Cinebench result'
-      },
-      storage: {
-        label: 'Storage Details',
-        fields: [
-          { id: 'dpStCapacity', label: 'Available Storage (TB)', type: 'number', placeholder: 'e.g. 10', min: 0.1 },
-          { id: 'dpStType', label: 'Storage Type', type: 'text', placeholder: 'SSD / HDD / NVMe' },
-          { id: 'dpStRaid', label: 'RAID Level (if any)', type: 'text', placeholder: 'e.g. RAID-5, None' }
-        ],
-        reward: 500, verify: 'Disk info screenshot or df -h output'
-      },
-      lora5g: {
-        label: 'LoRa/5G Gateway Details',
-        fields: [
-          { id: 'dpLrModel', label: 'Gateway Model', type: 'text', placeholder: 'e.g. Helium hotspot, Bobcat 300' },
-          { id: 'dpLrFreq', label: 'Frequency Band', type: 'text', placeholder: 'e.g. 868MHz, 915MHz, n78' },
-          { id: 'dpLrCoverage', label: 'Coverage Area (km\u00B2)', type: 'number', placeholder: 'e.g. 5', min: 0.1 }
-        ],
-        reward: 10, verify: 'Gateway dashboard screenshot or Helium Explorer link'
-      },
-      satellite: {
-        label: 'Satellite / Ground Station Details',
-        fields: [
-          { id: 'dpSatType', label: 'Station Type', type: 'text', placeholder: 'e.g. Starlink terminal, ground station' },
-          { id: 'dpSatBand', label: 'Frequency Band', type: 'text', placeholder: 'e.g. Ku-band, Ka-band' },
-          { id: 'dpSatCoords', label: 'Station Coordinates (lat, lon)', type: 'text', placeholder: 'e.g. 30.2672, -97.7431' }
-        ],
-        reward: 50000, verify: 'Starlink dashboard, antenna photo, or ground station registration'
-      },
-      datacenter: {
-        label: 'Data Center Details',
-        fields: [
-          { id: 'dpDcName', label: 'Facility Name / Provider', type: 'text', placeholder: 'e.g. Equinix DA1, self-hosted' },
-          { id: 'dpDcRacks', label: 'Number of Racks / U-space', type: 'text', placeholder: 'e.g. 2 racks, 42U' },
-          { id: 'dpDcPower', label: 'Power Capacity (kW)', type: 'number', placeholder: 'e.g. 20', min: 1 },
-          { id: 'dpDcTier', label: 'Tier Level', type: 'text', placeholder: 'e.g. Tier 3, Tier 4' }
-        ],
-        reward: 100000, verify: 'Colocation contract, facility photo, or power billing'
-      }
-    };
-
-    resSelect.addEventListener('change', function() {
-      var type = this.value;
-      if (!type || !resourceSpecs[type]) {
-        if (dynFields) dynFields.innerHTML = '';
-        [proofSec, walletSec, locSec, checklist].forEach(function(el) { if (el) el.classList.add('depin-form-hidden'); });
-        depinBtn.disabled = true;
-        return;
-      }
-      var spec = resourceSpecs[type];
-      var html = '<div class="depin-spec-header">' + spec.label + '</div>';
-      spec.fields.forEach(function(f) {
-        html += '<div class="depin-form-row">';
-        html += '<label class="depin-form-label">' + f.label + ' <span class="gv-req">*</span></label>';
-        html += '<input type="' + f.type + '" class="depin-form-input depin-spec-input" id="' + f.id + '" placeholder="' + f.placeholder + '"';
-        if (f.min !== undefined) html += ' min="' + f.min + '"';
-        if (f.max !== undefined) html += ' max="' + f.max + '"';
-        html += ' aria-label="' + f.placeholder + '">';
-        html += '</div>';
-      });
-      html += '<p class="depin-verify-hint">\uD83D\uDD0D Proof needed: ' + spec.verify + '</p>';
-      if (dynFields) dynFields.innerHTML = html;
-
-      [proofSec, walletSec, locSec, checklist].forEach(function(el) { if (el) el.classList.remove('depin-form-hidden'); });
-
-      // Fill wallet
-      var waddr = document.getElementById('depinWalletAddr');
-      if (waddr && connectedWallet) waddr.value = connectedWallet;
-
-      depinBtn.disabled = false;
-      if (depinVerify) depinVerify.textContent = 'Reward: ' + spec.reward.toLocaleString() + ' OST/day for verified ' + type + ' contribution';
-    });
-
-    function setCheck(id, pass, text) {
-      var el = document.getElementById(id);
-      if (!el) return;
-      el.className = 'depin-check-item ' + (pass ? 'depin-chk-pass' : 'depin-chk-fail');
-      el.innerHTML = '<span class="depin-chk-icon">' + (pass ? '\u2705' : '\u274C') + '</span> ' + text;
-    }
-
-    depinBtn.addEventListener('click', async function() {
-      var type = resSelect.value;
-      if (!type || !resourceSpecs[type]) return;
-      var spec = resourceSpecs[type];
-
-      // Validate all spec fields
-      var allFilled = true;
-      spec.fields.forEach(function(f) {
-        var el = document.getElementById(f.id);
-        if (!el || !el.value.trim()) allFilled = false;
-      });
-      var proof = document.getElementById('depinProofValue');
-      if (!proof || !proof.value.trim()) {
-        if (depinStatus) depinStatus.textContent = '\u26A0\uFE0F Provide proof of your resource (URL, screenshot, or node ID)';
-        return;
-      }
-      if (!allFilled) {
-        if (depinStatus) depinStatus.textContent = '\u26A0\uFE0F Fill in all resource specification fields';
-        return;
-      }
-
-      depinBtn.disabled = true;
-      depinBtn.innerHTML = '<span class="spinner"></span> Running verification...';
-
-      // Step-by-step verification
-      if (depinStatus) depinStatus.textContent = 'Starting verification pipeline...';
-      await sleep(600);
-
-      // Check 1: Wallet
-      var hasWallet = !!connectedWallet;
-      setCheck('dpChk1', hasWallet, hasWallet ? 'Wallet connected: ' + connectedWallet.slice(0,4) + '...' + connectedWallet.slice(-4) : 'Wallet not connected');
-      if (!hasWallet) {
-        if (depinStatus) depinStatus.textContent = '\u26A0\uFE0F Connect your Solana wallet first';
-        depinBtn.disabled = false;
-        depinBtn.innerHTML = '<span class="pay-icon">\uD83D\uDEF0\uFE0F</span> Verify & Claim Reward';
-        return;
-      }
-      await sleep(500);
-
-      // Check 2: Resource type
-      setCheck('dpChk2', true, 'Resource type: ' + type);
-      await sleep(400);
-
-      // Check 3: Specs verified
-      var specSummary = spec.fields.map(function(f) {
-        var el = document.getElementById(f.id);
-        return f.label + ': ' + (el ? el.value : '?');
-      }).join(', ');
-      setCheck('dpChk3', true, 'Specs: ' + specSummary.slice(0, 60) + (specSummary.length > 60 ? '...' : ''));
-      if (depinStatus) depinStatus.textContent = 'Verifying resource specifications...';
-      await sleep(600);
-
-      // Check 4: Proof
-      var proofVal = proof.value.trim();
-      var proofType = document.querySelector('input[name="depinProofType"]:checked');
-      var pType = proofType ? proofType.value : 'url';
-      setCheck('dpChk4', true, 'Proof submitted (' + pType + '): ' + proofVal.slice(0, 30) + '...');
-      if (depinStatus) depinStatus.textContent = 'Validating proof of resource...';
-      await sleep(800);
-
-      // Check 5: Node reachability (simulated ping)
-      if (depinStatus) depinStatus.textContent = 'Pinging node / checking reachability...';
-      await sleep(1000);
-      var reachable = proofVal.length > 5;  // basic validation
-      setCheck('dpChk5', reachable, reachable ? 'Node reachable \u2014 latency OK' : 'Could not reach node');
-      if (!reachable) {
-        if (depinStatus) depinStatus.textContent = '\u26A0\uFE0F Proof URL/ID too short. Provide a valid proof.';
-        depinBtn.disabled = false;
-        depinBtn.innerHTML = '<span class="pay-icon">\uD83D\uDEF0\uFE0F</span> Verify & Claim Reward';
-        return;
-      }
-      await sleep(500);
-
-      // Check 6: Reward calculation
-      setCheck('dpChk6', true, 'Reward: ' + spec.reward.toLocaleString() + ' OST/day (' + (spec.reward / 1440).toFixed(2) + ' OST/min)');
-      if (depinStatus) depinStatus.textContent = 'Calculating reward and submitting to treasury...';
-      await sleep(700);
-
-      // Final
-      if (depinStatus) depinStatus.textContent = '\u2705 Verification complete! ' + spec.reward.toLocaleString() + ' OST/day reward activated for your ' + type + ' contribution. Next claim in 24 hours.';
-      toast('\uD83D\uDEF0\uFE0F', spec.reward.toLocaleString() + ' OST/day DePIN reward activated for ' + type + '!');
-      launchConfetti();
-
-      depinBtn.disabled = false;
-      depinBtn.innerHTML = '<span class="pay-icon">\uD83D\uDEF0\uFE0F</span> Verify & Claim Reward';
-    });
-  })();
+  /* ---------- DEPIN FAUCET (FCT-1) ----------------------------------------
+   * The old "Real Verification System" was checklist theatre: fake checks
+   * (a "reachability ping" that tested proof.length > 5) and a fake
+   * "2,500 OST/day reward activated" — it never paid anything. The claim flow
+   * is deleted; the card is labelled "R&D — not live, no rewards are paid"
+   * in index.html / markets.html. Nothing to wire here. */
 
   /* ---------- CHECKLIST PROGRESS BAR ---------- */
   (function initChecklistProgress() {
@@ -7457,37 +8758,10 @@
     toast(connected ? '✅' : '❌', `${displayName}: ${connected ? 'Connected' : 'Failed'}`);
   }
 
-  /* ---------- JUPITER ---------- */
-  const loadJupiterBtn = $('#loadJupiterBtn');
-  const jupiterEmbed = $('#jupiterEmbed');
-  if (loadJupiterBtn) {
-    loadJupiterBtn.addEventListener('click', () => {
-      if (!connectedWallet) {
-        openWalletModal();
-        toast('👛', 'Connect a wallet first to use Jupiter');
-        return;
-      }
-
-      // Embed Jupiter Terminal as an iframe — swap SOL → wOST
-      if (jupiterEmbed) {
-        var wostMint = (window.OST_CONFIG && window.OST_CONFIG.wostMint) || 'Ac8RTG9R15HDXkjJDphRNpEgawEh1o5wLFaWPGFjiHoS';
-        jupiterEmbed.innerHTML = `
-          <iframe
-            src="https://terminal.jup.ag/swap?inputMint=So11111111111111111111111111111111111111112&outputMint=${wostMint}"
-            style="width:100%;height:520px;border:none;border-radius:16px;background:#131823;"
-            allow="clipboard-write"
-            sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-            loading="lazy"
-            title="Jupiter Swap"
-          ></iframe>
-          <p style="text-align:center;color:var(--text-muted);font-size:.82rem;margin-top:12px;">
-            Powered by Jupiter Aggregator &mdash; best rates across all Solana liquidity pools.
-          </p>
-        `;
-      }
-      toast('⚡', 'Jupiter swap loaded — find the best rates');
-    });
-  }
+  /* ---------- JUPITER (BRG-3) ----------
+   * The Jupiter Terminal embed was deprecated and pointed at a devnet-only mint
+   * ("Swap Any Crypto to OST") — it could never deliver OST. Removed; Jupiter is
+   * listed only as an external MAINNET tool for SOL assets (new tab). */
 
   /* ---------- CONFETTI ---------- */
   function launchConfetti() {
@@ -7524,13 +8798,19 @@
   const APP_TOAST_COOLDOWN_MS = 6000;
   const APP_TOAST_MAX_VISIBLE = 2;
 
-  function toast(icon, message) {
-    const container = $('#toastContainer');
-    if (!container) return;
+  // UX-1 / contract C2: every app.js notice goes through OST_NOTIFY (ost-optimistic.js).
+  // A notice the user caused ALWAYS shows; only `{ background: true }` ones are
+  // filtered. (This used to drop every non-error toast, so connect / create /
+  // restore / faucet results were invisible.)
+  function toast(icon, message, opts) {
     const text = String(message == null ? '' : message);
     const iconText = String(icon == null ? '' : icon);
-    const critical = /⚠|❌|error|failed|blocked|unavailable|denied|invalid|try again/i.test(iconText + ' ' + text);
-    if (!critical && window.OST_ALLOW_POPUP_NOTICES !== true) return;
+    if (typeof window.toast === 'function') {
+      try { window.toast(iconText, text, opts || {}); return; } catch (_) {}
+    }
+    const container = $('#toastContainer');
+    if (!container) return;
+    if (opts && opts.background && window.OST_ALLOW_POPUP_NOTICES !== true) return;
     const key = (iconText + '|' + text).replace(/\s+/g, ' ').trim().slice(0, 160);
     const now = Date.now();
     if (now - (appToastLastShown.get(key) || 0) < APP_TOAST_COOLDOWN_MS) return;
@@ -7579,6 +8859,9 @@
         else panel.setAttribute('hidden', '');
       });
 
+      // Lets the bottom bar highlight Markets vs Wallet (ost-appbar.js).
+      try { document.dispatchEvent(new CustomEvent('ost:wallet-panel', { detail: { panel: nextTarget } })); } catch (_) {}
+
       if (options.scroll) {
         const walletSection = $('#wallet');
         // Scroll to the PANEL that was just opened, not the top of the whole wallet
@@ -7618,6 +8901,11 @@
     setWalletPanel(hashTarget || defaultTarget);
 
     window.setWalletPanel = setWalletPanel;
+    // The panel that is open now (WAL-8: a wallet gate returns the user to it).
+    window.getWalletPanel = function () {
+      const b = tabButtons.find(button => button.classList.contains('active'));
+      return b ? b.getAttribute('data-wallet-panel-target') : null;
+    };
   })();
 
   /* ================================================================== */
@@ -7931,11 +9219,11 @@
         if (wdPortfolioCopy) wdPortfolioCopy.textContent = 'Your live wallet curve combines current SOL and OST holdings with the latest market tape.';
         setRouteStatus(wdRouteHoldStatus, '', 'Locked');
         setRouteStatus(wdRouteSwapStatus, '', 'Needs wallet');
-        setRouteStatus(wdRoutePortalStatus, 'preview', 'Preview rails');
+        setRouteStatus(wdRoutePortalStatus, 'preview', 'External · mainnet');
         setRouteStatus(wdRoutePredictStatus, '', 'Needs OST');
         if (wdRouteHoldCopy) wdRouteHoldCopy.textContent = 'Create or connect a wallet to hold OST while the fee vault sponsors devnet network costs.';
         if (wdRouteSwapCopy) wdRouteSwapCopy.textContent = 'Live once a wallet is connected and routed into OST through the sponsored vault rail.';
-        if (wdRoutePortalCopy) wdRoutePortalCopy.textContent = 'Wormhole, Onramper, MoonPay, and Transak stay linked here as the mainnet entry and exit stack.';
+        if (wdRoutePortalCopy) wdRoutePortalCopy.textContent = 'External mainnet tools for SOL assets (Wormhole, Onramper, MoonPay, Transak). They never deliver OST.';
         if (wdRoutePredictCopy) wdRoutePredictCopy.textContent = 'Place live devnet market tickets after this wallet is holding OST.';
         drawWalletPortfolioChart([], { hasWallet: false });
         return;
@@ -7948,11 +9236,11 @@
         setIntelBadge(wdPortfolioBadge, 'live', (changePct >= 0 ? '+' : '') + changePct.toFixed(2) + '% 24h');
         setRouteStatus(wdRouteHoldStatus, 'live', 'Live now');
         setRouteStatus(wdRouteSwapStatus, 'live', 'Live devnet');
-        setRouteStatus(wdRoutePortalStatus, 'preview', 'Preview rails');
+        setRouteStatus(wdRoutePortalStatus, 'preview', 'External · mainnet');
         setRouteStatus(wdRoutePredictStatus, 'live', 'Live devnet');
         if (wdRouteHoldCopy) wdRouteHoldCopy.textContent = 'This wallet is actively holding live devnet balances and exposing a real receive address.';
         if (wdRouteSwapCopy) wdRouteSwapCopy.textContent = 'Switch into OST rails while the fee vault pays Solana network costs for sponsored devnet actions.';
-        if (wdRoutePortalCopy) wdRoutePortalCopy.textContent = 'Use Wormhole and the fiat portals as the future mainnet bridge, bank, card, and cash-out stack.';
+        if (wdRoutePortalCopy) wdRoutePortalCopy.textContent = 'External mainnet tools for SOL assets (Wormhole, Onramper, MoonPay, Transak). They never deliver OST; OST ⇄ OSTG is in Convert.';
         if (wdRoutePredictCopy) wdRoutePredictCopy.textContent = 'Prediction tickets can already move OST into the devnet market vault from this same wallet.';
       } else {
         if (wdIntelFunding) wdIntelFunding.textContent = 'Fee-covered';
@@ -7961,11 +9249,11 @@
         setIntelBadge(wdPortfolioBadge, 'warning', 'Needs OST');
         setRouteStatus(wdRouteHoldStatus, 'live', 'Live now');
         setRouteStatus(wdRouteSwapStatus, 'warning', 'Claim first');
-        setRouteStatus(wdRoutePortalStatus, 'preview', 'Preview rails');
+        setRouteStatus(wdRoutePortalStatus, 'preview', 'External · mainnet');
         setRouteStatus(wdRoutePredictStatus, 'warning', 'Needs OST');
         if (wdRouteHoldCopy) wdRouteHoldCopy.textContent = 'The address is real and connected. No SOL top-up is needed for the sponsored OST claim.';
         if (wdRouteSwapCopy) wdRouteSwapCopy.textContent = 'Claim the 100 OST head start first; sponsored devnet actions use the fee vault instead of user SOL.';
-        if (wdRoutePortalCopy) wdRoutePortalCopy.textContent = 'Use the linked bank, card, and bridge portals to preview the future mainnet stack.';
+        if (wdRoutePortalCopy) wdRoutePortalCopy.textContent = 'External mainnet tools for SOL assets (Wormhole, Onramper, MoonPay, Transak). They never deliver OST.';
         if (wdRoutePredictCopy) wdRoutePredictCopy.textContent = 'The prediction vault stays locked until this wallet is holding OST.';
       }
 
@@ -7980,7 +9268,7 @@
     function handleJourneyAction(action) {
       if (!action) return;
       if (action === 'create-local') {
-        connectWallet('local');
+        requireWallet({ reason: 'start' });   // C9: one get-started path
         return;
       }
       if (action === 'show-access') {
@@ -8046,7 +9334,8 @@
     $$('.wd-connect-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const walletType = btn.getAttribute('data-wallet');
-        if (walletType) connectWallet(walletType);
+        if (walletType === 'local') requireWallet({ reason: 'start' });   // C9
+        else if (walletType) connectWallet(walletType);
       });
     });
 
@@ -8102,7 +9391,18 @@
           return { solBalance: 0, ostBalance: 0 };
         }
         const pk = new solanaWeb3.PublicKey(pubkey);
-        const lamports = await conn.getBalance(pk);
+        // NET-3 / C6: read the shared OST_BALANCE (it already polls SOL + OST once
+        // a minute while visible and on every ost:wallet-tx) instead of running a
+        // second getBalance + getAccountInfo loop here. RPC only as a fallback.
+        let sharedSol, sharedOst;
+        try {
+          if (window.OST_BALANCE && typeof window.OST_BALANCE.get === 'function') {
+            const g = window.OST_BALANCE.get() || {};
+            if (g.sol != null && Number.isFinite(Number(g.sol))) sharedSol = Number(g.sol);
+            if (g.ost != null && Number.isFinite(Number(g.ost))) sharedOst = Number(g.ost);
+          }
+        } catch (_) {}
+        const lamports = sharedSol != null ? Math.round(sharedSol * 1e9) : await rpcCall(function (c) { return c.getBalance(pk); });   // NET-1
         const solBal = lamports / 1e9;
         if (wdSolBal) wdSolBal.textContent = solBal.toFixed(4);
         if (wdSolUsd) {
@@ -8115,7 +9415,7 @@
           const solInCur = solBal * solPrice / fiatRate;
           wdSolUsd.textContent = curSymbol + solInCur.toFixed(cur === 'BTC' ? 6 : 2);
         }
-        const ostBal = await getOstBalanceForAddress(pk);
+        const ostBal = sharedOst != null ? sharedOst : (window.OST_BALANCE ? undefined : await getOstBalanceForAddress(pk));
         // `undefined` = the read failed. Do NOT render it and do NOT feed it
         // onward — keep whatever is on screen, which is the last value the chain
         // actually confirmed.
@@ -8154,9 +9454,14 @@
           var prev = __ostLastBalances[key];
           if (prev) {
             var dSol = solBal - prev.sol;
-            var dOst = ostBal - prev.ost;
+            // Round to the token's 9 dp so float noise never reads as a transfer.
+            var dOst = Math.round((ostBal - prev.ost) * 1e9) / 1e9;
+            // BRG-6: a rise right after this wallet's OWN conversion / claim / send
+            // is not an incoming transfer — don't log it as "recv-ost" (the wallet
+            // home shows the real, parsed "Received X OST" for true incoming tx).
+            var ownRecent = Date.now() - (window.__ostLastOwnMoneyTxAt || 0) < 90000;
             if (dSol > 0.0001) {
-              toast('💰', 'Received ' + dSol.toFixed(4) + ' SOL');
+              toast('💰', 'Received ' + dSol.toFixed(4) + ' SOL', { background: true });
               // Never feed an UNKNOWN OST balance into the portfolio chart. When
               // the OST read failed (ostBal === undefined), recording it would
               // plot an undefined point and corrupt the curve — the same
@@ -8168,8 +9473,8 @@
                 clearWalletFundingState();
               }
             }
-            if (dOst > 0.0001) {
-              toast('🟡', 'Received ' + dOst.toFixed(4) + ' OST');
+            if (dOst > 0.0001 && !ownRecent) {
+              toast('🟡', 'Received ' + dOst.toFixed(4) + ' OST', { background: true });
               if (typeof window.recordOstSnapshot === 'function' && ostBal !== undefined) {
                 try { window.recordOstSnapshot({ ts: Date.now(), ostBalance: ostBal, solBalance: solBal, kind: 'recv-ost', amount: dOst }); } catch (_) {}
               }
@@ -8321,12 +9626,27 @@
       }
     }, 1200);
 
-    // Also refresh balances every 8 s while connected so receivers see
-    // incoming SOL / OST quickly (was 30 s — too slow for live transfers).
+    // NET-3: this legacy dashboard poll ran every 8 s (2 RPC reads each, ~15/min
+    // per idle tab). Money moves now announce themselves (`ost:wallet-tx`), so poll
+    // at most once a minute, only while visible and not idle, and refresh right
+    // after a money event instead.
     setInterval(() => {
       if (document.hidden) return;
+      if (window.OST_IDLE_GUARD && typeof OST_IDLE_GUARD.isGated === 'function' && OST_IDLE_GUARD.isGated()) return;
       if (connectedWallet) syncJourneyUi();
-    }, 8000);
+    }, 60000);
+    window.addEventListener('ost:wallet-tx', function (e) {
+      var d = (e && e.detail) || {};
+      if (d.direction !== 'in') window.__ostLastOwnMoneyTxAt = Date.now();
+      if (connectedWallet) setTimeout(syncJourneyUi, 2500);
+    });
+    // The dashboard reads OST_BALANCE now: repaint when it publishes (≤ 1 per 20 s).
+    var lastBalanceRepaint = 0;
+    window.addEventListener('ost:balance', function () {
+      if (!connectedWallet || document.hidden || Date.now() - lastBalanceRepaint < 20000) return;
+      lastBalanceRepaint = Date.now();
+      syncJourneyUi();
+    });
 
     // If already connected on load
     if (connectedWallet) showDashboard(connectedWallet);
@@ -9434,24 +10754,9 @@
         // --- Binance → consumer buy page ---
         if (h === 'binance.com') return 'https://www.binance.com/en/price/solana';
 
-        // --- Jupiter DEX → use embeddable Terminal with wOST ---
-        if (h === 'jup.ag') return 'https://terminal.jup.ag/swap?outputMint=Ac8RTG9R15HDXkjJDphRNpEgawEh1o5wLFaWPGFjiHoS';
-        if (h === 'terminal.jup.ag') return raw; // already embeddable
-
-        // --- Orca → route through Jupiter Terminal (aggregates Orca liquidity) ---
-        if (h === 'orca.so') return 'https://terminal.jup.ag/swap?outputMint=Ac8RTG9R15HDXkjJDphRNpEgawEh1o5wLFaWPGFjiHoS';
-
-        // --- Portal Bridge (uses iframe-friendly checkout) ---
-        if (h === 'portalbridge.com') return raw;
-
-        // --- deBridge (embeddable widget) ---
-        if (h === 'app.debridge.finance') return raw;
-
-        // --- Allbridge Core (embeddable) ---
-        if (h === 'core.allbridge.io' || h === 'app.allbridge.io') return raw;
-
-        // --- Mayan Finance (embeddable) ---
-        if (h === 'mayan.finance') return raw;
+        // BRG-3: no more jup.ag / orca.so rewrites into the deprecated Jupiter
+        // Terminal on a devnet mint — Jupiter and Orca open as themselves
+        // (external mainnet tools) in a new tab.
       } catch(e) {}
       return raw;
     }
@@ -9503,14 +10808,12 @@
 
     // Embeddable allowlist — ONLY these domains load inside our popup iframe.
     // Everything else opens in a new tab. Almost no website allows iframe embedding.
+    // BRG-2: cross-origin bridges (Portal/Wormhole, deBridge, Allbridge, Mayan)
+    // send frame-ancestors 'none' / X-Frame-Options DENY. A blocked frame still
+    // fires onload, which cancelled the fallback — a permanently blank sheet.
+    // They are never iframed: they open in a new tab like every other tool.
     var embeddableDomains = [
-      'terminal.jup.ag',           // Jupiter swap widget
-      'openstreetmap.org',         // Maps embed
-      'app.debridge.finance',      // deBridge widget
-      'core.allbridge.io',         // Allbridge Core widget
-      'app.allbridge.io',          // Allbridge legacy
-      'mayan.finance',             // Mayan bridge widget
-      'portalbridge.com'           // Portal Bridge widget
+      'openstreetmap.org'          // Maps embed
     ];
 
     function isEmbeddable(testUrl) {
@@ -12677,8 +13980,11 @@
         } catch (err) {
           console.warn('[memecoin trade] failed', err);
           var msg = (err && err.message) ? err.message : 'Trade failed';
-          toast('⚠️', msg.length > 80 ? msg.slice(0, 80) + '…' : msg);
-          try { alert('Memecoin trade failed:\n\n' + msg); } catch(e){}
+          // C2 / UX-1: one visible notice (no blocking alert()).
+          try {
+            if (typeof window.OST_NOTIFY === 'function') window.OST_NOTIFY({ kind: 'error', title: 'Memecoin trade failed.', body: msg.length > 200 ? msg.slice(0, 200) + '…' : msg });
+            else toast('⚠️', 'Memecoin trade failed: ' + (msg.length > 80 ? msg.slice(0, 80) + '…' : msg));
+          } catch(e){}
         } finally {
           tradeBtn.disabled = false; tradeBtn.textContent = origLabel;
         }
@@ -15334,46 +16640,86 @@
       });
     }
 
-    // Auto-settle OSTG-NATIVE tickets whose round has closed, so a 5-min market
-    // resolves on its own instead of waiting for the user to tap "Settle". The
-    // server owns the outcome; this only asks it to resolve (idempotent). A
-    // transient not_yet / settle_price_unavailable (round not rolled over yet)
-    // leaves the ticket open to retry — it never fabricates a result.
+    // OSTG-NATIVE (BTC 5-min, play rail) results come from the OST SERVER: it
+    // resolves every position itself (alarm at close + 10 s) and credits the win
+    // to the play balance. PRD-1: this only READS that result —
+    // GET /play/predict/get needs no wallet session, so it works on page load
+    // before the wallet attaches (the old POST /resolve went out unsigned and
+    // 401'd, and it skipped any ticket this browser had already flipped to
+    // won/lost from its own feed — which is what fed the double payout). A
+    // ticket without the server's answer yet is always re-checked, whatever the
+    // local status says. The server is asked to resolve (idempotent POST) only
+    // when it is late and a signed session exists. Never fabricates a result.
     function refreshOstgNativeResolutions() {
       if (refreshOstgNativeResolutions.inFlight) return Promise.resolve(false);
+      // PRD-1: put legacy p_ records (imported by an older client without
+      // fundedBy) back on the play rail first, so they are read from the server.
+      try { migrateLegacyPredictionRecords(); } catch (_) {}
       var orders = readPredictionOrderRecords();
       var due = [];
-      orders.forEach(function(order, index) {
-        if (!order || order.fundedBy !== 'ostg-native' || order.cashedOut) return;
-        var st = String(order.status || '').toLowerCase();
-        if (st === 'won' || st === 'lost' || st === 'refunded') return;
+      orders.forEach(function(order) {
+        if (!order || order.serverResolvedAt) return;
+        var pid = predictionServerPositionId(order);
+        if (!pid) return;
         var closeAt = Number(order.closeAt || order.closeAtMs || 0);
+        if (!(closeAt > 0)) { var mOpen = String(order.marketId || '').match(/^ost-btc5m-(\d+)$/); if (mOpen) closeAt = Number(mOpen[1]) + 300000; }
         if (!(closeAt > 0 && closeAt <= Date.now())) return;
-        due.push({ order: order, index: index });
+        due.push({ pid: pid, closeAt: closeAt, marketId: order.marketId });
       });
       if (!due.length) return Promise.resolve(false);
       refreshOstgNativeResolutions.inFlight = true;
       var base = getOstApiBase() || (window.OST_API_BASE || 'https://ost-api.nachogtavl.workers.dev');
-      return Promise.all(due.map(function(d) {
-        var pid = d.order.serverPositionId || d.order.signature || d.order.sig || d.order.id;
-        return fetch(base + '/play/predict/resolve', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: pid, marketId: d.order.marketId })
-        }).then(function(x){ return x.json(); }).then(function(rr){ return { d: d, rr: rr }; })
-          .catch(function(){ return { d: d, rr: { ok: false, error: 'network' } }; });
+      var signed = !!(window.OST_WALLET && window.OST_WALLET.session && window.OST_WALLET.session.publicKey);
+      return Promise.all(due.slice(0, 12).map(function(d) {
+        return fetch(base + '/play/predict/get?id=' + encodeURIComponent(d.pid), { cache: 'no-store', headers: { accept: 'application/json' } })
+          .then(function(x) { return x.ok ? x.json() : null; })
+          .then(function(j) {
+            var pos = j && j.position;
+            var st = pos ? String(pos.status || '').toLowerCase() : '';
+            // Server late (> 2 min after close) and still open: nudge it, signed.
+            if (pos && st === 'open' && signed && Date.now() > d.closeAt + 120000) {
+              return fetch(base + '/play/predict/resolve', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: d.pid, marketId: d.marketId })
+              }).then(function(x) { return x.json(); }).then(function(rr) {
+                if (rr && rr.ok !== false && rr.status) return { d: d, pos: Object.assign({}, pos, { status: rr.status, payout: rr.payout, fee: rr.fee, settlePrice: rr.settlePrice, line: rr.line, winningSide: rr.winningSide }) };
+                return { d: d, pos: pos };
+              }).catch(function() { return { d: d, pos: pos }; });
+            }
+            return { d: d, pos: pos };
+          })
+          .catch(function() { return { d: d, pos: null }; });
       })).then(function(results) {
         var fresh = readPredictionOrderRecords();
         var changed = false, credited = false;
         results.forEach(function(res) {
-          var rr = res.rr;
-          if (!rr || rr.ok === false) return;   // transient — leave ticket open
-          var oN = fresh[res.d.index]; if (!oN) return;
-          oN.status = rr.status; oN.settlePrice = rr.settlePrice; oN.line = rr.line; oN.winningSide = rr.winningSide;
-          oN.payout = Number(rr.payout) || 0; oN.houseFee = Number(rr.fee) || 0;
-          oN.cashedOut = (Number(rr.payout) || 0) > 0; oN.cashoutOst = Number(rr.payout) || 0;
-          oN.cashoutKind = 'ostg-native-resolve'; oN.resolvedAt = Date.now();
-          fresh[res.d.index] = oN; sharePredictionOrderRecord(oN);
-          changed = true; if (oN.payout > 0) credited = true;
+          var p = res.pos; if (!p) return;
+          var st = String(p.status || '').toLowerCase();
+          var i = fresh.findIndex(function(o) { return o && predictionServerPositionId(o) === res.d.pid; });
+          if (i < 0) return;
+          var oN = fresh[i];
+          if (st === 'open') {
+            // Not resolved yet. Undo any result this browser invented from its
+            // own price feed — only the server's answer counts.
+            if (!oN.cashedOut && String(oN.status || 'open') !== 'open') {
+              oN.status = 'open'; oN.outcome = ''; oN.resolved = false; changed = true; fresh[i] = oN;
+            }
+            return;
+          }
+          var payout = Number(p.payout) || 0;
+          oN.status = st; oN.outcome = st; oN.resolved = true;
+          if (p.settlePrice != null) oN.settlePrice = p.settlePrice;
+          if (p.line != null) oN.line = p.line;
+          if (p.winningSide != null) oN.winningSide = p.winningSide;
+          oN.payout = payout; oN.houseFee = Number(p.fee) || 0;
+          // Won / refunded / sold: the server already paid the PLAY balance.
+          oN.cashedOut = payout > 0; oN.cashoutOst = payout; oN.paidTo = payout > 0 ? 'play' : '';
+          oN.cashoutKind = st === 'sold' ? 'ostg-native-sell' : 'ostg-native-resolve';
+          oN.resolvedAt = Number(p.resolvedAt || p.soldAt) || Date.now();
+          oN.serverResolvedAt = Date.now();
+          oN.rail = 'play'; oN.unit = 'OSTG'; oN.serverSettled = true;
+          fresh[i] = oN; sharePredictionOrderRecord(oN);
+          changed = true; if (payout > 0 && st !== 'sold') credited = true;
         });
         if (!changed) return false;
         writePredictionOrderRecords(fresh); state.orderHistory = fresh;
@@ -15382,6 +16728,8 @@
           try { window.dispatchEvent(new CustomEvent('ost:money:change')); } catch (_) {}
         }
         renderPredictionLedger();
+        try { window.dispatchEvent(new CustomEvent('ost:prediction-resolutions-refreshed')); } catch (_) {}
+        try { window.dispatchEvent(new CustomEvent('ost:prediction:order-changed')); } catch (_) {}
         return true;
       }).finally(function() { refreshOstgNativeResolutions.inFlight = false; });
     }
@@ -15395,11 +16743,16 @@
       var byId = {}; (ev.payload.positions || []).forEach(function (p) { if (p && p.id) byId[p.id] = p; });
       var fresh = readPredictionOrderRecords(); var changed = false, credited = false, myBal = null;
       fresh.forEach(function (oN, i) {
-        if (!oN || oN.fundedBy !== 'ostg-native' || oN.cashedOut) return;
-        var pid = oN.serverPositionId || oN.signature || oN.sig || oN.id; var p = byId[pid]; if (!p) return;
+        if (!oN || oN.serverResolvedAt) return;
+        var pid = predictionServerPositionId(oN); var p = pid ? byId[pid] : null; if (!p) return;
+        oN.fundedBy = 'ostg-native'; oN.serverPositionId = pid;
         oN.status = p.status; oN.settlePrice = ev.payload.settlePrice; oN.winningSide = (Number(ev.payload.settlePrice) > Number(oN.priceToBeat || oN.line || 0)) ? 'yes' : 'no';
         oN.payout = Number(p.payout) || 0; oN.houseFee = Number(p.fee) || 0;
         oN.cashedOut = oN.payout > 0; oN.cashoutOst = oN.payout; oN.cashoutKind = 'ostg-native-resolve'; oN.resolvedAt = Date.now();
+        // The server already credited the play balance: record it as such, so no
+        // surface ever offers a Claim for it (PRD-1).
+        oN.outcome = oN.status; oN.resolved = true; oN.paidTo = oN.payout > 0 ? 'play' : ''; oN.serverResolvedAt = Date.now();
+        oN.rail = 'play'; oN.unit = 'OSTG'; oN.serverSettled = true;
         fresh[i] = oN; sharePredictionOrderRecord(oN); changed = true;
         if (oN.payout > 0) { credited = true; if (p.balance != null) myBal = Number(p.balance); }
       });
@@ -15412,6 +16765,13 @@
       }
       renderPredictionLedger();
       try { window.dispatchEvent(new CustomEvent('ost:prediction-resolutions-refreshed')); } catch (_) {}
+    });
+    // Re-check server results once the wallet attaches (and on later changes):
+    // a late-attaching wallet must never leave a closed ticket on a stale status.
+    var _nativeRecheckT = 0;
+    window.addEventListener('ost:wallet-changed', function () {
+      clearTimeout(_nativeRecheckT);
+      _nativeRecheckT = setTimeout(function () { try { refreshOstgNativeResolutions(); } catch (_) {} }, 1500);
     });
 
     function getPredictionOrderAction(order) {
@@ -15449,89 +16809,158 @@
         }
       }
 
-      if (order && order.cashedOut) {
-        return {
-          market: market,
-          side: side,
-          stake: stake,
-          entryPrice: entryPrice,
-          shares: shares,
-          livePrice: livePrice,
-          liveValue: liveValue,
-          payout: Number(order.cashoutOst || 0),
-          label: 'Paid',
-          detail: 'Paid out ' + formatOst(Number(order.cashoutOst || 0)),
-          canCash: false,
-          kind: order.cashoutKind || 'prediction-cashout'
-        };
+      // C6: every ticket carries its rail + unit. Wallet tickets are OST on
+      // chain; the BTC 5-min server ledger and the on-chain program are OSTG.
+      // The rail comes from the ONE classifier (predictionTicketTrust): a p_…
+      // server position is the play rail even when an older client stored it
+      // without fundedBy (PRD-1).
+      var trust = predictionTicketTrust(order);
+      var funded = String(order && order.fundedBy || '');
+      if (trust.native) funded = 'ostg-native';
+      var rail = trust.rail;
+      var unit = (rail === 'play' || rail === 'onchain') ? 'OSTG' : (rail === 'wallet' || rail === 'credits') ? 'OST' : ((order && order.unit) || trust.unit);
+      function act(extra) {
+        return Object.assign({ market: market, side: side, stake: stake, entryPrice: entryPrice, shares: shares,
+          livePrice: livePrice, liveValue: liveValue, rail: rail, unit: unit, payout: 0, net: 0, fee: 0, canCash: false, finalStatus: null,
+          trust: trust }, extra);
       }
 
-      // OSTG-NATIVE (server-authoritative) tickets never settle on the client.
-      // Before close they are LOCKED (the server refuses to resolve early — no
-      // peer to sell to on a pari-mutuel 5-min round). After close, "Settle"
-      // asks the server to resolve from the real close price. The payout number
-      // is not known until the server computes it, so we show the max potential
-      // (shares) as an estimate on the button; the credit is whatever the server
-      // returns.
-      if (order && order.fundedBy === 'ostg-native') {
+      // PRD-7: a "paid" record whose payout signature was invented by an old
+      // client ('local-…') is not a receipt — nothing was paid on chain.
+      if (order && order.cashedOut && trust.fakePaid && rail === 'wallet') {
+        return act({ label: 'Legacy receipt', detail: 'Legacy record — this payout was never made on chain', kind: 'legacy-receipt' });
+      }
+      if (order && order.cashedOut) {
+        var paid = Number(order.cashoutOst || 0);
+        var paidSold = /sell|cashout/.test(String(order.cashoutKind || '')) || String(order.status || '').toLowerCase() === 'sold';
+        return act({
+          payout: paid, net: paid,
+          label: paidSold ? 'Sold' : 'Paid',
+          detail: (paidSold ? 'Sold for ' : 'Paid ') + formatOst(paid).replace(/\s*OST$/, '') + ' ' + unit + (rail === 'play' ? ' to your play balance' : ' to your wallet'),
+          kind: order.cashoutKind || 'prediction-cashout'
+        });
+      }
+
+      // D1: legacy credits are retired — a credits ticket is history, never cashable.
+      if (rail === 'credits') {
+        return act({ label: 'Legacy credits', detail: 'Retired legacy credits ticket — not cashable', kind: 'credits-retired', finalStatus: lost ? 'lost' : null });
+      }
+      // Legacy PlayLedger stake (pre-server-ledger): settles on the server only.
+      if (funded === 'ostg' && !trust.native) {
+        return act({ label: 'Legacy OSTG ticket', detail: 'Legacy play-balance ticket — settled by the OST server', kind: 'ostg-legacy' });
+      }
+      // The stake is still confirming on chain: nothing to sell until it lands.
+      if (order && (order.fundingState === 'confirming' || order.fundingState === 'submitting' || order.pending)) {
+        return act({ label: 'Confirming stake…', detail: 'Confirming your stake on chain', kind: 'confirming' });
+      }
+      // PRD-7: a wallet ticket with no real stake signature ('local-…', 'sim-…',
+      // '[object Object]' from old clients) never moved any OST.
+      if (trust.fake) {
+        var notPlaced = status === 'failed';
+        return act({ label: notPlaced ? 'Not placed' : 'Legacy ticket',
+          detail: notPlaced ? 'This ticket was never placed — nothing was staked' : 'Legacy record with no on-chain stake — not cashable',
+          kind: 'legacy-fake' });
+      }
+      // On-chain program tickets are paid by the PROGRAM (claim_payout), never
+      // from the OST pool (D4: that rail is offline until the crank runs).
+      if (rail === 'onchain') {
+        return act({ label: 'On-chain ticket', detail: 'Escrowed in the on-chain program — it pays out from the program when the round settles', kind: 'onchain' });
+      }
+      // SRV-3: a ticket first seen in /positions whose stake is NOT on chain for
+      // this wallet (forged or mistaken) is never payable.
+      if (trust.unverifiable) {
+        return act({ label: 'Not verified', detail: 'Its stake was not found on chain for this wallet — not cashable', kind: 'unverified' });
+      }
+      // Imported and not checked yet: no Sell / Claim is offered until the
+      // stake is found on chain (a forged record never shows a payable win).
+      function gateImported(a) {
+        if (!a || !a.canCash || !trust.imported || order.stakeVerifiedAt) return a;
+        schedulePredictionImportVerify();
+        return act({ label: 'Verifying stake…', detail: 'Checking this ticket’s stake on chain before it can be sold or claimed', kind: 'verifying',
+          finalStatus: a.finalStatus === 'won' ? 'won' : null });
+      }
+      // A payout request whose answer was lost: never "Sell" again until the
+      // chain / server says what happened (SRV-2).
+      if (order && order.cashoutPending) {
+        return act({ label: 'Paying…', detail: 'Checking whether the payout landed', kind: 'paying',
+          payout: Number(order.cashoutRequestedOst || 0), net: Number(order.cashoutRequestedOst || 0) });
+      }
+
+      // OSTG-NATIVE (BTC 5-min server ledger). The SERVER settles from the BTC
+      // close price and credits the play balance itself — the client never
+      // claims (PRD-1). Before close the position can be sold back to the server
+      // at ITS current odds (estimate shown). A local won/lost without the
+      // server's answer is not trusted.
+      if (funded === 'ostg-native') {
         var oNativeStatus = String(order.status || '').toLowerCase();
-        if (oNativeStatus === 'won' || oNativeStatus === 'lost' || oNativeStatus === 'refunded') {
-          return {
-            market: market, side: side, stake: stake, entryPrice: entryPrice, shares: shares,
-            livePrice: livePrice, liveValue: liveValue, payout: Number(order.payout || 0),
-            label: oNativeStatus === 'won' ? 'Won' : (oNativeStatus === 'refunded' ? 'Refunded' : 'Closed lost'),
-            detail: oNativeStatus === 'won' ? ('Paid ' + formatOst(Number(order.payout || 0)))
-              : (oNativeStatus === 'refunded' ? 'Tie — stake refunded' : 'Resolved losing side'),
-            canCash: false, kind: 'ostg-native-resolved',
-            finalStatus: oNativeStatus === 'refunded' ? 'won' : oNativeStatus
-          };
+        if (order.serverResolvedAt && (oNativeStatus === 'won' || oNativeStatus === 'lost' || oNativeStatus === 'refunded' || oNativeStatus === 'sold')) {
+          var np = Number(order.payout || 0);
+          return act({
+            payout: np, net: np,
+            label: oNativeStatus === 'won' ? 'Won' : oNativeStatus === 'refunded' ? 'Refunded' : oNativeStatus === 'sold' ? 'Sold' : 'Closed lost',
+            detail: oNativeStatus === 'won' ? ('Won · paid ' + Number(np).toFixed(2) + ' OSTG to your play balance')
+              : oNativeStatus === 'refunded' ? 'Tie — stake refunded to your play balance'
+              : oNativeStatus === 'sold' ? ('Sold · ' + Number(np).toFixed(2) + ' OSTG to your play balance') : 'Resolved losing side',
+            kind: 'ostg-native-resolved',
+            finalStatus: oNativeStatus === 'lost' ? 'lost' : 'paid'
+          });
         }
         var nativeClose = Number(order.closeAt || order.closeAtMs || 0);
         var nativeClosed = nativeClose > 0 && nativeClose <= Date.now();
-        return {
-          market: market, side: side, stake: stake, entryPrice: entryPrice, shares: shares,
-          livePrice: livePrice, liveValue: liveValue,
-          payout: nativeClosed ? (Number(shares) || 0) : 0,
-          label: nativeClosed ? 'Settle' : 'Locked until close',
-          detail: nativeClosed ? 'Server settles from the round close price'
-            : 'OSTG position settles automatically at round close',
-          canCash: nativeClosed, kind: 'ostg-native-resolve', finalStatus: null
-        };
+        if (nativeClosed) {
+          return act({ label: 'Settling…', detail: 'Settled by the OST server from the BTC close price — paid to your play balance automatically', kind: 'ostg-native-settling' });
+        }
+        var npx = NaN;
+        try { var rnd = window.OST_PREDICTION_API && OST_PREDICTION_API.fiveMinRound && OST_PREDICTION_API.fiveMinRound(); if (rnd && String(rnd.id || rnd.marketId || '') === String(order.marketId) && Number(rnd.yesPriceNumber) > 0) npx = side === 'yes' ? Number(rnd.yesPriceNumber) : 1 - Number(rnd.yesPriceNumber); } catch (_) {}
+        if (!(npx > 0 && npx < 1)) npx = livePrice;
+        var ngross = shares > 0 && npx > 0 ? Math.min(shares, shares * npx) : 0;
+        var nfee = Math.max(0, ngross - stake) * 0.02;
+        return act({
+          livePrice: npx, liveValue: ngross, payout: ngross, net: Math.max(0, ngross - nfee), fee: nfee,
+          label: 'Sell', detail: 'Estimated — the server fills at its current odds', canCash: ngross > 0,
+          kind: 'ostg-native-sell', finalStatus: 'sold'
+        });
       }
 
+      // Wallet (OST) tickets. The sell / claim quote here is the SAME math the
+      // cash-out executes (OST_PRICES mid → OST_ARB.sellQuote; OST_HOUSE.quote on
+      // a win), so the number a sheet shows is the number that gets paid (PRD-4).
       if (resolved) {
-        return {
-          market: market,
-          side: side,
-          stake: stake,
-          entryPrice: entryPrice,
-          shares: shares,
-          livePrice: livePrice,
-          liveValue: liveValue,
-          payout: won ? potentialReturn : 0,
+        var wfee = 0, wnet = 0;
+        if (won && potentialReturn > 0) {
+          try { var hq = window.OST_HOUSE && window.OST_HOUSE.quote ? window.OST_HOUSE.quote(potentialReturn, stake) : null; wfee = hq ? Number(hq.fee) || 0 : 0; } catch (_) {}
+          wnet = Math.max(0, potentialReturn - wfee);
+        }
+        return gateImported(act({
+          payout: won ? potentialReturn : 0, net: wnet, fee: wfee,
           label: won ? 'Claim win' : 'Closed lost',
-          detail: won ? 'Resolved winner' : 'Resolved losing side',
+          detail: won ? 'Resolved winner — claim pays ' + unit + ' to your wallet' : 'Resolved losing side',
           canCash: won && potentialReturn > 0,
           kind: 'prediction-settlement',
           finalStatus: won ? 'won' : 'lost'
-        };
+        }));
       }
-
-      return {
-        market: market,
-        side: side,
-        stake: stake,
-        entryPrice: entryPrice,
-        shares: shares,
-        livePrice: livePrice,
-        liveValue: liveValue,
-        payout: Math.max(0, liveValue),
+      // A round / market that has closed but is not resolved yet trades no more.
+      if (isClosed) {
+        return act({ label: 'Awaiting result', detail: 'Market closed — waiting for the result', kind: 'awaiting' });
+      }
+      var smid = NaN;
+      try { smid = (window.OST_PRICES && order.marketId) ? Number(window.OST_PRICES.mid(order.marketId, side)) : NaN; } catch (_) {}
+      if (!(smid > 0 && smid < 1)) smid = livePrice;
+      var sshares = shares > 0 ? shares : (smid > 0 ? liveValue / smid : 0);
+      var sq = null;
+      try { sq = (window.OST_ARB && window.OST_ARB.sellQuote && sshares > 0 && smid > 0) ? window.OST_ARB.sellQuote(sshares, smid) : null; } catch (_) { sq = null; }
+      var sgross = sshares > 0 && smid > 0 ? sshares * smid : liveValue;
+      var snet = sq ? Number(sq.proceeds) || 0 : sgross;
+      return gateImported(act({
+        livePrice: smid, liveValue: sgross, payout: Math.max(0, sgross), net: Math.max(0, snet), fee: sq ? Number(sq.arb) || 0 : 0,
+        quoteMid: smid, quoteShares: sshares,
         label: 'Sell position',
         detail: market ? 'Live mark price' : 'Entry price fallback',
-        canCash: liveValue > 0,
+        canCash: sgross > 0,
         kind: 'prediction-sell',
         finalStatus: 'sold'
-      };
+      }));
     }
 
     function renderPredictionLedger() {
@@ -15589,6 +17018,8 @@
       // the GROSS input the execution path rakes from; showing it on the button
       // advertised more than users got. Display-only: execution math unchanged.
       function displayNetPayout(action, order) {
+        // getPredictionOrderAction now carries the exact net the cash-out pays.
+        if (action && Number.isFinite(Number(action.net)) && Number(action.net) > 0) return Number(action.net);
         var gross = Number(action.payout) || 0;
         if (gross <= 0) return 0;
         try {
@@ -15613,8 +17044,9 @@
           ? t('wallet.portal.prediction.buyNo', 'NO position')
           : t('wallet.portal.prediction.buyYes', 'YES position');
         var canCash = action.canCash && Number(order.stake || 0) > 0;
+        var unitOf = function (v) { return formatOst(v).replace(/ OST$/, ' ' + (action.unit || 'OST')); };
         var cashBtn = canCash
-          ? '<button type="button" class="prediction-cashout-btn" data-cashout-idx="' + idx + '" data-order-sig="' + escapeHtml(String(order.signature || order.sig || order.id || '')) + '" style="margin-left:auto;padding:4px 10px;border-radius:6px;background:#22c55e;color:#000;border:none;font-weight:700;cursor:pointer;font-size:12px">' + escapeHtml(action.label) + ' · ' + escapeHtml(formatOst(displayNetPayout(action, order))) + '</button>'
+          ? '<button type="button" class="prediction-cashout-btn" data-cashout-idx="' + idx + '" data-order-sig="' + escapeHtml(String(order.signature || order.sig || order.id || '')) + '" style="margin-left:auto;padding:4px 10px;border-radius:6px;background:#22c55e;color:#000;border:none;font-weight:700;cursor:pointer;font-size:12px">' + escapeHtml(action.label) + ' · ' + escapeHtml(unitOf(displayNetPayout(action, order))) + '</button>'
           : '<span style="color:' + (order.cashedOut || action.finalStatus === 'won' ? '#22c55e' : action.finalStatus === 'lost' ? '#f87171' : '#94a3b8') + ';font-weight:700;font-size:12px;margin-left:auto">' + escapeHtml(action.detail || action.label) + '</span>';
         // Per-share info: use stored price directly (side-specific), fallback to deriving from potReturn
         var stake = Number(order.stake || 0);
@@ -15641,11 +17073,11 @@
             '</div>',
             '<div class="prediction-position-row-meta" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">',
               '<span title="Stake / Side entry price / Shares bought / Max win return">',
-                '<b>' + escapeHtml(formatOst(stake)) + '</b> staked',
+                '<b>' + escapeHtml(unitOf(stake)) + '</b> staked',
                 ' \u2022 <b style="color:' + sideColor + ';">' + pricePct + '</b> ' + escapeHtml((order.side || 'yes').toUpperCase()) + ' price',
                 ' \u2022 <b>' + escapeHtml(String(shares)) + '</b> shares',
                 ' \u2022 live <b>' + escapeHtml(livePricePct) + '</b>',
-                ' \u2022 value <b>' + escapeHtml(formatOst(action.liveValue || 0)) + '</b>',
+                ' \u2022 value <b>' + escapeHtml(unitOf(action.liveValue || 0)) + '</b>',
               '</span>',
               '<a class="prediction-market-api-link" href="' + escapeHtml(explorerTxUrl(order.signature)) + '" target="_blank" rel="noopener">' + escapeHtml(shortAddress(order.signature || '')) + '</a>',
               cashBtn,
@@ -15680,79 +17112,314 @@
       });
     }
 
-    // ONE cash-out / claim / settle routine for every ticket kind (ostg-native,
-    // ostg, credits, wallet, on-chain). It used to live inside the ledger button's
-    // click handler, so the only way another surface (the market page, the
-    // positions list) could sell was to find that hidden button and click it —
-    // then wait a fixed 1.7s and hope. Now callable directly, by ticket ref
-    // (the stale row index bug is gone too: optimistic tickets are unshifted, so
-    // an index captured at render time could target the wrong ticket).
-    // Resolves { ok, payout, sig, order } on success; throws on failure, leaving
-    // the ticket exactly as claimable as it was.
+    // ONE cash-out / claim / sell routine for every ticket kind, callable by
+    // ticket ref (market page, Portfolio, ledger). Contract C4 outcomes:
+    //   resolves { ok:true, payout, sig, unit, rail, order }     paid
+    //   resolves { ok:true, pending:true, payout, sig?, order }  sent, still confirming ("Paying…")
+    //   resolves { ok:false, reason, label, order }              nothing to cash now
+    //   rejects  Error (human message, err.code)                  refused / failed: ticket unchanged
+    // SRV-2: a payout whose answer is lost is NEVER reported as failed and never
+    // re-requested under a new id — the ticket shows "Paying…" until the chain or
+    // the server says what happened. Every result is shown via OST_NOTIFY (UX-1).
     async function cashOutPredictionOrder(opts) {
       opts = opts || {};
       var btn = opts.btn || { disabled: false, textContent: '' };
       var orders = readPredictionOrderRecords();
       var ref = String(opts.ref || '');
       var idx = -1;
-      if (ref) idx = orders.findIndex(function (o) { return o && String(o.signature || o.sig || o.id || '') === ref; });
+      if (ref) idx = orders.findIndex(function (o) { return o && (String(o.signature || o.sig || o.id || '') === ref || (o.reference && o.reference === ref) || (o.serverPositionId && o.serverPositionId === ref)); });
       if (idx < 0 && Number.isFinite(Number(opts.idx))) idx = Number(opts.idx);
       var order = orders[idx];
       if (!order) throw new Error('Ticket not found');
-      if (order.cashedOut) return { ok: true, already: true, payout: Number(order.cashoutOst || 0), sig: order.cashoutSig || '', order: order };
-      var cashKey = ref || ('idx:' + idx);
+      var action0 = getPredictionOrderAction(order);
+      var unit = action0.unit || 'OST', rail = action0.rail || 'wallet';
+      if (order.cashedOut) return { ok: true, already: true, payout: Number(order.cashoutOst || 0), sig: order.cashoutSig || '', unit: unit, rail: rail, order: order };
+      var cashKey = String(order.signature || order.sig || order.reference || order.id || ref || ('idx:' + idx));
       if (cashingRefs[cashKey]) throw new Error('This ticket is already being paid out.');
       cashingRefs[cashKey] = true;
+      var noteId = 'cashout-' + cashKey.slice(0, 40);
+      // `notified` tells callers (market page, Portfolio) that the outcome was
+      // already shown, so they never show it twice. opts.background marks an
+      // automatic reconcile (C2: only background notices may be filtered).
+      var notified = false;
+      function notice(kind, title, body, sig) {
+        if (kind === 'error' || kind === 'warn' || kind === 'info') notified = true;
+        try { if (typeof window.OST_NOTIFY === 'function') { window.OST_NOTIFY({ id: noteId, kind: kind, title: title, body: body || '', sig: sig || undefined, background: !!opts.background }); return; } } catch (_) {}
+        try { if (opts.background && kind !== 'ok') return; toast(kind === 'error' ? '⚠️' : kind === 'ok' ? '✅' : '⏳', title + (body ? ' — ' + body : '')); } catch (_) {}
+      }
+      function human(err, stage) {
+        try {
+          if (window.OST_MONEY_ERRORS && typeof window.OST_MONEY_ERRORS.humanize === 'function') {
+            var h = window.OST_MONEY_ERRORS.humanize(err, { stage: stage || 'submit', asset: unit });
+            if (h && h.title) return h;
+          }
+        } catch (_) {}
+        return { state: 'failed', title: (err && err.message) || 'That did not go through.', body: '' };
+      }
+      function keyOf(o) { return String(o && (o.signature || o.sig || o.reference || o.id) || ''); }
+      function save(o) {
+        var fresh = readPredictionOrderRecords();
+        var j = fresh.findIndex(function (x) { return keyOf(x) === keyOf(o); });
+        if (j < 0) j = idx;
+        fresh[j] = o; writePredictionOrderRecords(fresh); sharePredictionOrderRecord(o); state.orderHistory = fresh;
+        renderPredictionLedger();
+        try { window.dispatchEvent(new CustomEvent('ost:prediction:order-changed')); } catch (_) {}
+      }
+      // A wallet-ticket payout that was requested but whose result is unknown:
+      // ask the worker (/wallet/payout/status, new worker) or find the payout on
+      // chain by its memo (old worker). `allowRetry`: after 3 minutes with no
+      // trace, re-request with the SAME payoutId and SAME amount (the server
+      // dedupes it, so this can never pay twice).
+      // The pending signature on chain, read once: 'confirmed' | 'failed' |
+      // 'absent' (the RPC answered: no such transaction) | 'unknown'.
+      async function chainSigState(sig) {
+        var api = window.OST_PREDICTION_API || {};
+        if (!sig || typeof api._rpc !== 'function') return 'unknown';
+        try {
+          var r = await api._rpc(function (c) { return c.getSignatureStatuses([sig], { searchTransactionHistory: true }); });
+          if (!r || !Array.isArray(r.value)) return 'unknown';
+          var st = r.value[0];
+          if (!st) return 'absent';
+          if (st.err) return 'failed';
+          return (st.confirmationStatus === 'confirmed' || st.confirmationStatus === 'finalized') ? 'confirmed' : 'unknown';
+        } catch (_) { return 'unknown'; }
+      }
+      // PRD-6 / review: a payout that DEFINITELY did not pay (its transaction
+      // failed on chain, or never landed long after its blockhash expired) is
+      // NOT "Paying…" forever: the ticket goes back to exactly what it was, the
+      // user is told nothing was paid, and Sell / Claim is offered again. The
+      // retry uses the SAME payoutId (the new worker re-sends a failed id; the
+      // server dedupes, so it can never pay twice).
+      function payoutDefinitelyFailed(o, failedSig, why) {
+        var oF = Object.assign({}, o, { cashoutPending: false, cashoutPendingSig: '', cashoutFailedAt: Date.now(),
+          cashoutFailedSig: failedSig || o.cashoutFailedSig || '', cashoutError: why });
+        save(oF);
+        notice('error', 'Payout failed on chain — nothing was paid', 'Your ticket is unchanged. Try again.', failedSig || '');
+        return { ok: false, reason: 'payout_failed', label: 'Payout failed on chain — nothing was paid. Try again.', order: oF };
+      }
+      async function reconcilePayout(o, allowRetry) {
+        var api = window.OST_PREDICTION_API || {};
+        var owner = (o.wallet && /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(String(o.wallet))) ? String(o.wallet) : getPredictionWalletAddress();
+        var pidW = o.cashoutPayoutId || (api.predictionPayoutId ? api.predictionPayoutId(o, o.cashoutRequestedOst) : '');
+        var found = null, refusedByServer = false, searchedNone = false, serverSaysFailed = false, serverKnows = false;
+        try {
+          if (window.OST_RESCUE && typeof window.OST_RESCUE.payoutStatus === 'function' && pidW) {
+            var ps = await window.OST_RESCUE.payoutStatus(pidW);
+            var pst = ps ? String(ps.status || '').toLowerCase() : '';
+            if (ps) serverKnows = true;
+            if (ps && ps.sig && pst === 'confirmed') found = { sig: String(ps.sig) };
+            // The new worker marks an id 'failed' only after the chain said so
+            // (failed or expired) — with or without a signature.
+            else if (ps && (pst === 'failed' || pst === 'released' || pst === 'refused' || pst === 'expired')) { serverSaysFailed = true; if (!ps.sig) refusedByServer = true; }
+            else if (ps && ps.sig && (pst === 'sent' || pst === 'pending') && ps.sig !== o.cashoutPendingSig) {
+              o = Object.assign({}, o, { cashoutPendingSig: String(ps.sig) });
+            }
+          }
+        } catch (_) {}
+        // A signature we hold: ask the chain directly.
+        var sigState = 'unknown';
+        if (!found && o.cashoutPendingSig) {
+          sigState = await chainSigState(o.cashoutPendingSig);
+          if (sigState === 'confirmed') found = { sig: String(o.cashoutPendingSig) };
+        }
+        if (!found && api._findPayoutByMemo) {
+          var fm = await api._findPayoutByMemo(owner, pidW);
+          if (fm && fm.sig) found = fm; else if (fm && fm.none) searchedNone = true;
+        }
+        var ageR = Date.now() - Number(o.cashoutRequestedAt || 0);
+        if (!found) {
+          // Definitely NOT paid: the server marked it failed, or the recorded
+          // transaction failed on chain (a failed transaction is final), or it
+          // never landed 10 minutes after it was sent (blockhash long expired).
+          if (serverSaysFailed && (searchedNone || !o.cashoutPendingSig || sigState === 'failed' || sigState === 'absent')) {
+            return payoutDefinitelyFailed(o, o.cashoutPendingSig, 'payout_failed');
+          }
+          if (o.cashoutPendingSig && sigState === 'failed') {
+            return payoutDefinitelyFailed(o, o.cashoutPendingSig, 'payout_tx_failed');
+          }
+          if (o.cashoutPendingSig && sigState === 'absent' && searchedNone && ageR > 600000) {
+            return payoutDefinitelyFailed(o, o.cashoutPendingSig, 'payout_never_landed');
+          }
+        }
+        if (found && found.sig) {
+          var okSig = String(found.sig);
+          var paidAmt = Number(o.cashoutRequestedOst || 0);
+          var oP = Object.assign({}, o, { cashedOut: true, cashoutPending: false, cashoutSig: okSig, cashoutOst: paidAmt, cashoutAt: Date.now(),
+            status: o.cashoutKind === 'prediction-settlement' ? 'settled' : 'sold' });
+          save(oP);
+          notice('ok', (o.cashoutKind === 'prediction-settlement' ? 'Claimed — ' : 'Sold — ') + paidAmt.toFixed(2) + ' OST to your wallet', '', okSig);
+          try { window.dispatchEvent(new CustomEvent('ost:wallet-changed')); } catch (_) {}
+          return { ok: true, payout: paidAmt, sig: okSig, kind: o.cashoutKind, unit: 'OST', rail: 'wallet', order: oP };
+        }
+        var age = Date.now() - Number(o.cashoutRequestedAt || 0);
+        // Re-request ONLY when the server said it never paid, or the chain was
+        // searched (not "RPC failed") and shows no payout 3 min later — past the
+        // blockhash lifetime, so the first request can no longer land (C4).
+        if (refusedByServer || (allowRetry && age > 180000 && searchedNone && !o.cashoutPendingSig)) {
+          // Re-request under the SAME id + amount (deduped by the server).
+          if (window.OST_TRADE && typeof window.OST_TRADE.predictionCashOut === 'function' && Number(o.cashoutRequestedOst) > 0) {
+            try {
+              var rr2 = await window.OST_TRADE.predictionCashOut(o, Number(o.cashoutRequestedOst));
+              if (rr2 && rr2.sig && !rr2.pending) {
+                var oQ = Object.assign({}, o, { cashedOut: true, cashoutPending: false, cashoutSig: String(rr2.sig), cashoutOst: Number(rr2.ost || o.cashoutRequestedOst), cashoutAt: Date.now(),
+                  status: o.cashoutKind === 'prediction-settlement' ? 'settled' : 'sold' });
+                save(oQ);
+                notice('ok', 'Paid — ' + Number(oQ.cashoutOst).toFixed(2) + ' OST to your wallet', '', oQ.cashoutSig);
+                return { ok: true, payout: Number(oQ.cashoutOst), sig: oQ.cashoutSig, kind: o.cashoutKind, unit: 'OST', rail: 'wallet', order: oQ };
+              }
+              if (rr2 && rr2.pending && rr2.sig) { o = Object.assign({}, o, { cashoutPendingSig: String(rr2.sig) }); save(o); }
+            } catch (e2) {
+              var h2 = human(e2, 'submit');
+              var e2Sig = String((e2 && (e2.sig || (e2.body && e2.body.sig))) || '');
+              if (e2 && e2.code === 'already_paid' && e2Sig) {
+                var oA = Object.assign({}, o, { cashedOut: true, cashoutPending: false, cashoutSig: e2Sig, cashoutOst: Number(o.cashoutRequestedOst || 0), cashoutAt: Date.now(),
+                  status: o.cashoutKind === 'prediction-settlement' ? 'settled' : 'sold' });
+                save(oA);
+                notice('ok', 'Already paid — ' + Number(oA.cashoutOst).toFixed(2) + ' OST is in your wallet', '', e2Sig);
+                return { ok: true, payout: Number(oA.cashoutOst), sig: e2Sig, kind: o.cashoutKind, unit: 'OST', rail: 'wallet', order: oA };
+              }
+              if (e2Sig && !e2.pending && e2.code !== 'state_unknown' && e2.code !== 'gate_reset' && await chainSigState(e2Sig) === 'failed') {
+                return payoutDefinitelyFailed(o, e2Sig, 'payout_tx_failed');
+              }
+              if (e2 && e2.pending && e2Sig) { o = Object.assign({}, o, { cashoutPendingSig: e2Sig }); save(o); }
+              if (h2.state === 'refused' && !e2.pending && !e2.sig) {
+                var oU = Object.assign({}, o, { cashoutPending: false, cashoutFailedAt: Date.now(), cashoutError: String(h2.title).slice(0, 200) });
+                save(oU);
+                notice('error', 'Payout refused', h2.title + (h2.body ? ' — ' + h2.body : ''));
+                return { ok: false, reason: 'refused', label: h2.title, order: oU };
+              }
+            }
+          }
+        }
+        notice('pending', 'Paying…', 'Checking whether the payout landed — check your wallet balance before retrying.');
+        // Keep looking for a while (the new worker answers by id; the old one by
+        // memo / signature). Past 10 minutes a never-landed payout is called
+        // failed above, so the checks continue a little beyond that.
+        if (age < 900000) setTimeout(function () { try { cashOutPredictionOrder({ ref: keyOf(o), background: true }).catch(function () {}); } catch (_) {} }, age < 300000 ? 30000 : 90000);
+        return { ok: true, pending: true, payout: Number(o.cashoutRequestedOst || 0), sig: o.cashoutPendingSig || '', kind: o.cashoutKind, unit: 'OST', rail: 'wallet', order: o };
+      }
       try {
         return await (async function () {
 
-          // OSTG-NATIVE: the SERVER resolves and pays. The client never asserts
-          // an outcome or a payout — it asks /play/predict/resolve, which settles
-          // once, deterministically, from the real round close price, and credits
-          // the server-computed amount. This bypasses ALL the client payout math
-          // below (rake/arb), which only applies to credits/wallet tickets.
-          if (order.fundedBy === 'ostg-native') {
-            var pid = order.serverPositionId || order.signature || order.sig || order.id;
-            var oClose = Number(order.closeAt || order.closeAtMs || 0);
-            if (oClose > 0 && oClose > Date.now()) {
-              toast('⏳', 'This OSTG position settles automatically at round close.');
-              throw new Error('This OSTG position settles automatically at round close.');
-            }
-            var origN = btn.textContent; btn.disabled = true; btn.textContent = '…';
+          // OSTG-NATIVE (BTC 5-min server ledger). Before close: sell back to the
+          // SERVER at its current odds (/play/predict/cashout). After close: the
+          // server settles and pays the play balance by itself — the client only
+          // READS the result (PRD-1: no claim exists for these tickets). The client
+          // never asserts an outcome or an amount here.
+          var trust0 = predictionTicketTrust(order);
+          if (trust0.native || order.fundedBy === 'ostg-native') {
+            var pid = trust0.serverPositionId || String(order.serverPositionId || order.signature || order.sig || order.id || '');
             var baseN = getOstApiBase() || (window.OST_API_BASE || 'https://ost-api.nachogtavl.workers.dev');
-            var rr = await fetch(baseN + '/play/predict/resolve', {
-              method: 'POST', headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ id: pid, marketId: order.marketId })
-            }).then(function (x) { return x.json(); }).catch(function () { return { ok: false, error: 'network' }; });
-            if (!rr || rr.ok === false) {
-              var msg = rr && rr.error === 'not_yet' ? 'Round has not closed yet — try again shortly.'
-                : rr && rr.error === 'settle_price_unavailable' ? 'Waiting for the round close price — try again in a moment.'
-                : ('Could not settle yet: ' + ((rr && rr.error) || 'unknown'));
-              toast('⚠️', msg);
-              btn.disabled = false; btn.textContent = origN;
-              throw new Error(msg);
+            var oClose = Number(order.closeAt || order.closeAtMs || 0);
+            var applyServer = function (st, payout, extra) {
+              var oN = Object.assign({}, order, extra || {});
+              oN.status = st; oN.outcome = st; oN.payout = payout; oN.cashoutOst = payout; oN.cashedOut = payout > 0;
+              oN.paidTo = payout > 0 ? 'play' : ''; oN.cashoutKind = st === 'sold' ? 'ostg-native-sell' : 'ostg-native-resolve';
+              oN.cashoutAt = Date.now(); oN.resolvedAt = oN.resolvedAt || Date.now(); oN.serverResolvedAt = Date.now();
+              oN.rail = 'play'; oN.unit = 'OSTG'; oN.serverSettled = true;
+              save(oN);
+              try { if (window.OST_PLAY && OST_PLAY.refresh) OST_PLAY.refresh(); } catch (_) {}
+              try { window.dispatchEvent(new CustomEvent('ost:money:change')); } catch (_) {}
+              return oN;
+            };
+            var readBack = function () {
+              return fetch(baseN + '/play/predict/get?id=' + encodeURIComponent(pid), { cache: 'no-store' })
+                .then(function (x) { return x.ok ? x.json() : null; }).then(function (j) { return (j && j.position) || null; }).catch(function () { return null; });
+            };
+            if (!(oClose > 0 && oClose <= Date.now())) {
+              // SELL before close, at the SERVER's current odds.
+              var origS = btn.textContent; btn.disabled = true; btn.textContent = '…';
+              notice('pending', 'Selling your position…', 'Estimated — the server fills at its current odds.');
+              var ctrlS = typeof AbortController !== 'undefined' ? new AbortController() : null;
+              var tmoS = setTimeout(function () { try { if (ctrlS) ctrlS.abort(); } catch (_) {} }, 15000);
+              var respS = null, sj = null, sErr = null;
+              try {
+                respS = await fetch(baseN + '/play/predict/cashout', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ id: pid, marketId: order.marketId, wallet: getPredictionWalletAddress() }), signal: ctrlS ? ctrlS.signal : undefined });
+                sj = await respS.json().catch(function () { return null; });
+              } catch (e) { sErr = e; }
+              clearTimeout(tmoS);
+              if (sErr || !sj || (respS && respS.status >= 500 && !(sj && sj.error))) {
+                // Lost answer: read the position back from the server (read-only).
+                var bp = await readBack();
+                if (bp && String(bp.status) !== 'open') {
+                  var oB = applyServer(String(bp.status), Number(bp.payout) || 0, { sellPrice: bp.sellPrice, houseFee: Number(bp.fee) || 0 });
+                  notice('ok', 'Sold — ' + (Number(bp.payout) || 0).toFixed(2) + ' OSTG to your play balance');
+                  return { ok: true, payout: Number(bp.payout) || 0, sig: '', kind: oB.cashoutKind, unit: 'OSTG', rail: 'play', order: oB };
+                }
+                btn.disabled = false; btn.textContent = origS;
+                var ue = new Error(bp ? 'The OST server did not answer — your position is still open. Try again.' : 'Could not reach the OST server — your position is unchanged. Try again in a moment.');
+                ue.code = 'network_error';
+                notice('error', 'Sell did not go through', ue.message);
+                throw ue;
+              }
+              if (sj.ok === false) {
+                btn.disabled = false; btn.textContent = origS;
+                var scode = String(sj.error || '');
+                var smsg = scode === 'round_closed' ? 'Too close to the round end — it settles automatically from the BTC close price.'
+                  : scode === 'price_unavailable' ? 'No fresh BTC price right now — try again in a moment. It still settles at close.'
+                  : (scode === 'wallet_auth_required' || scode === 'unauthorized') ? 'Your wallet sign-in expired — reconnect your wallet and try again.'
+                  : (sj.note || human(sj).title);
+                var se = new Error(smsg); se.code = scode || 'cashout_failed'; se.body = sj;
+                notice(scode === 'round_closed' ? 'info' : 'error', scode === 'round_closed' ? 'Round closing' : 'Sell did not go through', smsg);
+                throw se;
+              }
+              var spay = Number(sj.payout) || 0;
+              var oS = applyServer(String(sj.status || 'sold'), spay, { sellPrice: sj.sellPrice, houseFee: Number(sj.fee) || 0 });
+              if (Number.isFinite(Number(sj.balance))) { try { window.dispatchEvent(new CustomEvent('ost:play:balance', { detail: { balance: Number(sj.balance) } })); } catch (_) {} }
+              notice('ok', (oS.status === 'sold' ? 'Sold — ' : 'Settled — ') + spay.toFixed(2) + ' OSTG to your play balance');
+              return { ok: true, payout: spay, sig: '', kind: oS.cashoutKind, unit: 'OSTG', rail: 'play', order: oS };
             }
-            var freshN = readPredictionOrderRecords();
-            var oN = freshN[idx] || order;
-            oN.status = rr.status; oN.settlePrice = rr.settlePrice; oN.line = rr.line; oN.winningSide = rr.winningSide;
-            oN.payout = Number(rr.payout) || 0; oN.houseFee = Number(rr.fee) || 0;
-            oN.cashedOut = (Number(rr.payout) || 0) > 0; oN.cashoutOst = Number(rr.payout) || 0;
-            oN.cashoutKind = 'ostg-native-resolve'; oN.resolvedAt = Date.now();
-            freshN[idx] = oN; writePredictionOrderRecords(freshN); sharePredictionOrderRecord(oN); state.orderHistory = freshN;
-            try { if (window.OST_PLAY && OST_PLAY.refresh) OST_PLAY.refresh(); } catch (_) {}
-            try { window.dispatchEvent(new CustomEvent('ost:money:change')); } catch (_) {}
-            renderPredictionLedger();
-            if (rr.status === 'won') toast('🎉', 'Won! Paid ' + formatOst(oN.payout) + ' OSTG');
-            else if (rr.status === 'refunded') toast('↩️', 'Tie — stake refunded.');
-            else toast('📉', 'Round settled — better luck next round.');
-            try { window.dispatchEvent(new CustomEvent('ost:prediction:order-changed')); } catch (_) {}
-            return { ok: true, payout: oN.payout, sig: 'ostg-native-' + String(pid), order: oN };
+            // AFTER close: read the server's result (nothing to claim).
+            var gp = await readBack();
+            if (gp && String(gp.status) !== 'open') {
+              var oR = applyServer(String(gp.status), Number(gp.payout) || 0, { settlePrice: gp.settlePrice, line: gp.line, winningSide: gp.winningSide, houseFee: Number(gp.fee) || 0 });
+              return { ok: true, payout: Number(gp.payout) || 0, sig: '', kind: 'ostg-native-resolve', unit: 'OSTG', rail: 'play', order: oR };
+            }
+            return { ok: false, reason: 'settling', label: 'Settled by the OST server from the BTC close price — it pays your play balance automatically.', order: order };
           }
 
           var hasCashOut = !!(window.OST_TRADE && window.OST_TRADE.predictionCashOut);
           var action = getPredictionOrderAction(order);
+          if (action.kind === 'paying' || order.cashoutPending) return await reconcilePayout(order, true);
+          if (action.kind === 'confirming') {
+            var ce = new Error('Your stake is still confirming on chain — you can sell once it lands.');
+            ce.code = 'stake_confirming';
+            notice('info', 'Stake still confirming', ce.message);
+            throw ce;
+          }
+          if (action.kind === 'credits-retired' || action.kind === 'ostg-legacy' || action.kind === 'awaiting' ||
+              action.kind === 'legacy-fake' || action.kind === 'legacy-receipt' || action.kind === 'onchain' || action.kind === 'unverified') {
+            return { ok: false, reason: 'not-cashable', label: action.detail || action.label, order: order };
+          }
+          // The pool only ever pays a WALLET ticket with a real on-chain stake
+          // (never a p_ server position, a fake 'local-…' receipt, credits or a
+          // program ticket — whatever called us). PRD-1 / PRD-7 / SRV-3.
+          if (trust0.rail !== 'wallet' || !trust0.realSig || trust0.native || predictionServerPositionId(order)) {
+            return { ok: false, reason: 'not-cashable', label: 'This ticket is not paid from the OST pool.', order: order };
+          }
+          // SRV-3: a ticket first seen in /positions is paid only once its stake
+          // is found on chain for THIS wallet (market + side + amount), with the
+          // shares capped at what that stake bought.
+          if (trust0.imported && !order.stakeVerifiedAt) {
+            var vs = await verifyPredictionStakeOnChain(order);
+            var checked = applyPredictionStakeCheck(predictionOrderKey(order), vs);
+            if (!vs || !vs.ok) {
+              var vmsg = (vs && vs.definite) ? 'This ticket\'s stake was not found on chain for this wallet — it cannot be paid.'
+                : 'Could not verify this ticket\'s stake on chain right now — nothing was paid. Try again in a moment.';
+              notice(vs && vs.definite ? 'error' : 'warn', vs && vs.definite ? 'Ticket not verified' : 'Checking your ticket', vmsg);
+              try { window.dispatchEvent(new CustomEvent('ost:prediction:order-changed')); } catch (_) {}
+              return { ok: false, reason: vs && vs.definite ? 'unverified' : 'verify-unavailable', label: vmsg, order: checked || order };
+            }
+            if (checked) { order = checked; orders = readPredictionOrderRecords(); }
+            action = getPredictionOrderAction(order);
+            if (!action.canCash) return { ok: false, reason: 'not-cashable', label: action.detail || action.label, order: order };
+          }
           if (!action.canCash || !Number.isFinite(Number(action.payout)) || Number(action.payout) <= 0) {
-            order.status = action.finalStatus || order.status || 'closed';
+            // Only a resolved LOSS changes the ticket here; a 0 quote on an open
+            // ticket is not a sale.
+            if (action.finalStatus !== 'lost') return { ok: false, reason: 'not-cashable', label: action.detail || action.label, order: order };
+            order.status = 'lost';
             if (action.finalStatus === 'lost' && !order.vaultRetainedAt) {
               var lostStake = Math.max(0, Number(order.stake || action.stake || 0) || 0);
               if (lostStake > 0) {
@@ -15780,24 +17447,21 @@
             try { window.dispatchEvent(new CustomEvent('ost:prediction:order-changed')); } catch (_) {}
             return { ok: false, reason: 'not-cashable', label: action.label, order: order };
           }
-          var payout = Number(action.payout);
-          var houseFee = 0;
-          if (payout > 0) {
-            if (action.kind === 'prediction-settlement') {
-              // Winning claim: the house takes its cut of the PROFIT.
-              if (window.OST_HOUSE && typeof window.OST_HOUSE.rake === 'function') {
-                var rk = window.OST_HOUSE.rake(payout, Number(order.stake || action.stake || 0), 'prediction', { kind: 'claim' });
-                houseFee = rk.fee; payout = rk.net;
-              }
-            } else if (window.OST_ARB && typeof window.OST_ARB.bookSell === 'function') {
-              // Selling out early: OST buys the shares back BELOW market (the
-              // arbitrage spread), so the user is filled at OST's bid.
-              var midSell = (window.OST_PRICES && order.marketId) ? window.OST_PRICES.mid(order.marketId, order.side) : Number(action.livePrice || order.price);
-              if (!Number.isFinite(midSell) || midSell <= 0) midSell = Number(action.livePrice || order.price) || (payout / Math.max(1e-9, Number(order.shares) || 1));
-              var shs = Number(order.shares) > 0 ? Number(order.shares) : (midSell > 0 ? payout / midSell : 0);
-              var arbS = window.OST_ARB.bookSell(shs, midSell, { marketId: order.marketId, side: order.side, kind: 'sell' });
-              houseFee = arbS.arb; payout = arbS.proceeds;
-            }
+          // The amount paid is EXACTLY the action's quote (the same number every
+          // sheet shows — PRD-4). The house fee / spread is booked only after the
+          // payout really landed.
+          var payout = Number(action.net) > 0 ? Number(action.net) : Number(action.payout);
+          var houseFee = Number(action.fee) || 0;
+          var bookFee = function () {
+            try {
+              if (action.kind === 'prediction-settlement') { if (houseFee > 0 && window.OST_HOUSE && typeof window.OST_HOUSE.book === 'function') window.OST_HOUSE.book(houseFee, 'prediction', { kind: 'claim' }); }
+              else if (window.OST_ARB && typeof window.OST_ARB.bookSell === 'function' && action.quoteShares > 0 && action.quoteMid > 0) window.OST_ARB.bookSell(action.quoteShares, action.quoteMid, { marketId: order.marketId, side: order.side, kind: 'sell' });
+            } catch (_) {}
+          };
+          if (opts.expectNet > 0 && payout > 0 && Math.abs(payout - Number(opts.expectNet)) / Number(opts.expectNet) > 0.05) {
+            var pm = new Error('The price moved — you now get ' + payout.toFixed(2) + ' ' + unit + ' (you saw ' + Number(opts.expectNet).toFixed(2) + '). Review and sell again.');
+            pm.code = 'price_moved'; pm.net = payout;
+            throw pm;
           }
           var orig = btn.textContent;
           btn.disabled = true; btn.textContent = '\u2026';
@@ -15806,52 +17470,47 @@
           // fails we MUST put it back \u2014 a ticket stuck on 'settled' with no
           // payout is one nobody can ever claim again.
           var prevStatus = order.status;
+          var requested = false;
           try {
             order.houseFee = houseFee;
             order.cashoutKind = action.kind;
             order.sellPrice = action.livePrice;
             order.sellValue = action.liveValue;
-            order.status = action.finalStatus || (action.kind === 'prediction-settlement' ? 'settled' : 'sold');
             var r;
-            if (order.fundedBy === 'ostg') {
-              // OSTG-funded ticket: the payout returns to the SAME bucket that
-              // funded the stake. That is what keeps loan-funded profit locked
-              // to its loan - settling a borrowed ticket into personal OSTG
-              // would let a user cash out money the loan produced. houseFee /
-              // arb were already taken off `payout` above, so the ledger
-              // receives the NET and the fee is booked exactly once.
-              var bkt = order.ostgBucket || 'clean';
-              if (payout > 0) {
-                var sr = await window.OST_PLAY.settle(payout, { bucket: bkt, fee: houseFee });
-                if (!sr || sr.ok === false) throw new Error('Payout failed: ' + ((sr && sr.error) || 'ledger unavailable'));
-              }
-              r = { sig: 'ostg-' + Date.now().toString(36), ost: payout };
-            } else if (order.fundedBy === 'credits') {
-              // Credits-funded ticket: pay the NET win straight back to the
-              // canonical credits pool so the balance updates immediately.
-              if (payout > 0 && window.OST_MONEY && typeof window.OST_MONEY.add === 'function') {
-                window.OST_MONEY.add(payout, action.kind === 'prediction-settlement' ? 'prediction-win' : 'prediction-sell');
-              }
-              r = { sig: 'credits-' + Date.now().toString(36), ost: payout };
-            } else if (hasCashOut) {
-              r = await window.OST_TRADE.predictionCashOut(order, payout);
-            } else {
-              // This branch used to pay a WALLET/ON-CHAIN ticket out of the
-              // credits pool and stamp it with a fake 'local-…' signature,
-              // whenever OST_TRADE simply had not finished loading.
-              //
-              // That pays twice. This ticket's stake is real OST sitting in the
-              // swap pool; crediting the off-chain pool as well mints OST that
-              // was never backed — exactly what CLAUDE.md's two-pools rule
-              // forbids ("An on-chain ticket must never be paid from credits").
-              // And a module that has not loaded yet is a transient condition,
-              // not a reason to hand someone unbacked money forever.
-              //
-              // Throwing sends this to the catch below, which leaves the ticket
-              // claimable and tells the user to retry — by which time OST_TRADE
-              // is loaded and the real payout runs.
-              throw new Error('Payout module not ready yet — please retry in a moment.');
+            if (!hasCashOut) {
+              // A wallet / on-chain ticket is only ever paid by the real payout
+              // rail — never credits, never a fake 'local-…' receipt. A module
+              // that has not loaded yet is a transient condition: say so.
+              var nl = new Error('The payout service is still loading — try again in a moment.');
+              nl.code = 'rail_loading';
+              throw nl;
             }
+            // Mark the ticket "Paying…" BEFORE the request, keyed by its payoutId
+            // and amount: if the answer is lost (tab closed, 5xx, timeout) a
+            // reload shows "Paying…" and reconciles — never "Sell" again.
+            order.cashoutPending = true;
+            order.cashoutRequestedOst = payout;
+            order.cashoutRequestedAt = Date.now();
+            try { order.cashoutPayoutId = (window.OST_PREDICTION_API && OST_PREDICTION_API.predictionPayoutId) ? OST_PREDICTION_API.predictionPayoutId(order, payout) : ''; } catch (_) {}
+            save(order);
+            requested = true;
+            notice('pending', (action.kind === 'prediction-settlement' ? 'Claiming ' : 'Selling for ') + payout.toFixed(2) + ' OST…', 'Paid on-chain to your wallet as OST.');
+            r = await window.OST_TRADE.predictionCashOut(order, payout);
+            if (r && r.ok === false) { var rf = new Error(r.message || r.error || 'Payout refused'); rf.code = r.error; rf.body = r; throw rf; }
+            if (r && r.pending) {
+              // Sent, not yet confirmed: stay "Paying…" with the signature.
+              var pendSig = String(r.sig || '');
+              order.cashoutPendingSig = pendSig;
+              save(order);
+              notice('pending', 'Paying…', 'Still confirming — check your balance before retrying.', pendSig);
+              if (pendSig && window.OST_PREDICTION_API && OST_PREDICTION_API._verifySig) {
+                OST_PREDICTION_API._verifySig(pendSig, 60000).then(function (v) { if (v === 'confirmed') { try { cashOutPredictionOrder({ ref: keyOf(order), background: true }).catch(function () {}); } catch (_) {} } });
+              }
+              return { ok: true, pending: true, payout: payout, sig: pendSig, kind: action.kind, unit: 'OST', rail: 'wallet', order: order };
+            }
+            order.cashoutPending = false;
+            order.status = action.finalStatus || (action.kind === 'prediction-settlement' ? 'settled' : 'sold');
+            bookFee();
             order.cashedOut = true;
             order.cashoutSig = r.sig;
             order.cashoutOst = r.ost;
@@ -15885,11 +17544,10 @@
                 sig: r.sig || ''
               });
             }
-            orders[idx] = order;
-            writePredictionOrderRecords(orders);
-            sharePredictionOrderRecord(order);
-            state.orderHistory = orders;
-            renderPredictionLedger();
+            // Fresh read-modify-write (a stale snapshot could drop a ticket
+            // recorded while the payout was in flight).
+            save(order);
+            notice('ok', (action.kind === 'prediction-settlement' ? 'Claimed — ' : 'Sold — ') + Number(r.ost || payout || 0).toFixed(2) + ' OST to your wallet', '', r.sig || '');
             try { window.dispatchEvent(new CustomEvent('ost:wallet-changed')); } catch(e){}
             if (typeof window.notifyOstTxHistory === 'function') window.notifyOstTxHistory();
             // Record balance snapshot for wallet chart and refresh trade desk balance
@@ -15917,8 +17575,66 @@
             }
             // Every other surface (market page, positions list, desk rail) refreshes on this.
             try { window.dispatchEvent(new CustomEvent('ost:prediction:order-changed')); } catch(_) {}
-            return { ok: true, payout: Number(r.ost || payout || 0), sig: r.sig || '', kind: action.kind, order: order };
+            return { ok: true, payout: Number(r.ost || payout || 0), sig: r.sig || '', kind: action.kind, unit: 'OST', rail: 'wallet', order: order };
           } catch (err) {
+            // SRV-2: once the request may have been sent, a failure that is not a
+            // definite refusal is an UNKNOWN outcome — keep "Paying…" and
+            // reconcile; never tell the user it failed, never offer Sell again.
+            if (requested) {
+              var hh = human(err, 'submit');
+              var errSig = String((err && (err.sig || (err.body && err.body.sig))) || '');
+              var definite = !errSig && !err.pending && (hh.state === 'refused' ||
+                /^(invalid_|server_only_kind|credits_retired|rate_limited|cap_|daily_wallet_cap|insufficient_pool|solvency_cap|reserve_protected|balance_unknown|wallet_auth_required|unauthorized|forbidden|bad_|missing_|below_rent_minimum|keep_rent_reserve|no_wallet|rail_loading)/.test(String(err && err.code || '')) ||
+                (Number(err && err.status) >= 400 && Number(err && err.status) < 500 && !/unconfirmed|unknown|pending|in_progress|already_paid/.test(String(err && err.code || ''))));
+              if (err && err.code === 'already_paid' && errSig) {
+                order.cashoutPending = false; order.cashedOut = true; order.cashoutSig = errSig; order.cashoutOst = Number(order.cashoutRequestedOst || payout);
+                order.cashoutAt = Date.now(); order.status = action.finalStatus || 'sold';
+                save(order);
+                notice('ok', 'Already paid — ' + Number(order.cashoutOst).toFixed(2) + ' OST is in your wallet', '', errSig);
+                return { ok: true, payout: Number(order.cashoutOst), sig: errSig, kind: action.kind, unit: 'OST', rail: 'wallet', order: order };
+              }
+              // Review: an error that CARRIES a signature and is not "pending"
+              // (payoutOst's on-chain failure, the new worker's 422 tx_failed)
+              // is checked on chain: a failed transaction is final, so nothing
+              // was paid — the ticket goes back to what it was, retryable,
+              // instead of "Paying…" forever.
+              if (errSig && !err.pending && err.code !== 'state_unknown' && err.code !== 'gate_reset') {
+                var fState = await chainSigState(errSig);
+                if (fState === 'confirmed') {
+                  order.cashoutPending = false; order.cashedOut = true; order.cashoutSig = errSig; order.cashoutOst = Number(order.cashoutRequestedOst || payout);
+                  order.cashoutAt = Date.now(); order.status = action.finalStatus || 'sold';
+                  save(order);
+                  notice('ok', (action.kind === 'prediction-settlement' ? 'Claimed — ' : 'Sold — ') + Number(order.cashoutOst).toFixed(2) + ' OST to your wallet', '', errSig);
+                  return { ok: true, payout: Number(order.cashoutOst), sig: errSig, kind: action.kind, unit: 'OST', rail: 'wallet', order: order };
+                }
+                if (fState === 'failed') {
+                  var sameAgain = !!(order.cashoutFailedSig && order.cashoutFailedSig === errSig);
+                  order.cashoutPending = false; order.cashoutPendingSig = ''; order.cashoutFailedSig = errSig; order.cashoutFailedAt = Date.now();
+                  order.cashoutError = sameAgain ? 'payout_id_stuck' : 'payout_tx_failed';
+                  order.status = prevStatus; order.cashedOut = false;
+                  save(order);
+                  btn.disabled = false; btn.textContent = orig;
+                  notice('error', 'Payout failed on chain — nothing was paid',
+                    sameAgain ? 'The payout server still holds the failed transaction for this ticket. Your win is safe — it can be paid once the payout server is updated.'
+                      : 'Your ticket is unchanged. Try again.', errSig);
+                  var fe = new Error(sameAgain ? 'The payout server still holds the failed transaction for this ticket — nothing was paid.' : 'The payout transaction failed on chain — nothing was paid. Try again.');
+                  fe.code = 'payout_failed'; fe.sig = errSig; fe.notified = true;
+                  throw fe;
+                }
+              }
+              if (!definite) {
+                order.cashoutPending = true;
+                if (errSig) order.cashoutPendingSig = errSig;
+                if (err && err.payoutId) order.cashoutPayoutId = String(err.payoutId);
+                order.status = prevStatus;
+                save(order);
+                btn.disabled = false; btn.textContent = orig;
+                notice('pending', 'Paying…', 'Checking whether the payout landed — check your wallet balance before retrying.', errSig);
+                setTimeout(function () { try { cashOutPredictionOrder({ ref: keyOf(order), background: true }).catch(function () {}); } catch (_) {} }, 20000);
+                return { ok: true, pending: true, payout: Number(order.cashoutRequestedOst || payout), sig: errSig, kind: action.kind, unit: 'OST', rail: 'wallet', order: order };
+              }
+              order.cashoutPending = false;
+            }
             console.error('[prediction cashout] on-chain payout FAILED — ticket left UNPAID and retryable', err);
             //
             // DO NOT "FALL BACK" HERE. READ THIS BEFORE CHANGING ANYTHING.
@@ -15956,31 +17672,27 @@
               // payout simply never ran, and the stake is sitting in the pool.
               // A retained loss is only real on the SUCCESS path, where a payout
               // genuinely came back smaller than the stake.
-              orders[idx] = order;
-              writePredictionOrderRecords(orders);
-              sharePredictionOrderRecord(order);
-              state.orderHistory = orders;
-              renderPredictionLedger();
-              try { window.dispatchEvent(new CustomEvent('ost:prediction:order-changed')); } catch(_) {}
+              order.cashoutPending = false;
+              save(order);
               try { window.dispatchEvent(new CustomEvent('ost:wallet-changed')); } catch(_) {}
               // Hand the button back so the retry is one tap away, and tell them
-              // the truth: nothing was lost, the claim just did not go through.
+              // the truth (UX-1: a visible notice, never alert()).
               btn.disabled = false; btn.textContent = orig;
-              var msg = 'Payout did not go through — your OST is safe and this ticket is still claimable. Tap again to retry.';
-              try {
-                if (typeof window.OST_TOAST === 'function') window.OST_TOAST(msg);
-                else if (typeof showToast === 'function') showToast(msg);
-                else alert(msg);
-              } catch (_) { try { alert(msg); } catch (__) {} }
+              var hf = human(err, requested ? 'submit' : 'build');
+              notice('error', action.kind === 'prediction-settlement' ? 'Claim did not go through' : 'Sell did not go through',
+                (hf.title || 'Nothing was paid.') + (hf.body ? ' — ' + hf.body : '') + ' Your ticket is unchanged.');
             } catch (bookkeepingErr) {
               // Even the "leave it alone" path broke. Say so; never invent a receipt.
               console.error('[prediction cashout] could not record the failure', bookkeepingErr);
               btn.disabled = false; btn.textContent = orig;
-              try { alert('Claim failed: ' + ((err && err.message) || 'unknown') + '\nYour OST is safe — please retry.'); } catch(e){}
+              notice('error', 'Payout did not go through', 'Your ticket is unchanged — try again.');
             }
             throw err;
           }
         })();
+      } catch (outErr) {
+        try { if (notified && outErr && typeof outErr === 'object') outErr.notified = true; } catch (_) {}
+        throw outErr;
       } finally {
         delete cashingRefs[cashKey];
       }
@@ -15989,6 +17701,31 @@
     try {
       window.OST_PREDICTION_API = Object.assign(window.OST_PREDICTION_API || {}, {
         cashOut: function (ref, opts) { return cashOutPredictionOrder(Object.assign({ ref: ref }, opts || {})); },
+        // PRD-4: the exact quote a sell / claim pays right now — the market page
+        // and the Portfolio show THIS number, and cashOut pays it.
+        quoteCashOut: function (ref) {
+          var list = readPredictionOrderRecords();
+          var o = list.filter(function (x) { return x && (String(x.signature || x.sig || x.id || '') === String(ref) || (x.reference && x.reference === ref) || (x.serverPositionId && x.serverPositionId === ref)); })[0];
+          if (!o) return null;
+          var a = getPredictionOrderAction(o);
+          return { kind: a.kind, label: a.label, detail: a.detail, canCash: !!a.canCash, gross: Number(a.payout) || 0, net: Number(a.net) || 0,
+            fee: Number(a.fee) || 0, mid: Number(a.quoteMid || a.livePrice) || 0, shares: Number(a.quoteShares || a.shares) || 0, unit: a.unit, rail: a.rail, finalStatus: a.finalStatus };
+        },
+        actionFor: function (order) { try { var a = getPredictionOrderAction(order); return { kind: a.kind, label: a.label, detail: a.detail, canCash: !!a.canCash, net: Number(a.net) || 0, gross: Number(a.payout) || 0, unit: a.unit, rail: a.rail, finalStatus: a.finalStatus, livePrice: a.livePrice }; } catch (_) { return null; } },
+        refreshNativeResolutions: function () { try { return Promise.resolve(refreshOstgNativeResolutions()); } catch (e) { return Promise.resolve(false); } },
+        // SRV-2 / PRD-6: after a reload, every ticket left "Paying…" is looked up
+        // (payout status by id on the new worker, the payout memo on chain on the
+        // old one) — never re-sent as a new payout. Background: no pop-ups unless
+        // something actually changed.
+        reconcilePendingCashouts: function () {
+          var owner = getPredictionWalletAddress();
+          var refs = readPredictionOrderRecords().filter(function (o) {
+            return o && o.cashoutPending && !o.cashedOut && (!o.wallet || !/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(String(o.wallet)) || o.wallet === owner);
+          }).map(function (o) { return String(o.signature || o.sig || o.reference || o.id || ''); }).filter(Boolean).slice(0, 8);
+          return refs.reduce(function (p, ref) {
+            return p.then(function () { return cashOutPredictionOrder({ ref: ref, background: true }).catch(function () { return null; }); });
+          }, Promise.resolve()).then(function () { return refs.length; });
+        },
         // Portfolio surfaces pull resolutions on demand (the desk polls every 30s on its own).
         refreshResolutions: function () { try { return Promise.resolve(refreshPredictionOrderResolutions()); } catch (e) { return Promise.resolve(false); } }
       });
@@ -16007,8 +17744,11 @@
       if (receiptExplorerEl) receiptExplorerEl.href = explorerTxUrl(state.latestReceipt.signature);
     }
 
+    // D1 (FCT-2): legacy credits are retired and are never spendable in the
+    // markets, so the desk's spendable-credits figure is 0 (the retired balance
+    // is shown, labelled "not cashable", by the rewards vault — not here).
     function creditsBalance() {
-      try { return (window.OST_MONEY && typeof window.OST_MONEY.get === 'function') ? (Number(window.OST_MONEY.get()) || 0) : 0; } catch (_) { return 0; }
+      return 0;
     }
 
     // OSTG is the rail predictions actually spend (fundFromOstg). The desk used

@@ -1,14 +1,10 @@
 /* ==========================================================================
  * OST · Total Balance badge — one number for "how much OST do I have"
  * --------------------------------------------------------------------------
- * The site tracks OST in two places that never merge on their own:
- *   1) the real on-chain wallet balance (#wdOstBal, wallet dashboard)
- *   2) off-chain bonus credits earned via faucet-hub / games / academy /
- *      mesh markets, stored at localStorage['ost.faucet.hub.v2'].credits
- * Both are real OST (credits are redeemable via the vault cash-out flow),
- * so this badge shows the combined total in the nav at all times and
- * clicking it jumps to the wallet panel. Pure additive layer — does not
- * touch either underlying balance, only reads and displays them.
+ * Shows the wallet's on-chain OST (devnet) from OST_BALANCE (contract C6) in
+ * the header; clicking it opens the wallet. Legacy bonus credits are retired
+ * and not cashable (D1), so they are not added. Unknown shows "—", never 0.
+ * Read-only: it never changes a balance.
  * ========================================================================== */
 (function () {
   'use strict';
@@ -22,20 +18,31 @@
     } catch (_) { return 0; }
   }
 
+  // C6: the ONE balance authority is OST_BALANCE (on-chain OST); the balance
+  // tree's persisted last-known amount is the fallback. Unknown -> null (the
+  // badge shows "—"), never a 0 scraped off the screen.
   function getWalletOst() {
-    // Prefer the balance tree: it includes the persisted last-known on-chain
-    // amount, so this badge survives hard refreshes / slow RPC exactly like
-    // the app bar — one source of truth across the whole app.
+    var addr = '';
     try {
-      if (window.OST_TREE && window.OST_TREE.chain) {
-        var c = window.OST_TREE.chain();
-        if (c && Number.isFinite(c.amount)) return Math.max(0, c.amount);
+      var W = window.OST_WALLET;
+      addr = (W && typeof W.pubkey === 'function' && W.pubkey()) || '';
+      if (!addr) return null;
+    } catch (_) {}
+    try {
+      if (window.OST_BALANCE && typeof window.OST_BALANCE.onchainOstc === 'function') {
+        var v = window.OST_BALANCE.onchainOstc();
+        if (v != null && Number.isFinite(Number(v))) return Math.max(0, Number(v));
       }
     } catch (_) {}
-    var el = document.getElementById('wdOstBal');
-    if (!el) return 0;
-    var n = parseFloat(el.textContent);
-    return isNaN(n) ? 0 : n;
+    try {
+      // Only a last-known value cached FOR THIS WALLET (the tree's "none"/DOM
+      // fallbacks report 0 for "never read", which is not a balance).
+      if (window.OST_TREE && window.OST_TREE.chain) {
+        var c = window.OST_TREE.chain();
+        if (c && c.source === 'cache' && c.addr === addr && Number.isFinite(c.amount)) return Math.max(0, c.amount);
+      }
+    } catch (_) {}
+    return null;
   }
 
   function injectStyles() {
@@ -62,8 +69,9 @@
     btn.id = 'ostTotalBadge';
     btn.type = 'button';
     btn.className = 'ost-total-badge';
-    btn.title = 'Your on-chain OSTC. Click to open your wallet.';
-    btn.innerHTML = '<span>&#9673;</span><span id="ostTotalBadgeAmount">0.00</span><span class="ost-total-sub">OSTC</span>';
+    // C6: the token is shown as "OST" everywhere (it used to say "OSTC" here).
+    btn.title = 'Your on-chain OST (devnet). Click to open your wallet.';
+    btn.innerHTML = '<span>&#9673;</span><span id="ostTotalBadgeAmount">&mdash;</span><span class="ost-total-sub">OST</span>';
     btn.addEventListener('click', function () {
       if (window.OST_LINK && typeof window.OST_LINK.go === 'function') { window.OST_LINK.go('wallet'); return; }
       location.hash = '#wallet';
@@ -80,11 +88,12 @@
     // ONE balance: the on-chain OSTC the Wallet shows. Adding legacy bonus credits made a
     // third number ("25.00 OST") that matched nothing else; credits retired 2026-09-25.
     var w = getWalletOst();
-    amountEl.textContent = w.toFixed(2);
+    amountEl.textContent = w == null ? '—' : w.toFixed(2);
   }
 
   function boot() {
     render();
+    window.addEventListener('ost:balance', render, false);
     window.addEventListener('ost-faucet-hub-award', render, false);
     window.addEventListener('ost-money-changed', render, false);
     window.addEventListener('ost:wallet-changed', render, false);

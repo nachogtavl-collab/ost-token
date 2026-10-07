@@ -844,6 +844,13 @@
       showToast('Trade engine is still loading. Try again in a moment.', 'error');
       return;
     }
+    // Never take a stake for a market that has already closed — it could only
+    // sit there "awaiting result", unsellable.
+    var liveCloseAt = Date.parse('2026-05-01T15:00:00Z');
+    if (Date.now() >= liveCloseAt) {
+      showToast('This match market has closed — buying is off.', 'error');
+      return;
+    }
     var label = outcome.displayLabel || outcome.label;
     var price = Number(outcome.price);
     var original = button ? button.textContent : '';
@@ -865,19 +872,22 @@
       noPrice: 1 - price,
       shares: stake / price,
       potentialReturn: stake / price,
-      closeAtMs: Date.parse('2026-05-01T15:00:00Z'),
+      closeAtMs: liveCloseAt,
       clobTokenIds: (outcome.clobTokenIds || []).slice(0, 4),
       sourceUrl: STREAMS[FEATURED_SLUG].polymarket,
       reference: 'live-watch-' + outcome.key + '-' + Date.now().toString(36)
     }).then(function (result) {
       var sig = result && result.signature ? String(result.signature).slice(0, 10) + '...' : '';
-      showToast('Bought ' + label + ' shares' + (sig ? ' · ' + sig : ''));
+      // A wallet stake confirms in the background: say so, never "Bought" early.
+      if (result && result.pending) showToast('Ticket placed — confirming your ' + stake + ' OST stake on chain…');
+      else showToast('Bought ' + label + ' shares' + (sig ? ' · ' + sig : ''));
       if (statusEl) statusEl.textContent = 'Position opened · ' + label;
       if (stakeEl) stakeEl.value = '';
       renderOpenPositions();
       try { window.dispatchEvent(new CustomEvent('ost:prediction:order-changed')); } catch (_) {}
     }).catch(function (err) {
       var msg = err && err.message ? err.message : 'Could not place bet.';
+      if (err && err.code === 'no_wallet') { try { if (window.OST_WALLET && OST_WALLET.requireWallet) OST_WALLET.requireWallet({ reason: 'buy' }); } catch (_) {} }
       showToast(msg.length > 110 ? msg.slice(0, 110) + '...' : msg, 'error');
       if (statusEl) statusEl.textContent = msg.length > 70 ? msg.slice(0, 70) + '...' : msg;
     }).finally(function () {
@@ -897,7 +907,21 @@
     return String(order && (order.signature || order.sig || order.remoteId || order.id || [order.marketId, order.conditionId, order.createdAt || order.ts].join(':')) || '');
   }
   function isOpenOrder(order) {
-    return order && String(order.marketId || '') === NATIVE_MARKET_ID && !order.cashedOut && order.status !== 'sold' && order.status !== 'settled';
+    return order && String(order.marketId || '') === NATIVE_MARKET_ID && !order.cashedOut && order.status !== 'sold' && order.status !== 'settled' && order.fundedBy !== 'credits';
+  }
+  // PRD-7: Sell only where the ONE cash-out routine would really pay (a real
+  // on-chain stake — never a 'local-' / '[object Object]' record).
+  function sellAction(order) {
+    try { var api = window.OST_PREDICTION_API; if (api && typeof api.actionFor === 'function') return api.actionFor(order); } catch (_) {}
+    return null;
+  }
+  function sellableNow(order) {
+    var a = sellAction(order);
+    return !!(a && a.canCash);
+  }
+  function notSellableWhy(order) {
+    var a = sellAction(order);
+    return (a && (a.detail || a.label)) || 'Not sellable right now';
   }
   function outcomeForOrder(order) {
     var byKey = liveOutcomes.find(function (outcome) { return outcome.key && outcome.key === order.outcomeKey; });
@@ -931,67 +955,40 @@
         '<div><strong>' + escapeHtml(order.outcomeLabel || outcome.displayLabel || outcome.label || 'Shares') + '</strong><span>' + stake.toFixed(2) + ' OST @ ' + fmtCents(entry) + '</span></div>' +
         '<div><span>live ' + fmtCents(price) + '</span><strong>' + liveValue.toFixed(2) + ' OST</strong></div>' +
         '<span class="live-position-pnl ' + pnlClass + '">' + (pnl >= 0 ? '+' : '-') + Math.abs(pnl).toFixed(2) + '</span>' +
-        '<button type="button" data-live-sell-order="' + key + '">Sell</button>' +
+        (order.cashoutPending ? '<button type="button" disabled>Paying…</button>'
+          : (order.fundingState === 'confirming' || order.fundingState === 'submitting' || order.pending) ? '<button type="button" disabled>Confirming…</button>'
+          : sellableNow(order) ? '<button type="button" data-live-sell-order="' + key + '">Sell</button>'
+          : '<button type="button" disabled title="' + escapeHtml(notSellableWhy(order)) + '">Not cashable</button>') +
       '</div>';
     }).join('');
   }
 
+  // PRD-7: a sell goes through the ONE cash-out routine (OST_PREDICTION_API.
+  // cashOut). It pays on chain, marks "Paying…" when the answer is lost, and
+  // records the real signature. The old code turned ANY failure into a fake
+  // 'local-' receipt marked sold — the ticket looked paid while nothing was
+  // paid. A failure now leaves the ticket exactly as sellable as it was.
   function sellLiveOrder(key) {
     var orders = readOrders();
-    var idx = orders.findIndex(function (order) { return orderKey(order) === key; });
-    var order = idx >= 0 ? orders[idx] : null;
+    var order = orders.filter(function (o) { return orderKey(o) === key; })[0];
     if (!order) return;
-    var outcome = outcomeForOrder(order) || {};
-    var entry = Number(order.price || order.yesPrice || 0);
-    var stake = Number(order.stake || 0);
-    var shares = Number(order.shares) > 0 ? Number(order.shares) : (entry > 0 ? stake / entry : 0);
-    var livePx = Number(outcome.price);
-    if (!Number.isFinite(livePx) || livePx <= 0) livePx = entry;
-    var payout = Math.max(0, shares * livePx);
-    if (!payout) { showToast('Cannot sell at 0¢.', 'error'); return; }
     var btn = modalEl && modalEl.querySelector('[data-live-sell-order="' + cssEscape(key) + '"]');
     var old = btn ? btn.textContent : '';
+    var api = window.OST_PREDICTION_API;
+    if (!api || typeof api.cashOut !== 'function') { showToast('Selling is still loading — try again in a moment.', 'error'); return; }
     if (btn) { btn.disabled = true; btn.textContent = 'Selling...'; }
-    var finish = function (result, localOnly) {
-      order.cashedOut = true;
-      order.status = 'sold';
-      order.sellPrice = livePx;
-      order.sellValue = payout;
-      order.cashoutOst = Number(result && result.ost) || payout;
-      order.cashoutSig = result && result.sig ? result.sig : ('local-' + Date.now().toString(36));
-      order.cashoutAt = Date.now();
-      order.cashoutKind = localOnly ? 'live-watch-local-sell' : 'live-watch-sell';
-      orders[idx] = order;
-      writeOrders(orders);
-      postPositionUpdate(order);
+    Promise.resolve(api.cashOut(key)).then(function (r) {
+      if (r && r.pending) { showToast('Paying… checking whether the payout landed. Check your balance before retrying.'); return; }
+      if (!r || r.ok === false) { showToast((r && r.label) || 'This position is not sellable right now.', 'error'); return; }
+      showToast('Sold for ' + (Number(r.payout) || 0).toFixed(2) + ' ' + (r.unit || 'OST') + ' · paid to your wallet');
+    }).catch(function (err) {
+      var msg = (err && err.message) || 'The sale did not go through — your position is unchanged.';
+      try { if (window.OST_MONEY_ERRORS && OST_MONEY_ERRORS.humanize && !(err && err.notified)) { var h = OST_MONEY_ERRORS.humanize(err, { stage: 'submit', asset: 'OST' }); if (h && h.title) msg = h.title + (h.body ? ' — ' + h.body : ''); } } catch (_) {}
+      showToast(msg.length > 140 ? msg.slice(0, 140) + '…' : msg, 'error');
+    }).then(function () {
+      if (btn) { btn.disabled = false; btn.textContent = old || 'Sell'; }
       renderOpenPositions();
-      showToast('Sold for ' + order.cashoutOst.toFixed(2) + ' OST');
-      try { window.dispatchEvent(new CustomEvent('ost:prediction:order-changed')); } catch (_) {}
-      try { window.dispatchEvent(new CustomEvent('ost:wallet-changed')); } catch (_) {}
-    };
-    var cashOut = window.OST_TRADE && window.OST_TRADE.predictionCashOut;
-    var task = typeof cashOut === 'function'
-      ? Promise.resolve(cashOut(order, payout)).catch(function () { return { ost: payout, sig: 'local-' + Date.now().toString(36), localOnly: true }; })
-      : Promise.resolve({ ost: payout, sig: 'local-' + Date.now().toString(36), localOnly: true });
-    task.then(function (result) { finish(result, result && result.localOnly); })
-      .catch(function (err) { showToast((err && err.message) || 'Sell failed', 'error'); })
-      .finally(function () { if (btn) { btn.disabled = false; btn.textContent = old || 'Sell'; } });
-  }
-
-  function postPositionUpdate(order) {
-    try {
-      var base = relayBase();
-      if (!base) return;
-      fetch(base + '/positions', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(Object.assign({}, order, {
-          wallet: order.wallet || (window.OST_PREDICTION_API && window.OST_PREDICTION_API.walletAddress && window.OST_PREDICTION_API.walletAddress()) || 'anon',
-          marketTitle: order.title || '',
-          ts: order.createdAt || order.ts || Date.now()
-        }))
-      }).catch(function () {});
-    } catch (_) {}
+    });
   }
 
   function open(slug, name, opts) {

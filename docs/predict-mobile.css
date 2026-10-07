@@ -248,3 +248,30 @@
      the single price readout on the card. */
   .prediction-market-probability-row { font-size: 0.86rem !important; }
 }
+
+/* ── Markets money UI (money plan PRD-2 / PRD-3 / PRD-6) ─────────────────────
+   Applies on every width. The market page lives inside #ostPredictMobile. */
+
+/* PRD-6: the Portfolio meta line wraps BETWEEN its pieces, never mid-word
+   (mobile-shell.css's `overflow-wrap:anywhere` broke "OSTG" into "OS/TG"). */
+#ostPredictMobile .opm-tmeta { flex-wrap: wrap !important; row-gap: 2px; }
+#ostPredictMobile .opm-tmeta,
+#ostPredictMobile .opm-tmeta * { overflow-wrap: normal !important; word-break: normal !important; }
+#ostPredictMobile .opm-tmeta > span { white-space: nowrap !important; }
+#ostPredictMobile .opm-tval i { font-style: normal; }
+#ostPredictMobile .opm-tact .opm-tbadge { white-space: nowrap; }
+#ostPredictMobile .opm-pfnote { font-size: 10px; color: var(--opm-ink3, #8fa6b8); margin: 6px 2px 0; }
+
+/* PRD-2: the balance chip shows wallet OST next to OSTG. */
+#ostPredictMobile .opm-bal .v b { font-weight: 700; }
+#ostPredictMobile .opm-bal .v .opm-balost { color: var(--opm-ink, #e8f1f7); }
+#ostPredictMobile .opm-bal .v i { font-style: normal; opacity: .45; margin: 0 5px; }
+
+/* PRD-2 / PRD-3: the buy sheet says what it spends, and how to fix "not enough". */
+#ostPredictMobile .opm-plan { font-size: 11.5px; line-height: 1.45; color: var(--opm-ink2, #b9c7d4); margin: 8px 2px 2px; min-height: 0; }
+#ostPredictMobile .opm-plan:empty { display: none; }
+#ostPredictMobile .opm-short { font-size: 12px; line-height: 1.45; color: #fcd34d; background: rgba(251, 191, 36, .08); border: 1px solid rgba(251, 191, 36, .28); border-radius: 11px; padding: 9px 11px; margin: 10px 0 8px; }
+#ostPredictMobile #opmCta .opm-pcbtns { margin-top: 0; }
+#ostPredictMobile .opm-confirm:disabled { opacity: .55; cursor: default; }
+#ostPredictMobile .opm-src .l { overflow-wrap: normal !important; word-break: normal !important; }
+#ostPredictMobile .opm-ps .v { white-space: nowrap !important; overflow-wrap: normal !important; word-break: normal !important; }

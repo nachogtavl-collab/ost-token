@@ -1,7 +1,12 @@
 /* ==========================================================================
  * OST Money — ONE money API for every OST page
  * --------------------------------------------------------------------------
- * window.OST_MONEY is the single way to read/award/spend the user's OST
+ * DECISION D1 (money plan C12): legacy credits are RETIRED. They have no
+ * cash value: nothing grants new credits (add() is a no-op), nothing spends
+ * them (spend() refuses) and they are shown as "Retired legacy credits (not
+ * cashable)". Real devnet OST lives on chain only.
+ *
+ * window.OST_MONEY is the single way to read the user's legacy
  * bonus credits. It is a facade over the SAME canonical pool the faucet
  * hub, games, Code Academy and mesh markets use:
  *
@@ -23,7 +28,6 @@
 
   var HUB_KEY = 'ost.faucet.hub.v2';
   var LEGACY_KEY = 'ost.demo.balance.v1';
-  var WELCOME_BONUS = 25;
 
   function loadHub() {
     try { return JSON.parse(localStorage.getItem(HUB_KEY) || '{}') || {}; } catch (_) { return {}; }
@@ -32,8 +36,8 @@
     try { localStorage.setItem(HUB_KEY, JSON.stringify(s)); } catch (_) {}
   }
 
-  // One-time: fold legacy demo balance into the canonical pool; grant the
-  // welcome bonus once so first-time visitors still start with spending money.
+  // One-time: fold the old demo balance into the legacy pool. No welcome
+  // bonus is granted any more (D1).
   function migrate() {
     var s = loadHub();
     var changed = false;
@@ -50,12 +54,6 @@
         changed = true;
       }
     } catch (_) {}
-    if (!s.welcomeBonus) {
-      s.credits = Number(s.credits || 0) + WELCOME_BONUS;
-      s.lifetime = Number(s.lifetime || 0) + WELCOME_BONUS;
-      s.welcomeBonus = true;
-      changed = true;
-    }
     if (changed) saveHub(s);
   }
 
@@ -84,32 +82,18 @@
     }
   }
 
+  // D1: no new grants. Kept as a no-op so old callers do not throw.
   function add(amount, source, opts) {
-    amount = Number(amount) || 0;
-    if (amount <= 0) return read();
-    var s = loadHub();
-    s.credits = Number(s.credits || 0) + amount;
-    s.lifetime = Number(s.lifetime || 0) + amount;
-    saveHub(s);
-    render();
-    if (!(opts && opts.silent)) bump(amount);
-    syncSharedUi(s.credits);
-    broadcast(amount, s.credits, source, !!(opts && opts.silent));
-    return s.credits;
+    void amount; void source; void opts;
+    return read();
   }
 
+  // D1: retired credits cannot be spent.
   function spend(amount, source) {
-    amount = Number(amount) || 0;
-    var s = loadHub();
-    var current = Number(s.credits || 0);
-    if (amount <= 0 || amount > current) return false;
-    s.credits = current - amount;
-    saveHub(s);
-    render();
-    syncSharedUi(s.credits);
-    broadcast(-amount, s.credits, source);
-    return true;
+    void amount; void source;
+    return false;
   }
+  void bump; void broadcast; void syncSharedUi;
 
   // ------------------------------------------------------------------ badge
   function pageHasOwnBalanceUi() {
@@ -143,8 +127,8 @@
     injectStyles();
     badge = document.createElement('div');
     badge.id = 'ostMoneyBadge';
-    badge.title = 'Your OST balance across every OST app. Click to open Commerce.';
-    badge.innerHTML = '<span id="ostMoneyDelta"></span><span>&#9673;</span><span id="ostMoneyAmount">0.00</span><span style="opacity:.7;font-weight:600;">OST</span>';
+    badge.title = 'Retired legacy credits — no cash value, not cashable.';
+    badge.innerHTML = '<span id="ostMoneyDelta"></span><span>&#9673;</span><span id="ostMoneyAmount">0.00</span><span style="opacity:.7;font-weight:600;">credits · not cashable</span>';
     badge.addEventListener('click', function () {
       var here = (location.pathname.split('/').pop() || '');
       if (here === 'commerce.html') return;
@@ -176,6 +160,8 @@
   }
 
   function render() {
+    // Nothing to show when there are no legacy credits.
+    if (!(read() > 0)) { var old = document.getElementById('ostMoneyBadge'); if (old) old.remove(); return; }
     var badge = ensureBadge();
     if (!badge) return;
     var amountEl = document.getElementById('ostMoneyAmount');
@@ -190,7 +176,7 @@
     window.addEventListener('ost-faucet-hub-award', function () { render(); }, false);
   }
 
-  window.OST_MONEY = { get: read, add: add, spend: spend, refresh: render, key: HUB_KEY };
+  window.OST_MONEY = { get: read, add: add, spend: spend, refresh: render, key: HUB_KEY, retired: true, cashable: false };
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', boot);

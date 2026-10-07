@@ -14,7 +14,12 @@
 
   function $(id) { return document.getElementById(id); }
   function on(el, ev, fn) { if (el) el.addEventListener(ev, fn); }
-  function toast(icon, msg) { if (typeof window.toast === 'function') window.toast(icon, msg); }
+  function toast(icon, msg) {
+    try {
+      if (typeof window.toast === 'function') return window.toast(icon, msg);
+      if (window.OST_OPTIMISTIC && typeof window.OST_OPTIMISTIC.toast === 'function') return window.OST_OPTIMISTIC.toast(String(msg), /⚠|❌|✖/.test(String(icon)) ? 'error' : 'info');
+    } catch (e) {}
+  }
 
   function loadSnapshots() {
     try {
@@ -162,65 +167,67 @@
   //    Both signers (user + swapPool) sign before the network sees it.
   //    The swap pool keypair is published in site/swap-pool.js (devnet ONLY).
   // ------------------------------------------------------------------
-  function getLiveSolUsd() {
-    // Source of truth ranking: (1) the live /topup/config price the UI is
-    // showing in the quote — guarantees the on-chain swap matches what the
-    // user just saw; (2) the global price tracker (`__ostPrices`) which is
-    // populated by app.js Binance poll; (3) a safe last-resort default.
+  // SOL/USD for CONVERSIONS comes from /topup/config only (contract C7) — the
+  // same number the worker quotes with. No hard-coded fallback on a money
+  // path: while it is unknown, quotes show "—" and the config is fetched.
+  function configSolUsd() {
     try {
-      if (window.OST_TOPUP && typeof window.OST_TOPUP.solUsd === 'function') {
-        var liveTop = Number(window.OST_TOPUP.solUsd());
-        if (Number.isFinite(liveTop) && liveTop > 0) return liveTop;
+      var cfg = typeof topupConfigCache !== 'undefined' && topupConfigCache && topupConfigCache.value;
+      var v = Number(cfg && cfg.pricing && cfg.pricing.solUsd);
+      if (Number.isFinite(v) && v > 0) return v;
+    } catch (e) {}
+    try {
+      if (window.OST_TOPUP && typeof window.OST_TOPUP.solUsdLive === 'function') {
+        var t = Number(window.OST_TOPUP.solUsdLive());
+        if (Number.isFinite(t) && t > 0) return t;
       }
     } catch (e) {}
-    var p = window.__ostPrices || {};
-    if (Number.isFinite(p.solana) && p.solana > 0) return p.solana;
-    return 150; // sane fallback for May 2026 — much closer to spot than 86.6
+    return null;
+  }
+  var solPriceKick = 0;
+  function getLiveSolUsd() {
+    var v = configSolUsd();
+    if (v) return v;
+    if (Date.now() - solPriceKick > 15000) {
+      solPriceKick = Date.now();
+      try { loadTopupConfig().then(function () { try { window.dispatchEvent(new CustomEvent('ost:convert-price')); } catch (_) {} }).catch(function () {}); } catch (e) {}
+    }
+    return null;
   }
   // THE canonical USD price of OST for CONVERSIONS (both swap directions and
-  // the fiat tiers). This must be ONE number app-wide.
-  //
-  // It was not. The oracle check below used to run FIRST on the belief that
-  // "the flag is OFF by default" — but index.html sets
-  // `OST_LIVE_PRICE = OST_LIVE_PRICE !== false`, i.e. ON. So SOL→OST priced OST
-  // at the oracle (~$0.138) while OST→SOL (swap-resilient) priced it at the
-  // topup config (~$0.0118). Same token, two prices, 11.7x apart: converting
-  // 1 SOL -> OST -> back to SOL destroyed ~92% of the user's value, and the
-  // SOL→OST quote handed out ~11.7x LESS OST than the app's own advertised
-  // rate. Restoring the documented ranking (topup config first) makes both
-  // directions agree, matches the purchase tiers, spends the ABUNDANT asset
-  // (10B OST in the pool) and protects the SCARCE one (~30 SOL).
-  //
-  // NOTE: window.OST.getPrice() (the synthetic market oracle) is a DISPLAY
-  // price for charts — it is deliberately NOT the conversion price.
+  // the fiat tiers): the fixed devnet rate from /topup/config (0.0118). The
+  // synthetic market oracle (window.OST.getPrice) is a DISPLAY index for
+  // charts and is deliberately NOT used here — two prices 20x apart made a
+  // SOL -> OST -> SOL round trip lose most of its value.
   function getLiveOstUsd() {
+    try {
+      var cfg = typeof topupConfigCache !== 'undefined' && topupConfigCache && topupConfigCache.value;
+      var c = Number(cfg && cfg.pricing && cfg.pricing.usdPerOst);
+      if (Number.isFinite(c) && c > 0) return c;
+    } catch (e) {}
     try {
       if (window.OST_TOPUP && typeof window.OST_TOPUP.usdPerOst === 'function') {
         var liveTop = Number(window.OST_TOPUP.usdPerOst());
         if (Number.isFinite(liveTop) && liveTop > 0) return liveTop;
       }
     } catch (e) {}
-    try {
-      if (window.OST_LIVE_PRICE && window.OST && typeof window.OST.getPrice === 'function') {
-        var liveOracle = Number(window.OST.getPrice());
-        if (Number.isFinite(liveOracle) && liveOracle > 0) return liveOracle;
-      }
-    } catch (e) {}
-    var p = window.__ostPrices || {};
-    if (Number.isFinite(p.ost) && p.ost > 0 && p.ost < 100) return p.ost;
-    return 0.0118; // matches topup.js DEFAULT_USD_PER_OST
+    return 0.0118; // the fixed devnet conversion rate (topup.js DEFAULT_USD_PER_OST)
   }
-  // One exported source so no future module can invent a third conversion price.
+  // One exported source so no module can invent a second conversion price.
   window.OST_CONVERT_PRICE = {
     ostUsd: getLiveOstUsd,
     solUsd: function () { return getLiveSolUsd(); }
   };
 
+  var POOL_SWAP_FEE = 0.005;          // worker POOL_SWAP_FEE (solana-pool.js)
+  var RENT_MIN_LAMPORTS = 890880;     // Solana rent-exempt minimum for a plain account
+
   function quoteSolToOst(solAmount) {
     var solUsd = getLiveSolUsd();
     var ostUsd = getLiveOstUsd();
+    if (!solUsd || !ostUsd) return { ost: NaN, grossOst: NaN, fee: NaN, solUsd: null, ostUsd: ostUsd, rate: NaN, priceUnknown: true };
     var grossOst = (Number(solAmount) * solUsd) / ostUsd;
-    var fee = grossOst * 0.005; // 0.5% pool fee
+    var fee = grossOst * POOL_SWAP_FEE;
     return {
       ost: Math.max(grossOst - fee, 0),
       grossOst: grossOst,
@@ -231,63 +238,98 @@
     };
   }
 
+  function moneyErr(code, message, extra) {
+    var e = new Error(message);
+    e.code = code;
+    if (extra) Object.keys(extra).forEach(function (k) { e[k] = extra[k]; });
+    return e;
+  }
+  function solLamportsOf(pubkey) {
+    var w = window.OST_WALLET;
+    return w.rpcCall(function (c) { return c.getBalance(pubkey); });
+  }
+
+  // SOL-1: the one way to get devnet SOL is to cash out OST -> SOL. Opens
+  // Wallet → Convert with "From: OST" and 10 OST preset (RNT-1: a first
+  // cash-out into an empty wallet must cover Solana's rent minimum).
+  function openGetSol(presetOst) {
+    var amount = Number(presetOst) > 0 ? Number(presetOst) : 10;
+    // The preset must clear the rent minimum at today's SOL price.
+    try {
+      var Bm = window.OST_BALANCE && OST_BALANCE.get ? OST_BALANCE.get() : {};
+      var lamNow = Bm.sol != null ? Math.round(Number(Bm.sol) * 1e9) : 0;
+      var minNow = window.OST_REAL_SWAP && typeof OST_REAL_SWAP.minOstFor === 'function' ? OST_REAL_SWAP.minOstFor(lamNow) : 0;
+      if (minNow && minNow > amount) amount = Math.ceil(minNow);
+    } catch (e) {}
+    try { closeSendModal(); } catch (e) {}
+    try { if (window.OST_COMPARTMENTS && typeof window.OST_COMPARTMENTS.activate === 'function') window.OST_COMPARTMENTS.activate('wallet', true); } catch (e) {}
+    try { if (typeof window.setWalletPanel === 'function') window.setWalletPanel('convert', { scroll: true }); } catch (e) {}
+    var tries = 0;
+    (function fill() {
+      var sel = $('transferFrom'), amt = $('transferAmount');
+      if (sel && amt && sel.querySelector('option[value="OST"]')) {
+        sel.value = 'OST';
+        sel.dispatchEvent(new Event('change', { bubbles: true }));
+        amt.value = String(amount);
+        amt.dispatchEvent(new Event('input', { bubbles: true }));
+        try { (sel.closest('.convert-terminal') || sel).scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) {}
+        return;
+      }
+      if (tries++ < 20) setTimeout(fill, 200);
+    })();
+    return true;
+  }
+  window.OST_GET_SOL = { open: openGetSol };
+  // A "Need SOL" message always comes with this button, never as a dead end.
+  function getSolButtonHtml() {
+    return '<button type="button" class="btn btn-outline btn-sm" data-ost-get-sol="10" style="margin-top:6px;">Get SOL: cash out 10 OST → SOL</button>';
+  }
+  document.addEventListener('click', function (e) {
+    var b = e.target && e.target.closest && e.target.closest('[data-ost-get-sol]');
+    if (!b) return;
+    e.preventDefault();
+    openGetSol(Number(b.getAttribute('data-ost-get-sol')) || 10);
+  });
+
   async function performRealSwap(solAmount, opts) {
     opts = opts || {};
     var w = window.OST_WALLET;
-    if (!w || !w.session || !w.session.publicKey) throw new Error('Connect a wallet first');
-    if (!Number.isFinite(solAmount) || solAmount <= 0) throw new Error('Invalid SOL amount');
-    if (!window.OST_RESCUE || typeof window.OST_RESCUE.cosignSwap !== 'function') throw new Error('Swap pool not loaded — refresh the page');
+    if (!w || !w.session || !w.session.publicKey) throw moneyErr('no_wallet', 'Connect a wallet first');
+    if (!Number.isFinite(solAmount) || solAmount <= 0) throw moneyErr('invalid_amount', 'Enter a SOL amount greater than zero.');
+    if (!window.OST_RESCUE || typeof window.OST_RESCUE.cosignSwap !== 'function') throw moneyErr('bad_response', 'Swap rail still loading — try again in a moment.');
 
-    // Client-side quote/balance pre-checks are instant UX feedback only — the
-    // worker recomputes its own quote and caps authoritatively before it will
-    // ever sign (workers/ost-api/src/wallet-payouts.js handleCosignBuild).
+    // Client checks are instant feedback only; the worker re-quotes and re-checks.
     var quote = quoteSolToOst(solAmount);
-    if (quote.ost <= 0) throw new Error('Quote too small');
-    var conn = w.getConnection();
-    var userLamports = await conn.getBalance(w.session.publicKey);
-    var needed = Math.round(solAmount * solanaWeb3.LAMPORTS_PER_SOL);
-    if (userLamports < needed) {
-      try { await w.ensureFee(w.session.publicKey); } catch (e) {}
-      userLamports = await conn.getBalance(w.session.publicKey);
-      if (userLamports < needed) {
-        throw new Error('Need ' + (needed / solanaWeb3.LAMPORTS_PER_SOL).toFixed(6) + ' SOL on devnet (have ' + (userLamports / solanaWeb3.LAMPORTS_PER_SOL).toFixed(6) + ')');
+    var needed = Math.round(solAmount * 1e9);
+    var have = null;
+    try { have = Number(await solLamportsOf(w.session.publicKey)); } catch (e) { have = null; }
+    if (have != null && Number.isFinite(have)) {
+      if (have < needed) {
+        throw moneyErr('insufficient_sol', 'Need ' + (needed / 1e9).toFixed(6) + ' SOL (you have ' + (have / 1e9).toFixed(6) + ').', { needSol: needed / 1e9, haveSol: have / 1e9, getSol: true });
+      }
+      var rest = have - needed;      // the pool pays the network fee
+      if (rest > 0 && rest < RENT_MIN_LAMPORTS) {
+        throw moneyErr('keep_rent_reserve', 'Leave at least 0.00089 SOL in your wallet, or swap all of it.', { maxSol: Math.max(0, have - RENT_MIN_LAMPORTS) / 1e9, allSol: have / 1e9 });
       }
     }
 
-    var result;
-    try {
-      result = await window.OST_RESCUE.cosignSwap('sol-to-ost', { amount: solAmount, memo: opts.memo ? String(opts.memo) : '' });
-    } catch (err) {
-      var map = {
-        solvency_cap: 'This swap exceeds the live vault solvency cap. Try a smaller amount.',
-        insufficient_pool: 'OST vault needs refill before this swap can deliver the full quote. No partial swap was sent.',
-        quote_too_small: 'Quote too small.'
-      };
-      throw new Error((err && err.code && map[err.code]) || (err && err.message) || 'Swap failed');
-    }
+    // One cosign per user action. cosignSwap verifies the built transaction
+    // debits exactly the typed SOL before anything is signed (SOL-2).
+    var result = await window.OST_RESCUE.cosignSwap('sol-to-ost', { amount: solAmount, memo: opts.memo ? String(opts.memo) : '' });
     var sig = result.sig;
-    var toSendOst = result.quote.ostAmount;
-    quote = Object.assign({}, quote, result.quote, { ost: toSendOst });
+    var toSendOst = result.quote && Number(result.quote.ostAmount);
+    quote = Object.assign({}, quote, result.quote || {}, { ost: toSendOst });
 
-    if (window.OST_OPTIMISTIC) {
-      try {
-        window.OST_OPTIMISTIC.toast('Swap submitted · ' + String(sig).slice(0, 8) + '…', 'pending');
-        window.OST_OPTIMISTIC.balanceHint({ deltaOst: +toSendOst, source: 'swap-in', pending: true });
-      } catch (e) {}
-    }
-
-    // Snapshot for the curve
+    // Snapshot for the curve from the shared balance (no extra RPC).
     try {
-      var ostBal = await w.getOstBalance(w.session.publicKey);
-      var solBal = (await conn.getBalance(w.session.publicKey)) / solanaWeb3.LAMPORTS_PER_SOL;
-      recordSnapshot({ ts: Date.now(), ostBalance: ostBal, solBalance: solBal, kind: 'swap-in', amount: quote.ost, sig: sig });
+      var B = window.OST_BALANCE && OST_BALANCE.get ? OST_BALANCE.get() : {};
+      recordSnapshot({ ts: Date.now(), ostBalance: B.ost, solBalance: B.sol, kind: 'swap-in', amount: quote.ost, sig: sig, pending: !!result.pending });
       refreshChartIfReady();
     } catch (e) {}
 
-    // The 0.5% pool fee is OST the pool kept — report it to the real ledger.
     try { window.dispatchEvent(new CustomEvent('ost:house-fee', { detail: { source: 'swap', amount: Number(quote.fee) || 0, label: 'swap pool fee' } })); } catch (e) {}
 
-    return { sig: sig, ost: quote.ost, solUsd: quote.solUsd, rate: quote.rate, fee: quote.fee };
+    return { ok: true, sig: sig, pending: !!result.pending, ost: quote.ost, solUsd: quote.solUsd, rate: quote.rate, fee: quote.fee };
   }
 
   // ------------------------------------------------------------------
@@ -315,7 +357,7 @@
   function priceUsd(currency) {
     var p = window.__ostPrices || {};
     var c = String(currency || '').toUpperCase();
-    if (c === 'SOL') return getLiveSolUsd();
+    if (c === 'SOL') return getLiveSolUsd() || NaN;
     if (c === 'BTC') return Number.isFinite(p.bitcoin) && p.bitcoin > 0 ? p.bitcoin : 105000;
     if (c === 'ETH') return Number.isFinite(p.ethereum) && p.ethereum > 0 ? p.ethereum : 3800;
     if (c === 'BNB') return 650;
@@ -470,6 +512,38 @@
     } catch (e) {}
   }
 
+  // Exported writer for other modules (app.js Convert desk). It MERGES into
+  // the record for the same order: a saved payment signature is never wiped
+  // by a caller that does not know it yet (SOL-4: no second payment), and the
+  // typed SOL amount survives (SOL-2). null still clears.
+  function rememberPendingFromCaller(state) {
+    var cur = readPendingTopup();
+    // Never drop a SENT-but-unverified payment for another (or no) order: its
+    // signature is the only way that payment is ever verified and delivered.
+    if (cur && cur.id && cur.paymentRef && !cur.claimPending && (!state || state.id !== cur.id)) return false;
+    if (!state) return writePendingTopup(null);
+    var next = Object.assign({}, state);
+    if (cur && cur.id && cur.id === next.id) {
+      if (!next.paymentRef && cur.paymentRef) {
+        next.paymentRef = cur.paymentRef;
+        next.paymentAsset = cur.paymentAsset || next.paymentAsset;
+        next.paymentAmount = cur.paymentAmount || next.paymentAmount;
+      }
+      // Keep the saved payment's blockhash window and signing time: they are
+      // what lets a never-landed payment be released later.
+      if (next.paymentRef && next.paymentRef === cur.paymentRef) {
+        if (!next.paymentLvbh && cur.paymentLvbh) next.paymentLvbh = cur.paymentLvbh;
+        if (!next.paidAt && cur.paidAt) next.paidAt = cur.paidAt;
+      }
+      if (!next.createdAt && cur.createdAt) next.createdAt = cur.createdAt;
+      if (!(Number(next.solAmount) > 0) && Number(cur.solAmount) > 0) next.solAmount = Number(cur.solAmount);
+    }
+    if (!(Number(next.solAmount) > 0) && String(next.sourceCurrency || '').toUpperCase() === 'SOL' && Number(next.sourceAmount) > 0) {
+      next.solAmount = Number(next.sourceAmount);
+    }
+    writePendingTopup(next);
+  }
+
   function readClaimedTopups() {
     try { return JSON.parse(localStorage.getItem(TOPUP_CLAIMED_KEY) || '{}') || {}; }
     catch (e) { return {}; }
@@ -484,6 +558,9 @@
 
   function clearPendingTopup(intentId) {
     var current = readPendingTopup();
+    // A blanket clear (no id) keeps a sent-but-unverified payment: only its own
+    // order id (after delivery) or a proven failure releases it.
+    if (!intentId && current && current.paymentRef && !current.claimPending) return false;
     if (!intentId || (current && current.id === intentId)) writePendingTopup(null);
   }
 
@@ -501,9 +578,11 @@
     }));
   }
 
-  function rememberPendingPayment(intent, signature, payment) {
+  function rememberPendingPayment(intent, signature, payment, info) {
     if (!intent || !intent.id || !signature) return;
     var current = readPendingTopup() || {};
+    if (current.id !== intent.id) current = {};
+    var sameSig = current.paymentRef && String(current.paymentRef) === String(signature);
     writePendingTopup(Object.assign({}, current, {
       id: intent.id,
       wallet: intent.wallet || current.wallet || getActiveWalletAddress() || '',
@@ -513,9 +592,71 @@
       paymentRef: String(signature),
       paymentAsset: (payment && payment.asset) || current.paymentAsset || 'SOL',
       paymentAmount: Number((payment && payment.amount) || current.paymentAmount || 0),
+      // The blockhash window of THIS payment: lets a later check prove that a
+      // payment which never landed has expired, so the order can be freed.
+      paymentLvbh: Number(info && info.lastValidBlockHeight) || (sameSig ? Number(current.paymentLvbh) || null : null),
+      paidAt: (sameSig && current.paidAt) || Number(info && info.signedAt) || Date.now(),
       method: intent.method || current.method || 'crypto',
       createdAt: current.createdAt || Date.now()
     }));
+  }
+
+  // Look up a saved top-up payment by signature. { ok:false, !pending } means
+  // it failed on chain or provably never landed (blockhash window passed).
+  // This code always records paidAt with a payment, so a saved payment without
+  // it (written by an older build, or a caller that only knew the signature)
+  // was signed before this page loaded: the page-load time is a safe upper
+  // bound for its signing time.
+  var TOPUP_CODE_LOADED_AT = Date.now();
+  function lookUpSavedPayment(rec, timeoutMs) {
+    if (!rec || !rec.paymentRef || !window.OST_RESCUE || typeof window.OST_RESCUE.confirmBySig !== 'function') return Promise.resolve(null);
+    return window.OST_RESCUE.confirmBySig(String(rec.paymentRef), {
+      timeoutMs: timeoutMs || 4000,
+      lastValidBlockHeight: Number(rec.paymentLvbh) || undefined,
+      signedAt: Number(rec.paidAt) || (Number(rec.createdAt) > 0 && Number(rec.createdAt) < TOPUP_CODE_LOADED_AT ? TOPUP_CODE_LOADED_AT : undefined),
+      expiryFirst: true
+    }).catch(function () { return null; });
+  }
+  function releaseSavedPayment(rec) {
+    writePendingTopup(Object.assign({}, rec, { paymentRef: '', paymentAsset: '', paymentAmount: 0, paymentLvbh: null, paidAt: null }));
+  }
+  function hasUnverifiedPayment(rec) { return !!(rec && rec.id && rec.paymentRef && !rec.claimPending); }
+
+  // A payment that was SENT for an order and not yet verified locks new
+  // orders: a second order would overwrite its saved signature (nobody would
+  // ever verify it again) and invite paying twice. The lock frees itself when
+  // the order is delivered, or the payment failed / provably never landed.
+  async function guardPendingPayment() {
+    var prior = readPendingTopup();
+    if (!hasUnverifiedPayment(prior)) return;
+    var st = null;
+    try { st = await getTopupStatus(prior.id); } catch (e) { st = null; }
+    if (st && st.status === 'sent') { clearPendingTopup(prior.id); return; }
+    if (!(st && st.status === 'paid')) {
+      var look = await lookUpSavedPayment(prior, 6000);
+      if (look && look.ok === false && !look.pending) { releaseSavedPayment(prior); return; }
+      if (look && look.ok && !look.pending) {
+        // It landed: verify and deliver it now, then the slot is free.
+        try {
+          var v = await verifyTopupSignature(prior.id, prior.paymentRef);
+          var vi = v && (v.intent || v);
+          if (vi && (vi.status === 'paid' || vi.status === 'sent')) await deliverPaidIntent(vi);
+        } catch (e) {}
+        if (!hasUnverifiedPayment(readPendingTopup())) return;
+      }
+    } else {
+      try { await deliverPaidIntent(st); } catch (e) {}
+      if (!hasUnverifiedPayment(readPendingTopup())) return;
+    }
+    throw moneyErr('payment_pending', 'An earlier payment is still being verified.', { sig: prior.paymentRef, intentId: prior.id, pendingTopup: { id: prior.id, paymentRef: prior.paymentRef, paymentAsset: prior.paymentAsset || 'SOL' } });
+  }
+
+  // "Refresh status" for the saved order: verify + deliver it, or free it when
+  // its payment provably never landed. Never pays again.
+  async function refreshPendingTopup() {
+    var p = readPendingTopup();
+    if (!p || !p.id) return { none: true };
+    return settleTopupIntent(p.id, p.paymentAsset || p.settlementAsset || 'SOL', { verifyOnly: true });
   }
 
   function normalizeTopupCluster(cluster) {
@@ -539,11 +680,16 @@
     return resolveTopupCluster(config) === 'mainnet-beta' ? TOPUP_MAINNET_RPC : TOPUP_DEVNET_RPC;
   }
 
+  // Devnet top-up reads/sends go through the wallet's failover connection
+  // (NET-1), not a fixed public endpoint.
   function getTopupConnection(config) {
     if (typeof solanaWeb3 === 'undefined') return null;
+    if (resolveTopupCluster(config) === 'devnet' && window.OST_WALLET && typeof window.OST_WALLET.getConnection === 'function') {
+      try { var c = window.OST_WALLET.getConnection(); if (c) return c; } catch (e) {}
+    }
     var rpcUrl = resolveTopupRpc(config);
     if (!topupConnections[rpcUrl]) {
-      topupConnections[rpcUrl] = new solanaWeb3.Connection(rpcUrl, 'confirmed');
+      topupConnections[rpcUrl] = new solanaWeb3.Connection(rpcUrl, { commitment: 'confirmed', disableRetryOnRateLimit: true });
     }
     return topupConnections[rpcUrl];
   }
@@ -656,7 +802,10 @@
 
   async function createTopupIntent(request) {
     var wallet = String((request && request.wallet) || getActiveWalletAddress() || '').trim();
-    if (!wallet) throw new Error('Connect a wallet first');
+    if (!wallet) throw moneyErr('no_wallet', 'Connect a wallet first');
+    // One unverified payment at a time: a new order would wipe its saved
+    // signature and invite paying twice (refused with code payment_pending).
+    await guardPendingPayment();
     var config = await loadTopupConfig();
     var minUsd = Number(config && config.pricing && config.pricing.minUsd);
     var maxUsd = Number(config && config.pricing && config.pricing.maxUsd);
@@ -667,8 +816,54 @@
       throw new Error('Could not price that payment amount right now. Try again in a moment.');
     }
     usd = Math.round(usd * 100) / 100;
+    // SOL-2: remember the SOL amount the person TYPED so exactly that is
+    // signed. Callers pass it as solAmount; the Convert tab's own form is the
+    // fallback when a caller does not.
+    var typedSol = Number(request && request.solAmount);
+    if (!(typedSol > 0) && !(request && request.method === 'stripe')) {
+      try {
+        var selEl = $('transferFrom'), amtEl = $('transferAmount');
+        if (selEl && amtEl && String(selEl.value || '').toUpperCase() === 'SOL') {
+          var typedFromForm = Number(String(amtEl.value || '').replace(',', '.'));
+          if (typedFromForm > 0) typedSol = typedFromForm;
+        }
+      } catch (e) {}
+    }
+    // C7: a SOL order is priced with the ONE SOL price the worker quotes with
+    // (/topup/config). A caller that priced it with another number (a stale
+    // feed or a fallback constant) would otherwise make the wallet sign a
+    // different SOL amount than typed.
+    if (typedSol > 0 && !(request && request.method === 'stripe')) {
+      var cfgSolUsd = Number(config && config.pricing && config.pricing.solUsd);
+      if (Number.isFinite(cfgSolUsd) && cfgSolUsd > 0) {
+        var usdFromTyped = Math.round(typedSol * cfgSolUsd * 100) / 100;
+        if (Math.abs(usdFromTyped - usd) > Math.max(0.01, usd * 0.01)) usd = usdFromTyped;
+      }
+    }
     if (usd < minUsd || usd > maxUsd) {
       throw new Error('Top-up amount must be between $' + minUsd.toFixed(2) + ' and $' + maxUsd.toFixed(2) + '.');
+    }
+    // SOL-1: check the SOL balance BEFORE any order exists, so a wallet without
+    // SOL gets "Need SOL" + the Get-SOL path instead of an order it cannot pay.
+    if (typedSol > 0 && !(request && request.method === 'stripe')) {
+      var needLam = Math.round(typedSol * TOPUP_LAMPORTS_PER_SOL);
+      var haveLam = null;
+      try {
+        var Bs = window.OST_BALANCE && OST_BALANCE.get ? OST_BALANCE.get() : null;
+        if (Bs && Bs.sol != null && (!Bs.wallet || Bs.wallet === wallet)) haveLam = Math.round(Number(Bs.sol) * TOPUP_LAMPORTS_PER_SOL);
+        if (haveLam == null && window.OST_WALLET && typeof window.OST_WALLET.rpcCall === 'function') {
+          haveLam = Number(await window.OST_WALLET.rpcCall(function (c) { return c.getBalance(new solanaWeb3.PublicKey(wallet)); }));
+        }
+      } catch (e) { haveLam = null; }
+      if (haveLam != null && Number.isFinite(haveLam)) {
+        if (haveLam < needLam) {
+          throw moneyErr('insufficient_sol', 'Need ' + (needLam / TOPUP_LAMPORTS_PER_SOL).toFixed(6) + ' devnet SOL — you have ' + (haveLam / TOPUP_LAMPORTS_PER_SOL).toFixed(6) + '. Get SOL by cashing out 10 OST → SOL (Convert, From: OST). No order was created.', { needSol: needLam / 1e9, haveSol: haveLam / 1e9, getSol: true });
+        }
+        var restLam = haveLam - needLam;
+        if (restLam > 0 && restLam < RENT_MIN_LAMPORTS) {
+          throw moneyErr('keep_rent_reserve', 'Leave at least 0.00089 SOL in your wallet after paying, or pay with all of it. No order was created.', { maxSol: Math.max(0, haveLam - RENT_MIN_LAMPORTS) / 1e9 });
+        }
+      }
     }
     var payload = await topupRequest('/topup/intent', {
       method: 'POST',
@@ -678,7 +873,7 @@
         method: request && request.method === 'stripe' ? 'stripe' : 'crypto'
       })
     });
-    writePendingTopup({ id: payload.id, wallet: wallet, method: request && request.method === 'stripe' ? 'stripe' : 'crypto', createdAt: Date.now() });
+    writePendingTopup({ id: payload.id, wallet: wallet, method: request && request.method === 'stripe' ? 'stripe' : 'crypto', createdAt: Date.now(), solAmount: Number.isFinite(typedSol) && typedSol > 0 ? typedSol : null });
     return payload;
   }
 
@@ -697,18 +892,23 @@
   // from the pool (PayoutGate, internal key, idempotent on the intent id), then
   // polls /topup/status until it reports 'sent'. Replaces the old client-originated
   // /wallet/payout, which was capped at 2000 OST/day and needed no paid intent.
+  // C5: the OST delivery of a paid order is a settled money move into the wallet.
+  function deliveredTx(intent, sig) {
+    try { window.dispatchEvent(new CustomEvent('ost:wallet-tx', { detail: { sig: String(sig), asset: 'OST', amount: Number(intent && intent.ostAmount || 0), direction: 'in', status: 'confirmed', source: 'topup-delivery' } })); } catch (e) {}
+    return { sig: String(sig), server: true };
+  }
   async function serverDeliverTopup(intent) {
     var last = null;
     for (var attempt = 0; attempt < 8; attempt++) {
       try {
         var r = await topupRequest('/topup/claim', { method: 'POST', body: JSON.stringify({ id: intent.id, wallet: getActiveWalletAddress() }) });
         var it = r && r.intent;
-        if (it && it.status === 'sent' && it.signature) return { sig: String(it.signature), server: true };
+        if (it && it.status === 'sent' && it.signature) return deliveredTx(intent, it.signature);
         last = r;
       } catch (e) { last = e; }
       try {
         var st = await topupRequest('/topup/status/' + encodeURIComponent(intent.id), { method: 'GET' });
-        if (st && st.status === 'sent' && st.signature) return { sig: String(st.signature), server: true };
+        if (st && st.status === 'sent' && st.signature) return deliveredTx(intent, st.signature);
       } catch (_) {}
       await new Promise(function (res) { setTimeout(res, 1500 + attempt * 500); });
     }
@@ -843,13 +1043,22 @@
     return { ok: true, signature: payment.signature, paidLamports: paidLamports, expectedLamports: expectedLamports, tx: tx };
   }
 
+  // Raw RPC / program-log text never reaches the message (C3): it is kept on
+  // the error for OST_MONEY_ERRORS to decode into a plain-English code.
   function transactionError(err) {
-    if (!err) return new Error('Transaction send failed');
-    var logs = Array.isArray(err.logs) ? err.logs : [];
-    var message = err.message || 'Transaction send failed';
-    return logs.length ? new Error(message + '\n\nProgram logs:\n' + logs.join('\n')) : new Error(message);
+    var logs = err && Array.isArray(err.logs) ? err.logs : [];
+    var raw = String((err && err.message) || err || '') + (logs.length ? ' ' + logs.join(' ') : '');
+    var code = (err && (err.code === 4001 || /user rejected|rejected the request|declined|cancell?ed/i.test(raw))) ? 'user_rejected' : '';
+    if (!code) { try { code = (window.OST_MONEY_ERRORS && window.OST_MONEY_ERRORS.codeFromText(raw)) || ''; } catch (e) {} }
+    var e2 = moneyErr(code || 'transaction_failed', 'The payment was not sent.', { logs: logs, rawMessage: raw.slice(0, 400), serverMessage: 'The payment was not sent.' });
+    try { if (window.OST_MONEY_ERRORS) { e2.human = window.OST_MONEY_ERRORS.humanize(e2); e2.message = e2.human.title + (e2.human.body ? ' — ' + e2.human.body : ''); } } catch (e) {}
+    return e2;
   }
 
+  // SRV-6: never rebroadcast a rejected simulation with skipPreflight — that
+  // lands a doomed transaction on chain and hides the real reason. The only
+  // safe exceptions are an RPC node that is behind (no record of a prior
+  // credit) or has not seen the blockhash yet.
   async function sendRawWithRetry(conn, serialized) {
     try {
       return await conn.sendRawTransaction(serialized, {
@@ -858,82 +1067,160 @@
       });
     } catch (error) {
       var message = String(error && error.message || error || '');
-      if (message.indexOf('simulation failed') !== -1 || message.indexOf('Simulation failed') !== -1) {
+      if (/no record of a prior credit|blockhash not found/i.test(message)) {
         return conn.sendRawTransaction(serialized, { skipPreflight: true });
       }
       throw error;
     }
   }
 
-  async function signAndSendOnConnection(conn, transaction) {
+  // The fee payer's signature IS the transaction id, and it exists the moment
+  // the transaction is signed — before anything is sent.
+  function signatureOfSigned(tx) {
+    try {
+      if (window.OST_RESCUE && typeof window.OST_RESCUE.sigOf === 'function') { var s = window.OST_RESCUE.sigOf(tx); if (s) return s; }
+      var raw = tx && tx.signature;
+      if (raw && raw.length === 64 && window.OST_BASE58 && typeof window.OST_BASE58.encode === 'function') return window.OST_BASE58.encode(Uint8Array.from(raw));
+    } catch (e) {}
+    return '';
+  }
+  // A send that the RPC refused during preflight (simulation) never reached the
+  // network: that, and only that, is a definite "not sent".
+  function isPreflightRejection(error) {
+    var m = String((error && error.message) || error || '');
+    return !!(error && Array.isArray(error.logs)) || /simulation failed|preflight|insufficient funds|insufficient lamports|invalid transaction|signature verification|custom program error|InstructionError/i.test(m);
+  }
+
+  // Sign, SAVE, send, confirm (SOL-4): `onSent(signature, info)` runs as soon
+  // as the transaction is signed — BEFORE it is broadcast — so a lost answer
+  // can always be resolved by looking the signature up on chain. A failed or
+  // lost send is checked by signature (with its blockhash window) before it is
+  // ever called "not sent". An unknown outcome returns { pending:true }.
+  async function signAndSendOnConnection(conn, transaction, onSent) {
     var session = getWalletSession();
-    if (!conn) throw new Error('Solana RPC unavailable');
-    if (!session || !session.publicKey) throw new Error('Connect a wallet first');
+    if (!conn) throw moneyErr('network_error', 'Solana RPC unavailable', { stage: 'build' });
+    if (!session || !session.publicKey) throw moneyErr('no_wallet', 'Connect a wallet first', { stage: 'build' });
 
     var latest = await conn.getLatestBlockhash('confirmed');
     transaction.recentBlockhash = latest.blockhash;
     if (!transaction.feePayer) transaction.feePayer = session.publicKey;
+    var info = { lastValidBlockHeight: latest.lastValidBlockHeight, signedAt: Date.now() };
+    var saved = '';
+    function save(sig) {
+      if (!sig || saved === sig) return;
+      saved = String(sig);
+      if (typeof onSent === 'function') { try { onSent(saved, info); } catch (e) {} }
+    }
 
-    var signature = null;
+    var signature = null, signedTx = null;
     try {
       if (session.kind === 'local' && session.keypair) {
         transaction.partialSign(session.keypair);
-        signature = await sendRawWithRetry(conn, transaction.serialize());
+        signedTx = transaction;
       } else if (session.provider && typeof session.provider.signTransaction === 'function') {
-        var signedTransaction = await session.provider.signTransaction(transaction);
-        signature = await sendRawWithRetry(conn, signedTransaction.serialize());
+        signedTx = await session.provider.signTransaction(transaction);
       } else if (session.provider && typeof session.provider.signAndSendTransaction === 'function') {
         var result = await session.provider.signAndSendTransaction(transaction);
         signature = typeof result === 'string' ? result : result && result.signature;
       }
     } catch (error) {
-      throw transactionError(error);
+      var se = transactionError(error);
+      se.stage = 'build';                         // nothing was sent: the wallet did not sign
+      throw se;
+    }
+    if (signedTx) {
+      var pre = signatureOfSigned(signedTx);
+      save(pre);
+      try {
+        signature = await sendRawWithRetry(conn, signedTx.serialize());
+      } catch (error) {
+        if (!pre || isPreflightRejection(error)) {
+          // Definitely refused before broadcast: nothing moved.
+          var pe = transactionError(error);
+          pe.stage = 'build'; pe.notSent = true; pe.sig = pre || undefined;
+          throw pe;
+        }
+        // The answer was lost (timeout / dropped connection): a node may have
+        // accepted it. Look it up by signature before saying anything.
+        signature = pre;
+      }
     }
 
-    if (!signature) throw new Error('Active wallet cannot sign transactions');
-    var confirmation = await conn.confirmTransaction({
-      signature: signature,
-      blockhash: latest.blockhash,
-      lastValidBlockHeight: latest.lastValidBlockHeight
-    }, 'confirmed');
-    if (confirmation && confirmation.value && confirmation.value.err) {
-      var errText;
-      try { errText = JSON.stringify(confirmation.value.err); }
-      catch (e) { errText = String(confirmation.value.err); }
-      throw new Error('Transaction reverted on-chain: ' + errText + ' (sig ' + signature + ')');
+    if (!signature) throw moneyErr('wallet_cannot_sign', 'Active wallet cannot sign transactions', { stage: 'build' });
+    save(signature);
+    var c = (window.OST_RESCUE && typeof window.OST_RESCUE.confirmBySig === 'function')
+      ? await window.OST_RESCUE.confirmBySig(String(signature), { timeoutMs: 30000, lastValidBlockHeight: latest.lastValidBlockHeight })
+      : await conn.confirmTransaction({ signature: signature, blockhash: latest.blockhash, lastValidBlockHeight: latest.lastValidBlockHeight }, 'confirmed')
+          .then(function (r) { return r && r.value && r.value.err ? { ok: false, err: r.value.err } : { ok: true, pending: false }; })
+          .catch(function () { return { ok: true, pending: true }; });
+    if (c && c.ok === false && !c.pending) {
+      throw moneyErr(c.code || 'transaction_failed', c.expired ? 'The payment was never sent and its quote expired. Nothing moved.' : 'The payment did not go through.', { sig: String(signature), onchainErr: c.err || null, expired: !!c.expired, notSent: !!c.expired, stage: c.expired ? 'build' : 'submit' });
     }
-    return signature;
+    return { signature: String(signature), pending: !!(c && c.pending), lastValidBlockHeight: latest.lastValidBlockHeight };
   }
 
-  async function sendIntentWithSol(intent, config) {
+  // Pay a top-up intent in SOL. The OST pool pays the network fee when the
+  // rescue rail is present (C8), so the wallet needs exactly the SOL shown —
+  // under Solana's rent rule (RNT-1): whatever is left must be 0 or ≥ 0.00089.
+  async function sendIntentWithSol(intent, config, onSent) {
     var wallet = window.OST_WALLET;
     var session = getWalletSession();
-    if (!wallet || !session || !session.publicKey) throw new Error('Connect a wallet first');
+    if (!wallet || !session || !session.publicKey) throw moneyErr('no_wallet', 'Connect a wallet first');
     var currentConfig = config || await loadTopupConfig();
     var treasury = pickTopupReceiver(currentConfig, 'sol');
-    if (!treasury) throw new Error('Treasury SOL receiver is not configured');
+    if (!treasury) throw moneyErr('bad_response', 'Treasury SOL receiver is not configured');
 
     var settlement = quoteTopupSettlement(intent, 'SOL', currentConfig);
     var lamports = Math.ceil(settlement.amount * TOPUP_LAMPORTS_PER_SOL);
+    // SOL-2: when this order came from a typed SOL amount, sign exactly that
+    // amount (the USD intent is rounded to cents, which would shift the SOL).
+    var pendingOrder = readPendingTopup();
+    var typedSol = pendingOrder && pendingOrder.id === intent.id ? Number(pendingOrder.solAmount) : NaN;
+    if (Number.isFinite(typedSol) && typedSol > 0) {
+      var typedLamports = Math.round(typedSol * TOPUP_LAMPORTS_PER_SOL);
+      // The worker accepts ≥ 98.5 % of the order's USD value, so signing the
+      // typed amount within this window always verifies.
+      if (typedLamports >= Math.floor(lamports * 0.995) && typedLamports <= Math.ceil(lamports * 1.01) + 10) {
+        lamports = typedLamports;
+        settlement = Object.assign({}, settlement, { amount: typedLamports / TOPUP_LAMPORTS_PER_SOL, amountDisplay: (typedLamports / TOPUP_LAMPORTS_PER_SOL).toFixed(6) });
+      } else {
+        // The order was priced with a different SOL price than the one shown:
+        // never sign an amount the person did not type (SOL-2).
+        throw moneyErr('amount_mismatch', 'This order would need ' + (lamports / TOPUP_LAMPORTS_PER_SOL).toFixed(6) + ' SOL, not the ' + typedSol + ' SOL you typed, so nothing was signed. Re-enter the amount and try again.', { typedSol: typedSol, orderSol: lamports / TOPUP_LAMPORTS_PER_SOL });
+      }
+    }
     var conn = getTopupConnection(currentConfig);
-    var balance = await conn.getBalance(session.publicKey);
-    if (balance < lamports + 5000) {
-      throw new Error('Need ' + (lamports / TOPUP_LAMPORTS_PER_SOL).toFixed(6) + ' SOL on ' + topupNetworkLabel(currentConfig) + ' (have ' + (balance / TOPUP_LAMPORTS_PER_SOL).toFixed(6) + ')');
+    var poolPaid = !!(window.OST_RESCUE && typeof window.OST_RESCUE.sendPoolFeeOnly === 'function' && resolveTopupCluster(currentConfig) === 'devnet');
+    var balance = Number(await conn.getBalance(session.publicKey));
+    var feeBuffer = poolPaid ? 0 : 5000;
+    if (balance < lamports + feeBuffer) {
+      throw moneyErr('insufficient_sol', 'Need ' + (lamports / TOPUP_LAMPORTS_PER_SOL).toFixed(6) + ' SOL on ' + topupNetworkLabel(currentConfig) + ' (you have ' + (balance / TOPUP_LAMPORTS_PER_SOL).toFixed(6) + ').', { needSol: lamports / 1e9, haveSol: balance / 1e9, getSol: true });
+    }
+    var rest = balance - lamports - feeBuffer;
+    if (rest > 0 && rest < RENT_MIN_LAMPORTS) {
+      throw moneyErr('keep_rent_reserve', 'Leave at least 0.00089 SOL in your wallet after paying.', { maxSol: Math.max(0, balance - feeBuffer - RENT_MIN_LAMPORTS) / 1e9 });
     }
 
-    var tx = new solanaWeb3.Transaction();
-    tx.add(wallet.memoIx(intent.memo, session.publicKey));
-    tx.add(solanaWeb3.SystemProgram.transfer({
+    var memoIx = wallet.memoIx(intent.memo, session.publicKey);
+    var payIx = solanaWeb3.SystemProgram.transfer({
       fromPubkey: session.publicKey,
       toPubkey: wallet.toPublicKey(treasury),
       lamports: lamports
-    }));
-
-    var signature = await signAndSendOnConnection(conn, tx);
-    return { asset: 'SOL', amount: settlement.amount, signature: signature };
+    });
+    if (poolPaid) {
+      var r = await window.OST_RESCUE.sendPoolFeeOnly([memoIx, payIx], { onSigned: function (sig, built) { if (typeof onSent === 'function') onSent(sig, { lastValidBlockHeight: built && built.lastValidBlockHeight, signedAt: Date.now() }); } });
+      try { window.dispatchEvent(new CustomEvent('ost:wallet-tx', { detail: { sig: String(r), asset: 'SOL', amount: settlement.amount, direction: 'out', to: treasury, status: r.pending ? 'pending' : 'confirmed', source: 'topup-sol' } })); } catch (e) {}
+      return { asset: 'SOL', amount: settlement.amount, signature: String(r), pending: !!r.pending };
+    }
+    var tx = new solanaWeb3.Transaction();
+    tx.add(memoIx);
+    tx.add(payIx);
+    var sent = await signAndSendOnConnection(conn, tx, onSent);
+    try { window.dispatchEvent(new CustomEvent('ost:wallet-tx', { detail: { sig: sent.signature, asset: 'SOL', amount: settlement.amount, direction: 'out', to: treasury, status: sent.pending ? 'pending' : 'confirmed', source: 'topup-sol' } })); } catch (e) {}
+    return { asset: 'SOL', amount: settlement.amount, signature: sent.signature, pending: sent.pending };
   }
 
-  async function sendIntentWithUsdc(intent, config) {
+  async function sendIntentWithUsdc(intent, config, onSent) {
     var wallet = window.OST_WALLET;
     var session = getWalletSession();
     if (!wallet || !session || !session.publicKey) throw new Error('Connect a wallet first');
@@ -977,8 +1264,9 @@
       SPL_TOKEN_PROGRAM_ID
     ));
 
-    var signature = await signAndSendOnConnection(conn, tx);
-    return { asset: 'USDC', amount: settlement.amount, signature: signature };
+    var sent = await signAndSendOnConnection(conn, tx, onSent);
+    try { window.dispatchEvent(new CustomEvent('ost:wallet-tx', { detail: { sig: sent.signature, asset: 'USDC', amount: settlement.amount, direction: 'out', to: treasuryOwner, status: sent.pending ? 'pending' : 'confirmed', source: 'topup-usdc' } })); } catch (e) {}
+    return { asset: 'USDC', amount: settlement.amount, signature: sent.signature, pending: sent.pending };
   }
 
   async function recordTopupDeliverySnapshot(intent, signature) {
@@ -986,9 +1274,9 @@
     var session = getWalletSession();
     if (!wallet || !session || !session.publicKey) return;
     try {
-      var devnetConn = wallet.getConnection && wallet.getConnection();
-      var ostBalance = await wallet.getOstBalance(session.publicKey);
-      var solBalance = devnetConn ? (await devnetConn.getBalance(session.publicKey)) / TOPUP_LAMPORTS_PER_SOL : 0;
+      var shared = sharedBalances();
+      var ostBalance = shared.ost;
+      var solBalance = shared.sol;
       recordSnapshot({
         ts: Date.now(),
         ostBalance: ostBalance,
@@ -1200,15 +1488,70 @@
     return { intent: intent, payout: null, delivered: false };
   }
 
-  async function settleTopupIntent(intentId, asset) {
+  async function settleTopupIntent(intentId, asset, settleOpts) {
+    settleOpts = settleOpts || {};
     var intent = await getTopupStatus(intentId);
-    if (intent.status === 'sent') return { intent: intent, payment: null, payout: null, delivered: false };
+    if (intent.status === 'sent') { clearPendingTopup(intent.id); return { intent: intent, payment: null, payout: null, delivered: false }; }
     if (intent.status === 'paid') return deliverPaidIntent(intent);
 
     var config = await loadTopupConfig({ force: true });
-    var payment = String(asset || 'SOL').toUpperCase() === 'USDC'
-      ? await sendIntentWithUsdc(intent, config)
-      : await sendIntentWithSol(intent, config);
+    var isUsdc = String(asset || 'SOL').toUpperCase() === 'USDC';
+    // A payment for this order was already sent: never pay twice — verify it.
+    var prior = readPendingTopup();
+    if (prior && prior.id === intent.id && prior.paymentRef) {
+      // An earlier payment that FAILED on chain, or provably never landed (its
+      // blockhash window passed), frees the order for a deliberate retry.
+      var look = await lookUpSavedPayment(prior, 4000);
+      if (look && look.ok === false && !look.pending) {
+        releaseSavedPayment(prior);
+        prior = readPendingTopup();
+        if (settleOpts.verifyOnly) {
+          return { intent: intent, payment: null, payout: null, delivered: false, released: true, expired: !!look.expired,
+            verifyNote: look.expired ? 'That payment was never sent — nothing moved. You can pay again.' : 'That payment failed on chain — nothing moved. You can pay again.' };
+        }
+      }
+    }
+    if (prior && prior.id === intent.id && prior.paymentRef) {
+      var again = await verifyTopupSignature(intent.id, prior.paymentRef).catch(function () { return null; });
+      var againIntent = again && (again.intent || again);
+      if (againIntent && (againIntent.status === 'paid' || againIntent.status === 'sent')) return deliverPaidIntent(againIntent);
+      try {
+        var chk0 = await topupRequest('/topup/crypto/check/' + encodeURIComponent(intent.id));
+        var chk0Intent = chk0 && (chk0.intent || chk0);
+        if (chk0Intent && (chk0Intent.status === 'paid' || chk0Intent.status === 'sent')) return deliverPaidIntent(chk0Intent);
+      } catch (e) {}
+      return { intent: intent, payment: { asset: prior.paymentAsset || 'SOL', amount: prior.paymentAmount, signature: prior.paymentRef, pending: true }, payout: null, delivered: false, pendingVerification: true };
+    }
+    // "Refresh status" never pays: it only verifies what was already sent.
+    if (settleOpts.verifyOnly) return { intent: intent, payment: null, payout: null, delivered: false, noPayment: true };
+    var onSent = function (sig, info) {
+      // SOL-4: the signature is saved the moment it exists, before it is sent.
+      var q = null; try { q = quoteTopupSettlement(intent, isUsdc ? 'USDC' : 'SOL', config); } catch (e) {}
+      rememberPendingPayment(intent, sig, { asset: isUsdc ? 'USDC' : 'SOL', amount: q ? q.amount : 0 }, info);
+    };
+    var payment;
+    try {
+      payment = isUsdc
+        ? await sendIntentWithUsdc(intent, config, onSent)
+        : await sendIntentWithSol(intent, config, onSent);
+    } catch (payErr) {
+      // A definitive failure (refused, or failed on chain) frees the order for
+      // a deliberate retry; an unknown outcome keeps the saved signature.
+      var hs = humanOf(payErr, { stage: 'submit' });
+      var cur = readPendingTopup();
+      var savedRef = cur && cur.id === intent.id && cur.paymentRef ? String(cur.paymentRef) : '';
+      if (hs.state !== 'pending') {
+        if (savedRef) releaseSavedPayment(cur);
+        throw payErr;
+      }
+      // Outcome unknown after the payment was signed and saved: this is
+      // "Payment sent — verifying", never a failure and never an invitation to
+      // pay again (C4 / SOL-4). The order stays locked to that signature.
+      if (savedRef) {
+        return { intent: intent, payment: { asset: cur.paymentAsset || (isUsdc ? 'USDC' : 'SOL'), amount: Number(cur.paymentAmount || 0), signature: savedRef, pending: true }, payout: null, delivered: false, pendingVerification: true, verifyNote: hs.title + (hs.body ? ' — ' + hs.body : '') };
+      }
+      throw payErr;
+    }
     if (payment && payment.signature) {
       rememberPendingPayment(intent, payment.signature, payment);
     }
@@ -1224,15 +1567,21 @@
       if (localVerification && localVerification.ok) {
         return deliverLocallyVerifiedPayment(intent, payment);
       }
-      if (verifyError) throw verifyError;
-    }
-    if (verified && verified.pendingVerification) {
+      // SOL-4: the payment was SENT (its signature is saved). A lost or failed
+      // verify never reads as a failed payment: ask the server's auto-detect
+      // once, else report "Payment sent — verifying" and keep the order locked.
+      try {
+        var chk = await topupRequest('/topup/crypto/check/' + encodeURIComponent(intent.id));
+        var chkIntent = chk && (chk.intent || chk);
+        if (chkIntent && (chkIntent.status === 'paid' || chkIntent.status === 'sent')) return deliverPaidIntent(chkIntent);
+      } catch (e) {}
       return {
-        intent: verified.intent || intent,
+        intent: (verified && verified.intent) || intent,
         payment: payment,
         payout: null,
         delivered: false,
-        pendingVerification: true
+        pendingVerification: true,
+        verifyNote: verifyError ? humanText(verifyError, { stage: 'submit' }) : ''
       };
     }
     var delivered = await deliverPaidIntent(verified.intent || verified);
@@ -1252,9 +1601,13 @@
     getStatus: getTopupStatus,
     settleIntent: settleTopupIntent,
     deliverIfPaid: deliverIfPaid,
-    rememberPending: writePendingTopup,
+    rememberPending: rememberPendingFromCaller,
     getPending: readPendingTopup,
-    clearPending: clearPendingTopup
+    clearPending: clearPendingTopup,
+    // Is a SENT payment still waiting for verification? (locks new orders)
+    hasUnverifiedPayment: function () { return hasUnverifiedPayment(readPendingTopup()); },
+    // "Refresh status": verify/deliver the saved order, never pay again.
+    refreshPending: refreshPendingTopup
   });
   try { window.dispatchEvent(new CustomEvent('ost:topup-ready')); } catch (e) {}
 
@@ -1539,66 +1892,269 @@
   }
 
   // ------------------------------------------------------------------
-  // 2) Real Send OST modal
+  // 2) Send sheet — OST / OSTG / SOL (TRF-1, TRF-2, TRF-3, RNT-1)
+  //    OST and OSTG go through the pool-paid peer-transfer rail: OST pays the
+  //    network fee AND creates the recipient's token account, so a brand-new
+  //    wallet with 0 SOL can send. SOL is a native transfer (pool pays the fee
+  //    when the rail is up) under Solana's rent rule.
   // ------------------------------------------------------------------
+  var OSTG_MINT = 'DfgxMbdN49AX2Za9LuvsyixF1jgVh45RbgWYSGonxQos';
+  var TOKEN_PROGRAMS = ['TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA', 'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb'];
+  var SEND_ASSETS = ['OST', 'OSTG', 'SOL'];
+  var sendState = { asset: 'OST', busy: false, balanceBase: null, balanceAsset: '' };
+
+  function shortAddr(a) { a = String(a || ''); return a.length > 12 ? a.slice(0, 4) + '…' + a.slice(-4) : a; }
+  function ostMint() { return (window.OST_CONFIG && window.OST_CONFIG.mint) || (window.OST_SWAP_POOL && window.OST_SWAP_POOL.mint) || ''; }
+  function knownMints() { return [ostMint(), OSTG_MINT, USDC_DEVNET_MINT, USDC_MAINNET_MINT, 'So11111111111111111111111111111111111111112'].filter(Boolean); }
+  function humanText(err, opts) {
+    try { if (window.OST_MONEY_ERRORS) return window.OST_MONEY_ERRORS.text(err, opts); } catch (e) {}
+    return 'That didn’t go through — try again in a moment.';
+  }
+  function humanOf(err, opts) {
+    try { if (window.OST_MONEY_ERRORS) return window.OST_MONEY_ERRORS.humanize(err, opts); } catch (e) {}
+    return { state: 'failed', title: 'That didn’t go through', body: 'Try again in a moment.' };
+  }
+  function baseToText(base, decimals) {
+    var s = BigInt(base).toString();
+    while (s.length <= decimals) s = '0' + s;
+    var whole = s.slice(0, s.length - decimals), frac = s.slice(s.length - decimals).replace(/0+$/, '');
+    return frac ? whole + '.' + frac : whole;
+  }
+  function textToBase(text, decimals) {
+    var s = String(text || '').trim().replace(',', '.');
+    if (!/^\d*\.?\d*$/.test(s) || s === '' || s === '.') return null;
+    var parts = s.split('.');
+    var frac = (parts[1] || '');
+    if (frac.length > decimals) return null;            // more precision than the token has
+    while (frac.length < decimals) frac += '0';
+    return BigInt(parts[0] || '0') * (10n ** BigInt(decimals)) + BigInt(frac || '0');
+  }
+  function decimalsOf(asset) { return 9; }   // OST, OSTG and SOL all use 9
+
+  // Exact on-chain balance in base units (bigint) — null when unknown.
+  async function readBaseBalance(asset) {
+    var w = window.OST_WALLET;
+    if (!w || !w.session || !w.session.publicKey) return null;
+    var owner = w.session.publicKey;
+    try {
+      if (asset === 'SOL') return BigInt(await w.rpcCall(function (c) { return c.getBalance(owner); }));
+      var mint = new solanaWeb3.PublicKey(asset === 'OSTG' ? OSTG_MINT : ostMint());
+      var ata = w.associatedAddress(mint, owner, false, w.constants.TOKEN_2022_PROGRAM_ID, w.constants.ASSOCIATED_TOKEN_PROGRAM_ID);
+      var r = await w.rpcCall(function (c) { return c.getTokenAccountBalance(ata); });
+      return r && r.value && r.value.amount != null ? BigInt(r.value.amount) : null;
+    } catch (e) {
+      if (/could not find account|invalid param/i.test(String(e && e.message || e))) return 0n;
+      // Fall back to the shared balance (rounded down so Max never exceeds it).
+      try {
+        var B = window.OST_BALANCE && OST_BALANCE.get ? OST_BALANCE.get() : {};
+        var v = asset === 'SOL' ? B.sol : asset === 'OSTG' ? B.ostg : B.ost;
+        if (v != null && Number.isFinite(Number(v))) return BigInt(Math.floor(Number(v) * 1e9));
+      } catch (_) {}
+      return null;
+    }
+  }
+
+  // Parse a pasted / scanned value: a bare address or a solana: URI.
+  function parseRecipientInput(raw) {
+    var s = String(raw || '').trim();
+    var out = { to: '', amount: null, memo: '' };
+    var m = s.match(/^solana:([1-9A-HJ-NP-Za-km-z]{32,44})(\?.*)?$/i);
+    if (m) {
+      out.to = m[1];
+      try {
+        var q = new URLSearchParams((m[2] || '').replace(/^\?/, ''));
+        if (q.get('amount')) out.amount = q.get('amount');
+        if (q.get('memo')) out.memo = q.get('memo').slice(0, 80);
+        if (q.get('message') && !out.memo) out.memo = q.get('message').slice(0, 80);
+      } catch (e) {}
+      return out;
+    }
+    var bare = s.match(/[1-9A-HJ-NP-Za-km-z]{32,44}/);
+    out.to = bare ? bare[0] : s;
+    return out;
+  }
+
+  // TRF-3 guards: refuse self, mints, token accounts, programs and off-curve
+  // (program-derived) addresses. Returns { pubkey, lamports } for the rent check.
+  async function checkRecipient(toText, asset) {
+    var w = window.OST_WALLET;
+    var pk;
+    try { pk = new solanaWeb3.PublicKey(String(toText || '').trim()); }
+    catch (e) { throw moneyErr('invalid_recipient', 'That isn’t a valid Solana wallet address.'); }
+    var me = w && w.session && w.session.publicKey ? w.session.publicKey.toBase58() : '';
+    var to = pk.toBase58();
+    if (me && to === me) throw moneyErr('self_send', 'That’s your own wallet.');
+    if (knownMints().indexOf(to) !== -1) throw moneyErr('mint_address', 'That is a token mint address, not a wallet.');
+    if (window.OST_SWAP_POOL && (to === window.OST_SWAP_POOL.ata)) throw moneyErr('token_account_address', 'That is a token account, not a wallet.');
+    try { if (!solanaWeb3.PublicKey.isOnCurve(pk.toBytes())) throw moneyErr('invalid_recipient', 'That address is a program account and can’t receive here.'); }
+    catch (e) { if (e && e.code) throw e; }
+    var info = null, known = false;
+    try { info = await w.rpcCall(function (c) { return c.getAccountInfo(pk); }); known = true; } catch (e) { known = false; }
+    if (info) {
+      var owner = info.owner && info.owner.toBase58 ? info.owner.toBase58() : String(info.owner || '');
+      if (TOKEN_PROGRAMS.indexOf(owner) !== -1) throw moneyErr('token_account_address', 'That is a token account or mint, not a wallet.');
+      if (info.executable) throw moneyErr('invalid_recipient', 'That address is a program and can’t receive here.');
+    }
+    return { pubkey: pk, lamports: info ? Number(info.lamports || 0) : (known ? 0 : null) };
+  }
+
+  // One send for every surface (Send sheet, Mesh pay, tips). Resolves to
+  // { ok, sig, pending } (C4) and dispatches ost:wallet-tx (C5).
+  async function sendAsset(opts) {
+    var w = window.OST_WALLET;
+    var asset = SEND_ASSETS.indexOf(String(opts.asset || 'OST').toUpperCase()) !== -1 ? String(opts.asset || 'OST').toUpperCase() : 'OST';
+    if (!w || !w.session || !w.session.publicKey) throw moneyErr('no_wallet', 'Connect a wallet first.');
+    var base = textToBase(opts.amount, decimalsOf(asset));
+    if (base == null || base <= 0n) throw moneyErr('invalid_amount', 'Enter an amount greater than zero.');
+    var amountNum = Number(baseToText(base, 9));
+    var rcpt = await checkRecipient(opts.to, asset);
+    var have = opts.balanceBase != null ? BigInt(opts.balanceBase) : await readBaseBalance(asset);
+    if (have != null && base > have) {
+      throw moneyErr('insufficient_balance', 'You have ' + baseToText(have, 9) + ' ' + asset + '.', { body: { have: Number(baseToText(have, 9)) }, asset: asset });
+    }
+    var memo = opts.memo ? String(opts.memo).slice(0, 120) : '';
+    var to = rcpt.pubkey.toBase58();
+
+    if (asset === 'OST' || asset === 'OSTG') {
+      if (!window.OST_RESCUE || typeof window.OST_RESCUE.sendPeerOst !== 'function') throw moneyErr('bad_response', 'The OST send rail is still loading — try again in a moment.');
+      var r = await window.OST_RESCUE.sendPeerOst(to, amountNum, memo, asset === 'OSTG' ? OSTG_MINT : undefined);
+      return { ok: true, sig: String(r), pending: !!r.pending, asset: asset, amount: amountNum, to: to };
+    }
+
+    // SOL (RNT-1): a new address must receive ≥ 0.00089 SOL; what stays behind
+    // must be 0 or ≥ 0.00089 SOL.
+    var lamports = base;
+    if (rcpt.lamports === 0 && lamports < BigInt(RENT_MIN_LAMPORTS)) {
+      throw moneyErr('below_rent_minimum', 'A new Solana address must receive at least 0.00089 SOL.', { asset: 'SOL' });
+    }
+    var poolPaid = !!(window.OST_RESCUE && typeof window.OST_RESCUE.sendPoolFeeOnly === 'function');
+    var feeBuffer = poolPaid ? 0n : 5000n;
+    if (have != null) {
+      if (lamports + feeBuffer > have) throw moneyErr('insufficient_balance', 'You have ' + baseToText(have, 9) + ' SOL.', { asset: 'SOL', body: { have: Number(baseToText(have, 9)) } });
+      var rest = have - lamports - feeBuffer;
+      if (rest > 0n && rest < BigInt(RENT_MIN_LAMPORTS)) throw moneyErr('keep_rent_reserve', 'Leave at least 0.00089 SOL, or use Max to send all of it.', { asset: 'SOL' });
+    }
+    var ixs = [];
+    if (memo) ixs.push(w.memoIx(memo, w.session.publicKey));
+    ixs.push(solanaWeb3.SystemProgram.transfer({ fromPubkey: w.session.publicKey, toPubkey: rcpt.pubkey, lamports: Number(lamports) }));
+    var sig, pending = false;
+    if (poolPaid) {
+      var rs = await window.OST_RESCUE.sendPoolFeeOnly(ixs);
+      sig = String(rs); pending = !!rs.pending;
+    } else {
+      var tx = new solanaWeb3.Transaction();
+      ixs.forEach(function (ix) { tx.add(ix); });
+      var sent = await signAndSendOnConnection(w.getConnection(), tx);
+      sig = sent.signature; pending = sent.pending;
+    }
+    try { window.dispatchEvent(new CustomEvent('ost:wallet-tx', { detail: { sig: sig, asset: 'SOL', amount: amountNum, direction: 'out', to: to, status: pending ? 'pending' : 'confirmed', source: opts.source || 'send' } })); } catch (e) {}
+    return { ok: true, sig: sig, pending: pending, asset: 'SOL', amount: amountNum, to: to };
+  }
+  window.OST_SEND = {
+    send: sendAsset,
+    checkRecipient: checkRecipient,
+    balance: readBaseBalance,
+    parse: parseRecipientInput,
+    open: function (o) { openSendModal(o); }
+  };
+
+  function sendIntro(asset) {
+    if (asset === 'SOL') return 'Native SOL transfer on Solana devnet. OST pays the network fee. A new address must receive at least 0.00089 SOL (Solana’s rent minimum).';
+    return 'Real ' + asset + ' transfer on Solana devnet. OST pays the network fee and creates their account — you don’t need SOL. Devnet tokens have no cash value.';
+  }
+
   function buildSendModal() {
     if ($('ostSendModal')) return;
     var modal = document.createElement('div');
     modal.id = 'ostSendModal';
     modal.setAttribute('role', 'dialog');
     modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-labelledby', 'ostSendTitle');
     modal.style.cssText =
       'position:fixed;inset:0;display:none;align-items:center;justify-content:center;' +
-      'background:rgba(2,6,16,0.78);backdrop-filter:blur(8px);z-index:9998;padding:20px;';
+      'background:rgba(2,6,16,0.78);backdrop-filter:blur(8px);z-index:9998;padding:16px;';
+    var inputCss = 'padding:11px 12px;border-radius:9px;border:1px solid rgba(255,255,255,0.12);background:rgba(0,0,0,0.3);color:#f1f5f9;';
     modal.innerHTML =
-      '<div style="background:#0f131e;border:1px solid rgba(255,255,255,0.08);border-radius:18px;max-width:460px;width:100%;padding:26px 24px;box-shadow:0 20px 60px rgba(0,0,0,0.55);">' +
+      '<div style="background:#0f131e;border:1px solid rgba(255,255,255,0.08);border-radius:18px;max-width:460px;width:100%;max-height:calc(100vh - 32px);overflow:auto;padding:22px 20px;box-shadow:0 20px 60px rgba(0,0,0,0.55);">' +
         '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">' +
           '<h3 style="margin:0;font-size:1.15rem;color:#f8fafc;" id="ostSendTitle">Send on Devnet</h3>' +
           '<button type="button" id="ostSendClose" aria-label="Close" style="background:transparent;border:none;color:#94a3b8;font-size:1.4rem;cursor:pointer;line-height:1;">&times;</button>' +
         '</div>' +
-        '<p style="color:#94a3b8;font-size:.85rem;margin:0 0 14px;" id="ostSendIntro">Real Token-2022 transfer on Solana devnet. The recipient\'s OST account is created automatically if it doesn\'t exist (small SOL fee).</p>' +
+        '<p style="color:#94a3b8;font-size:.85rem;margin:0 0 14px;" id="ostSendIntro"></p>' +
         '<div style="display:flex;gap:8px;margin:0 0 14px;" role="tablist" aria-label="Asset to send">' +
-          '<button type="button" data-send-asset="OST" class="btn btn-outline btn-sm is-active" id="ostSendAssetOst" style="flex:1;">&#9673; OST</button>' +
+          '<button type="button" data-send-asset="OST" class="btn btn-outline btn-sm" id="ostSendAssetOst" style="flex:1;">&#9673; OST</button>' +
+          '<button type="button" data-send-asset="OSTG" class="btn btn-outline btn-sm" id="ostSendAssetOstg" style="flex:1;">&#9670; OSTG</button>' +
           '<button type="button" data-send-asset="SOL" class="btn btn-outline btn-sm" id="ostSendAssetSol" style="flex:1;">&#9728; SOL</button>' +
         '</div>' +
         '<div style="display:flex;flex-direction:column;gap:14px;">' +
           '<label style="display:flex;flex-direction:column;gap:6px;color:#cbd5e1;font-size:.85rem;">' +
             'Recipient wallet address' +
-            '<input type="text" id="ostSendTo" placeholder="Solana public key" autocomplete="off" spellcheck="false" style="padding:11px 12px;border-radius:9px;border:1px solid rgba(255,255,255,0.12);background:rgba(0,0,0,0.3);color:#f1f5f9;font-family:monospace;font-size:.82rem;">' +
+            '<input type="text" id="ostSendTo" placeholder="Solana address or solana: link" autocomplete="off" spellcheck="false" style="' + inputCss + 'font-family:monospace;font-size:.82rem;">' +
+            '<span style="display:flex;gap:6px;flex-wrap:wrap;">' +
+              '<button type="button" id="ostSendPaste" class="btn btn-outline btn-sm">Paste</button>' +
+              '<button type="button" id="ostSendScan" class="btn btn-outline btn-sm">Scan QR</button>' +
+              '<span id="ostSendToCheck" style="font-size:.78rem;color:#94a3b8;align-self:center;"></span>' +
+            '</span>' +
           '</label>' +
           '<label style="display:flex;flex-direction:column;gap:6px;color:#cbd5e1;font-size:.85rem;">' +
-            '<span style="display:flex;justify-content:space-between;align-items:baseline;"><span id="ostSendAmountLabel">Amount (OST)</span> <span id="ostSendAvail" style="font-size:.78rem;color:#94a3b8;">balance: --</span></span>' +
-            '<input type="number" id="ostSendAmount" placeholder="0.00" min="0" step="any" style="padding:11px 12px;border-radius:9px;border:1px solid rgba(255,255,255,0.12);background:rgba(0,0,0,0.3);color:#f1f5f9;font-size:.95rem;">' +
+            '<span style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;"><span id="ostSendAmountLabel">Amount (OST)</span> <span id="ostSendAvail" style="font-size:.78rem;color:#94a3b8;">You have —</span></span>' +
+            '<input type="text" inputmode="decimal" id="ostSendAmount" placeholder="0.00" autocomplete="off" style="' + inputCss + 'font-size:.95rem;">' +
             '<span style="display:flex;gap:6px;flex-wrap:wrap;">' +
-              '<button type="button" data-send-quick="0.1" class="btn btn-outline btn-sm">0.1</button>' +
               '<button type="button" data-send-quick="1" class="btn btn-outline btn-sm">1</button>' +
+              '<button type="button" data-send-quick="5" class="btn btn-outline btn-sm">5</button>' +
               '<button type="button" data-send-quick="10" class="btn btn-outline btn-sm">10</button>' +
-              '<button type="button" data-send-quick="max" class="btn btn-outline btn-sm">Max</button>' +
+              '<button type="button" data-send-quick="max" id="ostSendMax" class="btn btn-outline btn-sm" disabled>Max</button>' +
             '</span>' +
           '</label>' +
           '<label style="display:flex;flex-direction:column;gap:6px;color:#cbd5e1;font-size:.85rem;">' +
             'Memo (optional)' +
-            '<input type="text" id="ostSendMemo" maxlength="80" placeholder="e.g. coffee, payback, gift..." style="padding:10px 12px;border-radius:9px;border:1px solid rgba(255,255,255,0.12);background:rgba(0,0,0,0.3);color:#f1f5f9;font-size:.85rem;">' +
+            '<input type="text" id="ostSendMemo" maxlength="80" placeholder="e.g. coffee, payback, gift..." style="' + inputCss + 'font-size:.85rem;">' +
           '</label>' +
-          '<div id="ostSendStatus" style="font-size:.82rem;color:#94a3b8;min-height:18px;"></div>' +
+          '<div id="ostSendStatus" role="status" aria-live="polite" style="font-size:.82rem;color:#94a3b8;min-height:18px;"></div>' +
           '<button type="button" id="ostSendBtn" class="btn btn-primary" style="width:100%;justify-content:center;padding:13px;">Send OST</button>' +
+        '</div>' +
+        '<div id="ostSendScanBox" hidden style="margin-top:12px;">' +
+          '<video id="ostSendVideo" playsinline muted style="width:100%;border-radius:12px;background:#000;max-height:260px;"></video>' +
+          '<div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;">' +
+            '<label class="btn btn-outline btn-sm" style="cursor:pointer;margin:0;">Use a photo<input type="file" accept="image/*" id="ostSendScanFile" style="display:none;"></label>' +
+            '<button type="button" id="ostSendScanStop" class="btn btn-outline btn-sm">Stop camera</button>' +
+          '</div>' +
         '</div>' +
       '</div>';
     document.body.appendChild(modal);
 
     on($('ostSendClose'), 'click', closeSendModal);
     modal.addEventListener('click', function (e) { if (e.target === modal) closeSendModal(); });
+    modal.addEventListener('keydown', function (e) { if (e.key === 'Escape') { e.stopPropagation(); closeSendModal(); } });
     on($('ostSendBtn'), 'click', performSend);
-    on($('ostSendAssetOst'), 'click', function () { setSendAsset('OST'); });
-    on($('ostSendAssetSol'), 'click', function () { setSendAsset('SOL'); });
+    modal.querySelectorAll('[data-send-asset]').forEach(function (b) {
+      b.addEventListener('click', function () { if (!sendState.busy) setSendAsset(b.getAttribute('data-send-asset')); });
+    });
+    on($('ostSendPaste'), 'click', function () {
+      if (!navigator.clipboard || !navigator.clipboard.readText) { setSendStatus('Paste with your keyboard (clipboard access is not available here).', '#f59e0b'); return; }
+      navigator.clipboard.readText().then(function (t) { applyRecipientText(t); }).catch(function () { setSendStatus('Clipboard blocked — paste with your keyboard.', '#f59e0b'); });
+    });
+    on($('ostSendScan'), 'click', startSendScan);
+    on($('ostSendScanStop'), 'click', stopSendScan);
+    on($('ostSendScanFile'), 'change', function (e) {
+      var f = e.target.files && e.target.files[0]; if (!f) return;
+      loadQrReader().then(function (Q) { return Q.fromFile(f); }).then(function (raw) {
+        if (raw) { setSendStatus(''); applyRecipientText(raw); stopSendScan(); } else setSendStatus('No wallet address found in that image.', '#f59e0b');
+      }).catch(function () { setSendStatus('Could not read that image.', '#f59e0b'); });
+    });
+    var toInput = $('ostSendTo');
+    on(toInput, 'blur', function () { if (toInput.value.trim()) applyRecipientText(toInput.value, true); });
+    on($('ostSendAmount'), 'keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); if (!sendState.busy) performSend(); } });
     modal.querySelectorAll('[data-send-quick]').forEach(function (b) {
       b.addEventListener('click', function () {
         var v = b.getAttribute('data-send-quick');
         var amtInput = $('ostSendAmount');
         if (!amtInput) return;
         if (v === 'max') {
-          var av = parseFloat(($('ostSendAvail').textContent.match(/[\d.]+/) || [0])[0]);
-          if (Number.isFinite(av) && av > 0) amtInput.value = av;
+          if (sendState.balanceBase == null || sendState.balanceAsset !== sendState.asset) return;
+          // Exact balance in base units — Max never rounds up past what you hold.
+          // SOL: everything (the pool pays the fee, the account may close).
+          amtInput.value = baseToText(sendState.balanceBase, 9);
         } else {
           amtInput.value = v;
         }
@@ -1606,184 +2162,198 @@
     });
   }
 
-  function openSendModal() {
+  function setSendStatus(msg, color) {
+    var s = $('ostSendStatus');
+    if (s) { s.textContent = msg; s.style.color = color || '#94a3b8'; }
+  }
+  // C2: a user-initiated result always shows; a pending notice is later
+  // updated in place (same id) by the rail's resolution notice.
+  function sendNotice(n, icon) {
+    try {
+      if (typeof window.OST_NOTIFY === 'function') return window.OST_NOTIFY(n);
+      toast(icon || 'ℹ️', n.title + (n.body ? ' — ' + n.body : ''));
+    } catch (e) {}
+  }
+  // An unknown outcome is followed to the end: OST_RESCUE keeps looking the
+  // signature up and fires ost:wallet-tx {resolved:true}; the Send sheet line
+  // then says what really happened instead of "still confirming" forever.
+  function watchSendResolution(sig, r, asset) {
+    sendState.pendingSig = sig;
+    function onTx(ev) {
+      var d = ev && ev.detail;
+      if (!d || !d.resolved || String(d.sig) !== sig) return;
+      window.removeEventListener('ost:wallet-tx', onTx);
+      if (sendState.pendingSig !== sig) return;          // a newer send owns the line
+      sendState.pendingSig = '';
+      if (d.status === 'confirmed') setSendStatus('✓ Sent ' + r.amount + ' ' + asset + ' to ' + shortAddr(r.to) + ' · tx ' + sig.slice(0, 8) + '…', '#34d399');
+      else setSendStatus('Didn’t go through — ' + r.amount + ' ' + asset + ' was not sent. Nothing moved; you can try again.', '#ef4444');
+      setTimeout(refreshSendBalance, 800);
+    }
+    window.addEventListener('ost:wallet-tx', onTx);
+  }
+
+  function applyRecipientText(raw, quiet) {
+    var p = parseRecipientInput(raw);
+    var toInput = $('ostSendTo');
+    if (toInput) toInput.value = p.to;
+    if (p.amount && $('ostSendAmount')) $('ostSendAmount').value = p.amount;
+    if (p.memo && $('ostSendMemo')) $('ostSendMemo').value = p.memo;
+    var chk = $('ostSendToCheck');
+    if (!p.to) { if (chk) chk.textContent = ''; return; }
+    if (chk) { chk.textContent = 'Checking…'; chk.style.color = '#94a3b8'; }
+    checkRecipient(p.to, sendState.asset).then(function () {
+      if (chk) { chk.textContent = 'Wallet ' + shortAddr(p.to) + ' ✓'; chk.style.color = '#34d399'; }
+    }).catch(function (e) {
+      if (chk) { chk.textContent = humanOf(e).title; chk.style.color = '#f59e0b'; }
+      if (!quiet) setSendStatus(humanText(e), '#f59e0b');
+    });
+  }
+
+  var scanStop = null, scanStream = null;
+  function loadQrReader() {
+    if (window.OST_QR) return Promise.resolve(window.OST_QR);
+    return new Promise(function (res, rej) {
+      var s = document.createElement('script');
+      s.src = 'ost-qr-reader.js?v=1'; s.async = true;
+      s.onload = function () { window.OST_QR ? res(window.OST_QR) : rej(new Error('qr')); };
+      s.onerror = function () { rej(new Error('qr')); };
+      document.head.appendChild(s);
+    });
+  }
+  function startSendScan() {
+    var box = $('ostSendScanBox'), vid = $('ostSendVideo');
+    if (!box || !vid) return;
+    box.hidden = false;
+    if (!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)) { setSendStatus('Camera unavailable — use a photo of the QR code.', '#f59e0b'); return; }
+    loadQrReader().then(function (Q) {
+      return navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } }).then(function (stream) {
+        scanStream = stream; vid.srcObject = stream;
+        var p = vid.play(); if (p && p.catch) p.catch(function () {});
+        scanStop = Q.scanVideo(vid, function (raw) { setSendStatus(''); applyRecipientText(raw); stopSendScan(); }, function () { setSendStatus('Camera scan failed — use a photo.', '#f59e0b'); });
+      });
+    }).catch(function () { setSendStatus('Camera blocked — use a photo of the QR code.', '#f59e0b'); });
+  }
+  function stopSendScan() {
+    var box = $('ostSendScanBox'); if (box) box.hidden = true;
+    if (scanStop) { try { scanStop(); } catch (e) {} scanStop = null; }
+    if (scanStream) { try { scanStream.getTracks().forEach(function (t) { t.stop(); }); } catch (e) {} scanStream = null; }
+  }
+
+  function openSendModal(opts) {
+    opts = opts || {};
+    var w = window.OST_WALLET;
+    if (!w || !w.session || !w.session.publicKey) {
+      if (w && typeof w.requireWallet === 'function') { try { w.requireWallet({ reason: 'Send OST', resume: function () { openSendModal(opts); } }); } catch (e) {} return; }
+    }
     buildSendModal();
     var modal = $('ostSendModal');
     if (!modal) return;
     modal.style.display = 'flex';
-    var status = $('ostSendStatus');
-    if (status) status.textContent = '';
-    setSendAsset(window._ostSendAsset || 'OST');
+    setSendStatus('');
+    if (opts.to) { $('ostSendTo').value = opts.to; }
+    if (opts.amount) { $('ostSendAmount').value = String(opts.amount); }
+    setSendAsset(opts.asset || window._ostSendAsset || 'OST');
+    if (opts.to) applyRecipientText(opts.to, true);
+    setTimeout(function () { try { (opts.to ? $('ostSendAmount') : $('ostSendTo')).focus(); } catch (e) {} }, 60);
   }
 
   function closeSendModal() {
+    stopSendScan();
     var modal = $('ostSendModal');
     if (modal) modal.style.display = 'none';
   }
 
-  // Asset selector: 'OST' (Token-2022 transfer) or 'SOL' (System transfer).
   function setSendAsset(asset) {
-    asset = asset === 'SOL' ? 'SOL' : 'OST';
+    asset = SEND_ASSETS.indexOf(String(asset || '').toUpperCase()) !== -1 ? String(asset).toUpperCase() : 'OST';
+    sendState.asset = asset;
     window._ostSendAsset = asset;
-    var ostBtn = $('ostSendAssetOst');
-    var solBtn = $('ostSendAssetSol');
-    if (ostBtn) ostBtn.classList.toggle('is-active', asset === 'OST');
-    if (solBtn) solBtn.classList.toggle('is-active', asset === 'SOL');
+    document.querySelectorAll('#ostSendModal [data-send-asset]').forEach(function (b) {
+      var on = b.getAttribute('data-send-asset') === asset;
+      b.classList.toggle('is-active', on);
+      b.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
     var sendBtn = $('ostSendBtn');
     if (sendBtn) sendBtn.textContent = 'Send ' + asset;
     var title = $('ostSendTitle');
     if (title) title.textContent = 'Send ' + asset + ' on Devnet';
     var intro = $('ostSendIntro');
-    if (intro) {
-      intro.textContent = asset === 'SOL'
-        ? 'Native SOL transfer on Solana devnet. The recipient receives lamports directly \u2014 no token account needed.'
-        : 'Real Token-2022 transfer on Solana devnet. The recipient\'s OST account is created automatically if it doesn\'t exist (small SOL fee).';
-    }
+    if (intro) intro.textContent = sendIntro(asset);
     var amountLabel = $('ostSendAmountLabel');
     if (amountLabel) amountLabel.textContent = 'Amount (' + asset + ')';
     refreshSendBalance();
   }
 
   function refreshSendBalance() {
-    var avail = $('ostSendAvail');
+    var avail = $('ostSendAvail'), maxBtn = $('ostSendMax');
     if (!avail) return;
     var w = window.OST_WALLET;
-    if (!w || !w.session || !w.address) {
-      avail.textContent = 'Connect a wallet first';
-      return;
-    }
-    avail.textContent = 'loading…';
-    var asset = window._ostSendAsset || 'OST';
-    if (asset === 'SOL') {
-      var conn = w.getConnection();
-      conn.getBalance(w.session.publicKey).then(function (lamports) {
-        var sol = (lamports || 0) / solanaWeb3.LAMPORTS_PER_SOL;
-        avail.textContent = 'balance: ' + sol.toFixed(4) + ' SOL';
-      }).catch(function () { avail.textContent = 'balance: --'; });
-      return;
-    }
-    w.getOstBalance(w.address).then(function (bal) {
-      avail.textContent = 'balance: ' + (Number(bal) || 0).toFixed(4) + ' OST';
-    }).catch(function () { avail.textContent = 'balance: --'; });
+    var asset = sendState.asset;
+    sendState.balanceBase = null; sendState.balanceAsset = asset;
+    if (maxBtn) maxBtn.disabled = true;
+    if (!w || !w.session || !w.session.publicKey) { avail.textContent = 'Connect a wallet first'; return; }
+    avail.textContent = 'You have …';
+    readBaseBalance(asset).then(function (base) {
+      if (sendState.asset !== asset) return;
+      if (base == null) {
+        avail.textContent = 'You have — (balance unavailable)';
+        sendState.balanceBase = null;
+        if (maxBtn) maxBtn.disabled = true;
+        return;
+      }
+      sendState.balanceBase = base;
+      avail.textContent = 'You have ' + Number(baseToText(base, 9)).toLocaleString(undefined, { maximumFractionDigits: 9 }) + ' ' + asset;
+      if (maxBtn) maxBtn.disabled = base <= 0n;
+    });
   }
 
   async function performSend() {
+    if (sendState.busy) return;
     var w = window.OST_WALLET;
-    var statusEl = $('ostSendStatus');
     var sendBtn = $('ostSendBtn');
-    var asset = window._ostSendAsset || 'OST';
-    var setStatus = function (msg, color) {
-      if (statusEl) { statusEl.textContent = msg; statusEl.style.color = color || '#94a3b8'; }
-    };
-
-    if (!w || !w.session || !w.session.publicKey) {
-      setStatus('Connect a wallet first.', '#f59e0b');
-      return;
-    }
-    var to = ($('ostSendTo').value || '').trim();
-    var amount = parseFloat($('ostSendAmount').value);
+    var asset = sendState.asset;
+    if (!w || !w.session || !w.session.publicKey) { setSendStatus('Connect a wallet first.', '#f59e0b'); return; }
+    var parsed = parseRecipientInput($('ostSendTo').value);
+    var to = parsed.to;
+    var amountText = String($('ostSendAmount').value || '').trim().replace(',', '.');
     var memo = ($('ostSendMemo').value || '').trim();
+    if (!to) return setSendStatus('Enter a recipient address.', '#f59e0b');
+    if (!(Number(amountText) > 0)) return setSendStatus('Enter an amount greater than zero.', '#f59e0b');
 
-    if (!to) return setStatus('Enter a recipient address.', '#f59e0b');
-    var recipient;
-    try { recipient = w.toPublicKey(to); }
-    catch (e) { return setStatus('Invalid Solana address.', '#ef4444'); }
-    if (!Number.isFinite(amount) || amount <= 0) return setStatus('Enter a positive amount.', '#f59e0b');
-
+    sendState.busy = true;
+    sendState.pendingSig = '';
     sendBtn.disabled = true;
     sendBtn.innerHTML = '<span class="ost-spinner"></span> sending…';
+    setSendStatus(w.session.kind === 'local' ? 'Submitting…' : 'Approve in your wallet…');
+    var t0 = Date.now();
     try {
-      // -----------------------------------------------------------------
-      // SOL native transfer path (System Program).
-      // -----------------------------------------------------------------
-      if (asset === 'SOL') {
-        var conn0 = w.getConnection();
-        var lamportsToSend = Math.round(amount * solanaWeb3.LAMPORTS_PER_SOL);
-        var senderLamports = await conn0.getBalance(w.session.publicKey);
-        var feeBuffer = 5000;
-        if (senderLamports < lamportsToSend + feeBuffer) {
-          setStatus('Not enough SOL. Have ' + (senderLamports / solanaWeb3.LAMPORTS_PER_SOL).toFixed(4) + ' SOL.', '#ef4444');
-          sendBtn.disabled = false; sendBtn.innerHTML = 'Send SOL';
-          return;
-        }
-        setStatus('Building transaction…');
-        var solTx = new solanaWeb3.Transaction();
-        if (memo) solTx.add(w.memoIx(memo, w.session.publicKey));
-        solTx.add(solanaWeb3.SystemProgram.transfer({
-          fromPubkey: w.session.publicKey,
-          toPubkey: recipient,
-          lamports: lamportsToSend,
-        }));
-        setStatus('Awaiting wallet signature…');
-        var solSig = await w.sign(solTx);
-        setStatus('✓ Sent! Signature: ' + solSig.slice(0, 14) + '…', '#34d399');
-        toast('💸', 'Sent ' + amount + ' SOL · ' + solSig.slice(0, 8));
-
-        try {
-          var newSol = (await conn0.getBalance(w.session.publicKey)) / solanaWeb3.LAMPORTS_PER_SOL;
-          var ostBal2 = await w.getOstBalance(w.session.publicKey).catch(function () { return 0; });
-          recordSnapshot({ ts: Date.now(), ostBalance: ostBal2, solBalance: newSol, kind: 'send-sol', amount: amount, sig: solSig, to: to });
-          refreshChartIfReady();
-        } catch (e) {}
-
-        refreshSendBalance();
-        setTimeout(closeSendModal, 2500);
-        return;
+      var r = await sendAsset({ asset: asset, to: to, amount: amountText, memo: memo, balanceBase: sendState.balanceAsset === asset ? sendState.balanceBase : null, source: 'send-sheet' });
+      var secs = ((Date.now() - t0) / 1000).toFixed(1);
+      if (r.pending) {
+        // Outcome unknown: never "Sent". The rail keeps looking it up and
+        // fires ost:wallet-tx {resolved:true} when it confirms or fails.
+        setSendStatus('Still confirming ' + r.amount + ' ' + asset + ' to ' + shortAddr(r.to) + ' (tx ' + String(r.sig).slice(0, 8) + '…). Check your balance before retrying — this updates when it settles.', '#7dd3fc');
+        watchSendResolution(String(r.sig), r, asset);
+        sendNotice({ id: 'cosign-' + String(r.sig), kind: 'pending', title: 'Still confirming', body: r.amount + ' ' + asset + ' to ' + shortAddr(r.to) + '. Check your balance before retrying.' }, '⏳');
+      } else {
+        sendState.pendingSig = '';
+        setSendStatus('✓ Sent ' + r.amount + ' ' + asset + ' to ' + shortAddr(r.to) + ' · ' + secs + ' s · tx ' + String(r.sig).slice(0, 8) + '…', '#34d399');
+        sendNotice({ id: 'send-' + String(r.sig), kind: 'ok', title: 'Sent ' + r.amount + ' ' + asset, body: 'To ' + shortAddr(r.to) + '.', sig: String(r.sig) }, '💸');
       }
-
-      // -----------------------------------------------------------------
-      // OST Token-2022 transfer path (default).
-      // -----------------------------------------------------------------
-      var conn = w.getConnection();
-      var c = w.constants;
-      var mintPk = new solanaWeb3.PublicKey(window.OST_CONFIG.mint);
-      var sourceAta = w.associatedAddress(mintPk, w.session.publicKey, false, c.TOKEN_2022_PROGRAM_ID, c.ASSOCIATED_TOKEN_PROGRAM_ID);
-      var destAta = w.associatedAddress(mintPk, recipient, false, c.TOKEN_2022_PROGRAM_ID, c.ASSOCIATED_TOKEN_PROGRAM_ID);
-
-      // Make sure sender has SOL for fee; airdrop a tiny bit if not
-      try { await w.ensureFee(w.session.publicKey); } catch (e) {
-        setStatus('Need a little devnet SOL for fees. Open faucet.solana.com and try again.', '#f59e0b');
-        sendBtn.disabled = false; sendBtn.textContent = 'Send OST';
-        return;
-      }
-
-      setStatus('Building transaction…');
-      var tx = new solanaWeb3.Transaction();
-      var destInfo = await conn.getAccountInfo(destAta);
-      if (!destInfo) {
-        setStatus('Recipient has no OST account yet — creating it…');
-        tx.add(w.associatedAccountIx(
-          w.session.publicKey, destAta, recipient, mintPk,
-          c.TOKEN_2022_PROGRAM_ID, c.ASSOCIATED_TOKEN_PROGRAM_ID
-        ));
-      }
-      if (memo) tx.add(w.memoIx(memo, w.session.publicKey));
-      tx.add(w.transferChecked(
-        sourceAta, mintPk, destAta, w.session.publicKey,
-        w.toBaseUnits(amount, c.OST_TOKEN_DECIMALS),
-        c.OST_TOKEN_DECIMALS, c.TOKEN_2022_PROGRAM_ID
-      ));
-
-      setStatus('Awaiting wallet signature…');
-      var sig = await w.sign(tx);
-      setStatus('✓ Sent! Signature: ' + sig.slice(0, 14) + '…', '#34d399');
-      toast('💸', 'Sent ' + amount + ' OST · ' + sig.slice(0, 8));
-
-      // Snapshot the new balance for the curve
+      $('ostSendAmount').value = '';
       try {
-        var newBal = await w.getOstBalance(w.session.publicKey);
-        var sol = (await conn.getBalance(w.session.publicKey)) / solanaWeb3.LAMPORTS_PER_SOL;
-        recordSnapshot({ ts: Date.now(), ostBalance: newBal, solBalance: sol, kind: 'send', amount: amount, sig: sig, to: to });
+        var B = window.OST_BALANCE && OST_BALANCE.get ? OST_BALANCE.get() : {};
+        recordSnapshot({ ts: Date.now(), ostBalance: B.ost, solBalance: B.sol, kind: asset === 'SOL' ? 'send-sol' : (asset === 'OSTG' ? 'send-ostg' : 'send'), asset: asset, amount: r.amount, sig: r.sig, to: r.to, pending: !!r.pending });
         refreshChartIfReady();
       } catch (e) {}
-
-      refreshSendBalance();
-      setTimeout(closeSendModal, 2500);
+      setTimeout(refreshSendBalance, 1500);
     } catch (err) {
-      console.warn('[OST send] failed', err);
-      setStatus('Send failed: ' + (err.message || err), '#ef4444');
+      // The error knows its own stage (a failed quote is "nothing was sent")
+      // and asset; `submit` is only the fallback for errors that don't.
+      var h = humanOf(err, { stage: 'submit', asset: asset });
+      setSendStatus(h.title + (h.body ? ' — ' + h.body : ''), h.state === 'pending' ? '#7dd3fc' : '#ef4444');
     } finally {
-      sendBtn.disabled = false; sendBtn.innerHTML = 'Send ' + (window._ostSendAsset || 'OST');
+      sendState.busy = false;
+      sendBtn.disabled = false; sendBtn.innerHTML = 'Send ' + sendState.asset;
     }
   }
 
@@ -1800,33 +2370,21 @@
   // Expose so external modules (e.g. prediction buys in app.js) can log events.
   window.recordOstSnapshot = recordSnapshot;
 
-  var _lastBalFetchAt = 0;
-  var BAL_FETCH_THROTTLE_MS = 15000;
+  // Balances for snapshots come from OST_BALANCE (contract C6) — this module
+  // runs no balance RPC loop of its own (NET-3).
+  function sharedBalances() {
+    try {
+      var B = window.OST_BALANCE && typeof OST_BALANCE.get === 'function' ? OST_BALANCE.get() : null;
+      if (B) return { ost: B.ost, sol: B.sol };
+    } catch (e) {}
+    return { ost: null, sol: null };
+  }
   window.recordOstPlatformEvent = async function recordOstPlatformEvent(event) {
     var lastSnapshot = loadSnapshots().slice(-1)[0] || {};
-    var ostBalance = Number(lastSnapshot.ostBalance || 0) || 0;
-    var solBalance = Number(lastSnapshot.solBalance || 0) || 0;
-    var now = Date.now();
-    // Throttle the on-chain balance fetch. This function is called on rapid events
-    // (game losses, retained-loss entries) and each call otherwise fired TWO
-    // awaited Solana RPC requests — a storm under auto-bet. Reuse the most recent
-    // snapshot's balances if we fetched within the throttle window; only real,
-    // spaced-out events (launchpad buys/sells, sends) pay for a fresh fetch. The
-    // 30s snapshot poller still keeps the portfolio curve current on its own.
-    if (now - _lastBalFetchAt >= BAL_FETCH_THROTTLE_MS) {
-      try {
-        var wallet = window.OST_WALLET;
-        if (wallet && wallet.session && wallet.session.publicKey) {
-          var connection = wallet.getConnection && wallet.getConnection();
-          ostBalance = await wallet.getOstBalance(wallet.session.publicKey);
-          if (connection) {
-            solBalance = (await connection.getBalance(wallet.session.publicKey)) / solanaWeb3.LAMPORTS_PER_SOL;
-          }
-          _lastBalFetchAt = now;
-        }
-      } catch (e) {}
-    }
-    recordSnapshot(Object.assign({ ts: now, ostBalance: ostBalance, solBalance: solBalance }, event || {}));
+    var b = sharedBalances();
+    var ostBalance = b.ost != null ? b.ost : (Number(lastSnapshot.ostBalance || 0) || 0);
+    var solBalance = b.sol != null ? b.sol : (Number(lastSnapshot.solBalance || 0) || 0);
+    recordSnapshot(Object.assign({ ts: Date.now(), ostBalance: ostBalance, solBalance: solBalance }, event || {}));
     refreshChartIfReady();
     notifyTxHistory();
   };
@@ -1848,49 +2406,26 @@
     }));
   };
 
-  // Periodic background snapshot so the curve fills in even without txs
+  // Curve points: written when OST_BALANCE reports a changed balance.
   function startSnapshotPoller() {
-    var w = window.OST_WALLET;
-    var lastPollAt = 0;
-    var POLL_MIN_GAP_MS = 8000;   // debounce event bursts — never refetch faster than this
-    // REACTIVE, not blind-polling. The old version fired 2 Solana RPC calls every
-    // 30s forever — even in a hidden/idle tab with a static balance, draining RPC
-    // (and battery) for nothing. Now it fetches (a) the instant a balance-moving
-    // event flows, debounced, and (b) on a slow VISIBLE-only heartbeat as a safety
-    // net. A hidden/idle tab does zero work.
-    async function pollOnce() {
+    window.addEventListener('ost:balance', function () {
       try {
-        if (typeof document !== 'undefined' && document.hidden) return;   // idle → skip
-        if (!w || !w.session || !w.address) return;
-        if (Date.now() - lastPollAt < POLL_MIN_GAP_MS) return;            // debounce
-        lastPollAt = Date.now();
-        var conn = w.getConnection();
-        if (!conn) return;
-        var addr = w.address;
-        var ost = await w.getOstBalance(addr);
-        var lamports = await conn.getBalance(w.session.publicKey);
-        var sol = lamports / solanaWeb3.LAMPORTS_PER_SOL;
+        var addr = getActiveWalletAddress();
+        if (!addr) return;
+        var b = sharedBalances();
+        if (b.ost == null || b.sol == null) return;      // unknown is not zero: no fake points
         var list = loadSnapshots();
         var last = list[list.length - 1];
         var delta = !last || last.address !== addr ||
-          Math.abs((last.ostBalance || 0) - ost) > 1e-6 ||
-          Math.abs((last.solBalance || 0) - sol) > 1e-6 ||
+          Math.abs((last.ostBalance || 0) - b.ost) > 1e-6 ||
+          Math.abs((last.solBalance || 0) - b.sol) > 1e-6 ||
           (Date.now() - (last.ts || 0)) > 120000;
         if (delta) {
-          recordSnapshot({ ts: Date.now(), ostBalance: ost, solBalance: sol, kind: 'tick', address: addr });
+          recordSnapshot({ ts: Date.now(), ostBalance: b.ost, solBalance: b.sol, kind: 'tick', address: addr });
           refreshChartIfReady();
         }
       } catch (e) {}
-    }
-    // Reactive: refetch right after any balance-moving action or play-balance move.
-    window.addEventListener('ost:wallet-changed', pollOnce, false);
-    window.addEventListener('ost:play:balance', pollOnce, false);
-    document.addEventListener('visibilitychange', function () {
-      if (document.visibilityState === 'visible') pollOnce();
     }, false);
-    // Slow visible-only heartbeat as a safety net (was a blind 30s poll).
-    setInterval(pollOnce, 90000);
-    pollOnce();
   }
 
   // Replace the synthetic wallet portfolio chart drawing
@@ -2428,41 +2963,87 @@
   // 4) Wire the Send button + Receive button on the wallet card
   // ------------------------------------------------------------------
   function wireWalletButtons() {
-    on($('wdSendBtn'), 'click', openSendModal);
+    on($('wdSendBtn'), 'click', function () { openSendModal(); });
     // Receive button already wired in app.js — leave it
   }
 
   // ------------------------------------------------------------------
-  // 4b) Live quote under Convert amount input
+  // 4b) Live quote under the Convert amount — the ONE preview writer for the
+  //     SOL / USDC rail (C7, SOL-2). OST -> SOL belongs to swap-resilient.
   // ------------------------------------------------------------------
+  function fmtSol(n) { return Number(n).toLocaleString(undefined, { maximumFractionDigits: 6 }); }
+  function fmtOst(n) { return Number(n).toLocaleString(undefined, { maximumFractionDigits: 2 }); }
   function wireConvertQuote() {
     var amt = $('transferAmount');
     var sel = $('transferFrom');
     var out = $('transferQuote');
     if (!amt || !sel || !out) return;
-    function refresh() {
-      var v = parseFloat(amt.value);
-      var cur = (sel.value || 'SOL').toUpperCase();
-      if (!Number.isFinite(v) || v <= 0) { out.textContent = ''; return; }
-      if (!window.OST_REAL_SWAP) { out.textContent = ''; return; }
-      try {
-        var q = window.OST_REAL_SWAP.quoteAny(cur, v);
-        if (!q || !Number.isFinite(q.ost) || q.ost <= 0) { out.textContent = ''; return; }
-        var unitLabel = cur === 'SOL' ? '$' + q.unitUsd.toFixed(2) + '/SOL'
-          : '$' + q.unitUsd.toFixed(cur === 'BTC' ? 0 : 2) + '/' + cur;
-        var solEquiv = q.usd / (priceUsd('SOL') || 86.6);
-        out.innerHTML =
-          '<span style="color:#34d399;font-weight:700">&asymp; ' + q.ost.toFixed(2) + ' OST</span>' +
-          ' &nbsp;&bull;&nbsp; ' + unitLabel +
-          (cur !== 'SOL' ? ' &nbsp;&bull;&nbsp; &asymp; ' + solEquiv.toFixed(4) + ' SOL equiv' : '') +
-          ' &nbsp;&bull;&nbsp; fee ' + q.fee.toFixed(2) + ' OST' +
-          '<br><small style="color:#94a3b8;font-size:10px">Pool pays network fee &mdash; no devnet SOL needed</small>';
-      } catch(e) { out.textContent = ''; }
+    // SOL-2: below the order minimum the pay button is disabled. A marker
+    // makes sure only THIS rule ever re-enables what it disabled (the OST
+    // cash-out mode and in-flight states are owned elsewhere).
+    function setBelowMin(flag) {
+      var btn = $('transferBtn');
+      if (!btn) return;
+      if (flag) { btn.disabled = true; btn.setAttribute('data-ost-below-min', '1'); btn.title = 'Below the minimum order'; }
+      else if (btn.getAttribute('data-ost-below-min') === '1') { btn.removeAttribute('data-ost-below-min'); btn.disabled = false; btn.title = ''; }
     }
-    amt.addEventListener('input', refresh);
-    sel.addEventListener('change', refresh);
-    setInterval(refresh, 8000);
-    refresh();
+    function render() {
+      var cur = (sel.value || 'SOL').toUpperCase();
+      if (cur === 'OST') { setBelowMin(false); return; }   // swap-resilient writes the cash-out quote
+      var v = parseFloat(String(amt.value || '').replace(',', '.'));
+      if (!Number.isFinite(v) || v <= 0) { setBelowMin(false); out.textContent = ''; return; }
+      var cfg = topupConfigCache.value;
+      var ostUsd = getLiveOstUsd();
+      var minUsd = Number(cfg && cfg.pricing && cfg.pricing.minUsd) || 1;
+      var rateLine = '1 OST = $' + ostUsd + ' (fixed, devnet)';
+      if (cur === 'SOL') {
+        var solUsd = getLiveSolUsd();
+        if (!solUsd) { out.innerHTML = '<span style="color:#94a3b8">Loading the devnet SOL price…</span>'; return; }
+        var usd = Math.round(v * solUsd * 100) / 100;
+        var ost = usd / ostUsd;
+        var minSol = minUsd / solUsd;
+        var html =
+          '<span style="color:#34d399;font-weight:700">&asymp; ' + fmtOst(ost) + ' OST</span>' +
+          ' &nbsp;&bull;&nbsp; 1 SOL = $' + solUsd.toFixed(2) + ' &nbsp;&bull;&nbsp; ' + rateLine +
+          '<br><small style="color:#cbd5e1;font-size:11px">You will sign <b>' + fmtSol(v) + ' SOL</b>. The network fee is paid by OST.</small>';
+        var belowMinSol = v + 1e-12 < minSol;
+        if (belowMinSol) {
+          html += '<br><small style="color:#f59e0b;font-size:11px">Minimum ' + fmtSol(Math.ceil(minSol * 1e6) / 1e6) + ' SOL ($' + minUsd.toFixed(2) + ').</small>';
+        }
+        setBelowMin(belowMinSol);
+        var B = window.OST_BALANCE && OST_BALANCE.get ? OST_BALANCE.get() : {};
+        if (B.sol != null && B.sol + 1e-12 < v) {
+          html += '<br><small style="color:#f59e0b;font-size:11px">Need ' + fmtSol(v) + ' SOL — you have ' + fmtSol(B.sol) + '.</small> ' + getSolButtonHtml();
+        }
+        out.innerHTML = html;
+        return;
+      }
+      if (cur === 'USDC') {
+        setBelowMin(v + 1e-9 < minUsd);
+        var ostU = v / ostUsd;
+        out.innerHTML =
+          '<span style="color:#34d399;font-weight:700">&asymp; ' + fmtOst(ostU) + ' OST</span>' +
+          ' &nbsp;&bull;&nbsp; ' + rateLine +
+          '<br><small style="color:#cbd5e1;font-size:11px">You will sign <b>' + v.toFixed(2) + ' devnet USDC</b> plus a small SOL network fee.</small>' +
+          (v + 1e-9 < minUsd ? '<br><small style="color:#f59e0b;font-size:11px">Minimum ' + minUsd.toFixed(2) + ' USDC.</small>' : '');
+        return;
+      }
+      // Other currencies: quote only (settle in SOL or USDC). No cash value on devnet.
+      setBelowMin(false);
+      try {
+        var q = window.OST_REAL_SWAP && window.OST_REAL_SWAP.quoteAny ? window.OST_REAL_SWAP.quoteAny(cur, v) : null;
+        if (!q || !Number.isFinite(q.usd) || !(q.usd > 0)) { out.textContent = ''; return; }
+        out.innerHTML =
+          '<span style="color:#94a3b8">Quote only &asymp; ' + fmtOst(q.usd / ostUsd) + ' OST (&asymp; $' + q.usd.toFixed(2) + ').</span>' +
+          '<br><small style="color:#94a3b8;font-size:11px">Settle in devnet SOL or USDC. ' + rateLine + '.</small>';
+      } catch (e) { out.textContent = ''; }
+    }
+    amt.addEventListener('input', render);
+    sel.addEventListener('change', render);
+    window.addEventListener('ost:convert-price', render);
+    window.addEventListener('ost:balance', render);
+    loadTopupConfig().then(render).catch(function () {});
+    render();
   }
 
   // ------------------------------------------------------------------
@@ -2488,8 +3069,9 @@
       try { window.syncOstWalletEventsFromRemote(); } catch (e) {}
     });
     setInterval(function() {
+      if (document.hidden) return;   // NET-3: an idle hidden tab makes no requests
       try { window.syncOstWalletEventsFromRemote(); } catch (e) {}
-    }, 60000);
+    }, 120000);
     // Initial chart redraw shortly after load
     setTimeout(refreshChartIfReady, 1500);
     // Also redraw on window resize

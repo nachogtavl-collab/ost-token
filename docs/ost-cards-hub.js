@@ -43,7 +43,7 @@
     try {
       var s = window.OST_WALLET && window.OST_WALLET.session;
       if (s && s.publicKey && s.publicKey.toBase58) return s.publicKey.toBase58();
-      if (window.OST_WALLET && window.OST_WALLET.address) return window.OST_WALLET.address;
+      if (window.OST_WALLET && typeof window.OST_WALLET.pubkey === 'function') { var pk = window.OST_WALLET.pubkey(); if (pk) return String(pk); }
       if (window.solana && window.solana.publicKey) return window.solana.publicKey.toString();
     } catch (_) {}
     return '';
@@ -157,13 +157,13 @@
           // ---- OSTC debit ----
           '<div class="och-card debit">' +
             '<span class="och-tag">Debit</span>' +
-            '<div><div class="och-kind">OSTC</div>' +
+            '<div><div class="och-kind">OST</div>' +
             '<div class="och-name">OST Debit Card</div></div>' +
             '<div>' +
               '<div class="och-big" id="ochDebitBal">—</div>' +
               '<div class="och-fiat" id="ochDebitFiat"></div>' +
-              '<p class="och-sub">Spends OSTC you already hold. No debt, nothing to repay. ' +
-              'Devnet balance view &mdash; not a payment card yet; tap-to-pay and a 1:1 OSTG bridge are R&amp;D until mainnet.</p>' +
+              '<p class="och-sub">Spends OST you already hold. No debt, nothing to repay. ' +
+              'Devnet balance view &mdash; not a payment card yet. OST &#8644; OSTG conversion is live on devnet (Wallet &rarr; Convert); tap-to-pay is R&amp;D.</p>' +
             '</div>' +
           '</div>' +
 
@@ -307,7 +307,7 @@
 
   function debitBalance() {
     var amt = debitAmount();
-    return (amt === undefined) ? '—' : amt.toFixed(2) + ' OSTC';
+    return (amt === undefined) ? '—' : amt.toFixed(2) + ' OST';
   }
 
   // "≈ €12.34" in the holder's currency, or '' if FX has not loaded. Never a

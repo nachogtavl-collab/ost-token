@@ -22,18 +22,56 @@ async function walletAuthGuard(request, env, path, method) {
   let bodyText = '';
   try { bodyText = await request.text(); } catch (_) { bodyText = ''; }
   const result = await verifyWalletAuth(request, env, bodyText, path, method);
-  const mode = String((env && env.WALLET_AUTH_MODE) || 'log');
+  // POSITIONS_AUTH_MODE (optional var) can relax ONLY /positions to 'log' while
+  // clients that sign it roll out; unset = the global WALLET_AUTH_MODE.
+  const pathMode = (path === '/positions' && env && env.POSITIONS_AUTH_MODE) ? env.POSITIONS_AUTH_MODE : '';
+  const mode = String(pathMode || (env && env.WALLET_AUTH_MODE) || 'log');
   const fwd = new Request(request.url, { method, headers: request.headers, body: bodyText || undefined });
   if (!result.ok && mode === 'enforce') {
-    return { response: json({ ok: false, error: 'wallet_auth_required', reason: result.reason, note: 'Sign in with your wallet — this action must be authorized by the wallet it names.' }, 401) };
+    // AUTH-1: the replay guard itself being down is an OUTAGE, not a bad
+    // signature — say so (503, retryable) instead of a misleading 401.
+    if (result.reason === 'auth_unavailable') {
+      return { response: json({ ok: false, error: 'auth_unavailable', code: 'auth_unavailable', retryable: true, serverTime: Date.now(), message: authFailureMessage('auth_unavailable') }, 503) };
+    }
+    // AUTH-1 / contract C11: every 401 carries a readable message and the
+    // server's clock, so a client whose clock is off can correct and retry.
+    return { response: json({ ok: false, error: 'wallet_auth_required', code: 'wallet_auth_required', reason: result.reason, serverTime: Date.now(), skewMs: result.skewMs, message: authFailureMessage(result.reason, result.skewMs), note: 'Sign in with your wallet — this action must be authorized by the wallet it names.' }, 401) };
   }
   return { request: fwd, authTag: result.ok ? ('ok:' + result.via) : ('fail:' + result.reason) };
 }
+function authFailureMessage(reason, skewMs) {
+  if (reason === 'stale_timestamp') {
+    const mins = Math.max(1, Math.round(Math.abs(Number(skewMs) || 0) / 60000));
+    return 'Your device clock is about ' + mins + ' minute' + (mins === 1 ? '' : 's') + ' off. Turn on automatic date & time, then try again.';
+  }
+  if (reason === 'replay') return 'This request was already used. Please try again.';
+  if (reason === 'auth_unavailable') return 'Wallet sign-in is briefly unavailable. Nothing was done — try again in a moment.';
+  if (reason === 'wallet_mismatch') return 'This request names a different wallet than the one that signed it.';
+  if (reason === 'bad_signature' || reason === 'bad_session') return 'Your wallet signature could not be verified. Reconnect your wallet and try again.';
+  return 'Connect and sign with your wallet to do this.';
+}
 function withAuthTag(res, tag) {
   if (!tag) return res;
-  try { const out = new Response(res.body, res); out.headers.set('x-ost-auth', tag); out.headers.set('access-control-expose-headers', 'x-ost-auth'); return out; } catch (_) { return res; }
+  try {
+    const out = new Response(res.body, res);
+    out.headers.set('x-ost-auth', tag);
+    if (!out.headers.get('x-ost-server-time')) out.headers.set('x-ost-server-time', String(Date.now()));
+    out.headers.set('access-control-expose-headers', 'x-ost-auth, x-ost-server-time, date, retry-after');
+    return out;
+  } catch (_) { return res; }
 }
-import { ensureRpcConfigured as poolEnsureRpc, withRpc as poolWithRpc } from './solana-pool.js';
+// Every Durable Object stub call on a money path goes through this: a DO reset
+// ("Durable Object reset because its code was updated.") must reach the browser
+// as a readable, CORS-enabled 503 (contract C4), never an opaque platform error.
+async function doStubFetch(stub, input, init, label) {
+  try {
+    return init === undefined ? await stub.fetch(input) : await stub.fetch(input, init);
+  } catch (err) {
+    return json({ ok: false, error: 'gate_reset', code: 'gate_reset', retryable: true, service: label || 'gate', message: 'The OST ' + (label || 'service') + ' restarted mid-request. Check your balance or the status before retrying — a retry never pays twice.', detail: String((err && err.message) || err).slice(0, 160) }, 503, { 'cache-control': 'no-store' });
+  }
+}
+import { ensureRpcConfigured as poolEnsureRpc, withRpc as poolWithRpc, rpcEndpointList as poolRpcEndpointList, sendSerialized as poolSendSerialized } from './solana-pool.js';
+import bs58 from 'bs58';
 
 export { MeshHub } from './mesh/hub.js';
 export { StudioHub } from './studio/hub.js';
@@ -82,7 +120,7 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
   'Access-Control-Allow-Headers': 'content-type, accept, x-ost-wallet, x-ost-ts, x-ost-nonce, x-ost-sig, x-ost-session, x-ost-internal, x-mesh-addr, x-mesh-ts, x-mesh-nonce, x-mesh-sig',
-  'Access-Control-Expose-Headers': 'x-ost-relay',
+  'Access-Control-Expose-Headers': 'x-ost-relay, x-ost-auth, x-ost-server-time, date, retry-after',
   'Access-Control-Max-Age': '86400'
 };
 const FIVE_MIN_MS = 5 * 60 * 1000;
@@ -96,6 +134,10 @@ function json(data, status = 200, extra = {}) {
     status,
     headers: {
       'content-type': 'application/json; charset=utf-8',
+      // AUTH-1: the server clock on every JSON answer (exposed via CORS) so a
+      // client can learn its clock offset without a dedicated call.
+      'x-ost-server-time': String(Date.now()),
+      'date': new Date().toUTCString(),
       ...CORS_HEADERS,
       ...extra
     }
@@ -1551,6 +1593,30 @@ async function applyNativePositionToMarketState(env, positionRecord, fallbackBas
   return publicNativeMarketState(state);
 }
 
+// NET-3: a stable fingerprint of the fields that make a position record
+// materially different. A re-post with the same fingerprint is a no-op.
+function positionFingerprint(body) {
+  const b = body || {};
+  const keys = ['id', 'signature', 'marketId', 'side', 'stake', 'price', 'shares', 'status', 'outcome', 'cashoutSig',
+    'cashoutOst', 'cashoutAt', 'cashoutKind', 'resolvedAt', 'sellPrice', 'sellValue', 'potentialReturn',
+    'finalYesPrice', 'finalNoPrice', 'closeAtMs', 'source', 'fundedBy', 'unit', 'rail'];
+  const text = keys.map(k => k + '=' + (b[k] == null ? '' : String(b[k]).slice(0, 160))).join('|');
+  let h1 = 2166136261, h2 = 5381;
+  for (let i = 0; i < text.length; i++) {
+    const c = text.charCodeAt(i);
+    h1 ^= c; h1 = Math.imul(h1, 16777619);
+    h2 = (Math.imul(h2, 33) ^ c) >>> 0;
+  }
+  return ('00000000' + (h1 >>> 0).toString(16)).slice(-8) + ('00000000' + h2.toString(16)).slice(-8);
+}
+// Markets whose price the SERVER makes (the BTC 5-min desk, native-*), as
+// opposed to client-quoted fast markets and server-ledger tickets (p_…).
+function isServerQuotedMarket(marketId, id) {
+  const m = String(marketId == null ? '' : marketId);
+  if (/^p_/.test(String(id || ''))) return false;
+  return m.indexOf('ost-btc5m-') === 0 || m.indexOf('native-') === 0;
+}
+
 function mergeNewest(bucket, record, limit = 100) {
   const key = record.signature || record.sig || record.id;
   const current = Array.isArray(bucket) ? bucket : [];
@@ -2381,7 +2447,9 @@ function publicFaucetState(record, now = Date.now()) {
   const welcomeClaimedAt = cleanNumber(state.welcomeClaimedAt, 0) || 0;
   const lastDailyClaimAt = cleanNumber(state.lastDailyClaimAt || welcomeClaimedAt, 0) || 0;
   const nextDailyClaimAt = welcomeClaimedAt ? lastDailyClaimAt + FAUCET_DAILY_MS : 0;
-  const pending = state.pendingReservation && state.pendingReservation.expiresAt > now
+  // A reservation that is PAYING never expires (SRV-1): it is only finalized
+  // (paid or released) once the payout's on-chain outcome is known.
+  const pending = state.pendingReservation && (state.pendingReservation.paying || state.pendingReservation.expiresAt > now)
     ? state.pendingReservation
     : null;
   return {
@@ -2397,11 +2465,21 @@ function publicFaucetState(record, now = Date.now()) {
     lastSignature: cleanText(state.lastSignature || '', 128),
     lastReservationId: cleanText(state.lastReservationId || '', 80),
     updatedAt: cleanNumber(state.updatedAt, 0) || 0,
+    // FCT-3 / SRV-1: what the client needs to show "Confirming your claim…"
+    // honestly instead of guessing.
+    reservedAt: pending ? (cleanNumber(pending.reservedAt, 0) || 0) : 0,
+    paying: !!(pending && pending.paying),
+    payingAt: pending ? (cleanNumber(pending.payingAt, 0) || 0) : 0,
+    pendingSignature: pending ? cleanText(pending.sig || '', 128) : '',
     pendingReservation: pending ? {
       id: cleanText(pending.id || '', 80),
       kind: cleanText(pending.kind || '', 16),
       amount: cleanNumber(pending.amount, 0) || 0,
-      expiresAt: cleanNumber(pending.expiresAt, 0) || 0
+      expiresAt: cleanNumber(pending.expiresAt, 0) || 0,
+      reservedAt: cleanNumber(pending.reservedAt, 0) || 0,
+      paying: !!pending.paying,
+      payingAt: cleanNumber(pending.payingAt, 0) || 0,
+      sig: cleanText(pending.sig || '', 128)
     } : null
   };
 }
@@ -2429,28 +2507,65 @@ async function recordFaucetWalletEvent(env, event) {
   await kvPut(env, key, mergeNewest(bucket, record, 300));
 }
 
+// ── SRV-1: the faucet can never report failure after paying, and a claim
+// slot can never be paid twice ─────────────────────────────────────────────
+// The payout id is DETERMINISTIC per claim slot: the welcome grant has exactly
+// one id per wallet forever, each daily claim one id per wallet per day index.
+// PayoutGate dedupes by that id (regardless of amount) and additionally
+// refuses a second welcome under ANY id, so a retry, a Durable Object reset or
+// a fresh reservation can only ever resume the same payout.
+function faucetPayoutId(wallet, kind, reservedAt) {
+  return kind === 'welcome'
+    ? 'faucet-welcome-' + wallet
+    : 'faucet-daily-' + wallet + '-' + Math.floor((Number(reservedAt) || Date.now()) / FAUCET_DAILY_MS);
+}
+const FAUCET_RECONCILE_AFTER_MS = 10 * 1000;   // a paying claim older than this gets its outcome checked
+const FAUCET_DRIVE_AFTER_MS = 25 * 1000;       // the alarm re-drives (idempotently) a claim older than this
+const FAUCET_ALARM_MS = 30 * 1000;
+const FAUCET_WELCOME_RECHECK_MS = 10 * 60 * 1000;
+const FAUCET_PAYING_PREFIX = 'faucet:v1:paying:';
+// PayoutGate answers that mean NOTHING was broadcast (or it landed and failed):
+// the reservation is released and the user may simply try again.
+const FAUCET_RELEASE_CODES = new Set([
+  'invalid_wallet', 'invalid_amount', 'invalid_json', 'insufficient_pool', 'cap_exceeded', 'solvency_cap',
+  'reserve_protected', 'simulation_failed', 'blockhash_expired', 'rpc_unavailable', 'balance_unknown',
+  'gate_reset', 'payout_gate_not_configured', 'tx_failed', 'payout_id_conflict', 'daily_global_cap',
+  'insufficient_pool_sol', 'server_only_kind',
+  // An earlier (legacy) welcome whose outcome could not be established: end
+  // the claim with PayoutGate's honest message instead of re-driving forever.
+  'needs_support'
+]);
+function faucetWaitText(ms) {
+  const m = Math.max(1, Math.ceil(ms / 60000));
+  const h = Math.floor(m / 60);
+  return h > 0 ? (h + 'h ' + (m % 60) + 'm') : (m + 'm');
+}
+
 export class FaucetGate {
   constructor(state, env) {
     this.state = state;
     this.env = env;
   }
 
+  // Each handler locks only its own short read/decide/write sections; the
+  // on-chain payout (via PayoutGate) runs unlocked in between. Anything that
+  // escapes becomes a readable, CORS-enabled 503 — never an opaque error.
   async fetch(request) {
-    // /faucet/v1/commit does a slow on-chain payout: it must NOT hold this global
-    // lock for 3-10s (serializes every claim; risks the 30s lock limit). It locks
-    // only its own short read/decide/write sections and pays in between.
     try {
-      const u = new URL(request.url);
-      if (request.method === 'POST' && u.pathname.replace(/\/$/, '') === '/faucet/v1/commit') return this.handle(request);
-    } catch (_) {}
-    return this.state.blockConcurrencyWhile(() => this.handle(request));
+      return await this.handle(request);
+    } catch (err) {
+      return json({ ok: false, error: 'gate_reset', code: 'gate_reset', retryable: true, message: 'The faucet service restarted mid-request. If you were claiming, check your balance — a retry never pays twice.', detail: String((err && err.message) || err).slice(0, 160) }, 503, { 'cache-control': 'no-store' });
+    }
   }
 
+  // Never expires a PAYING reservation (its payout may have landed); only an
+  // un-started one past its expiry is dropped.
   async readWallet(wallet) {
     const raw = await this.state.storage.get(faucetWalletKey(wallet));
     const now = Date.now();
     const record = Object.assign({ wallet }, raw || {});
-    if (record.pendingReservation && record.pendingReservation.expiresAt <= now) {
+    const p = record.pendingReservation;
+    if (p && !p.paying && p.expiresAt <= now) {
       delete record.pendingReservation;
       await this.state.storage.put(faucetWalletKey(wallet), record);
     }
@@ -2459,6 +2574,264 @@ export class FaucetGate {
 
   async writeWallet(wallet, record) {
     await this.state.storage.put(faucetWalletKey(wallet), record);
+  }
+
+  async scheduleAlarm(at) {
+    try {
+      const cur = await this.state.storage.getAlarm();
+      if (!cur || cur > at) await this.state.storage.setAlarm(at);
+    } catch (_) {}
+  }
+
+  payoutGateStub() {
+    if (!this.env.PAYOUT_GATE || !this.env.INTERNAL_MUTATION_KEY) throw new Error('payout_gate_not_configured');
+    return this.env.PAYOUT_GATE.get(this.env.PAYOUT_GATE.idFromName('global'));
+  }
+
+  // -> { status: 'confirmed'|'pending'|'failed'|'unknown'|'not_found'|'needs_support', sig, createdAt }
+  // The record must be a FAUCET payout to THIS wallet: a payout record under
+  // a faucet id that belongs to another wallet or another kind is treated as
+  // not found, never as this wallet's claim (review: a squatted
+  // 'faucet-welcome-<victim>' record marked the victim's welcome as paid).
+  async payoutStatus(payoutId, wallet) {
+    try {
+      const r = await this.payoutGateStub().fetch('https://payout-gate/wallet/payout/status/' + encodeURIComponent(payoutId), { method: 'GET' });
+      const j = await r.json().catch(() => null);
+      if (r.status === 404) return { status: 'not_found' };
+      if (!j || !j.ok) return { status: 'unknown' };
+      if (wallet && j.wallet && String(j.wallet) !== String(wallet)) return { status: 'not_found', foreign: true };
+      if (j.kind && String(j.kind) !== 'ost-new-here') return { status: 'not_found', foreign: true };
+      if (j.origin && String(j.origin) !== 'server') return { status: 'not_found', foreign: true };
+      return { status: String(j.status || 'unknown'), sig: String(j.sig || ''), createdAt: Number(j.createdAt) || 0, payoutId: j.legacyPayoutId || payoutId };
+    } catch (_) {
+      return { status: 'unknown' };
+    }
+  }
+
+  // Ask PayoutGate to pay this reservation. Idempotent by payoutId, so calling
+  // it again for the same reservation can only resume the same payout.
+  //   { outcome: 'paid'|'pending'|'released'|'already'|'unknown', sig?, code?, message?, httpStatus? }
+  async drivePayout(wallet, pending) {
+    const amount = pending.amount;
+    const payoutId = pending.payoutId || ('faucet-' + pending.id);
+    try {
+      const memo = JSON.stringify({ k: 'ost-new-here', kind: pending.kind, amount, wallet, reservation: pending.id, t: pending.reservedAt || Date.now() });
+      const pr = await this.payoutGateStub().fetch('https://payout-gate/wallet/payout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-ost-internal': this.env.INTERNAL_MUTATION_KEY },
+        body: JSON.stringify({ wallet, amountOst: amount, memo, payoutId })
+      });
+      const pj = (await pr.json().catch(() => null)) || {};
+      const code = String(pj.code || pj.error || '');
+      if (pr.ok && pj.ok && pj.sig) return { outcome: pj.pending ? 'pending' : 'paid', sig: String(pj.sig) };
+      if (code === 'already_paid') return { outcome: 'already', sig: String(pj.sig || ''), message: pj.message };
+      if (code === 'claim_in_progress') return { outcome: 'pending', sig: '' };
+      if (FAUCET_RELEASE_CODES.has(code) || FAUCET_RELEASE_CODES.has(String(pj.error || ''))) {
+        return { outcome: 'released', code: code || 'payout_failed', message: String(pj.message || code || 'Payout refused').slice(0, 240), httpStatus: pr.status, retryable: !!pj.retryable };
+      }
+      return { outcome: 'unknown', code: code || ('http_' + pr.status), sig: String(pj.sig || '') };
+    } catch (err) {
+      // A thrown stub call (PayoutGate reset) may or may not have broadcast.
+      return { outcome: 'unknown', code: 'gate_reset', message: String((err && err.message) || err).slice(0, 160) };
+    }
+  }
+
+  // Record a paid claim on the wallet record (no double counting on repeats).
+  applyClaim(record, pending, sig, at) {
+    const amount = cleanNumber(pending.amount, 0) || 0;
+    if (pending.kind === 'welcome') {
+      if (!record.welcomeClaimedAt) {
+        record.totalClaimed = (cleanNumber(record.totalClaimed, 0) || 0) + amount;
+        record.welcomeClaimedAt = at;
+        record.welcomeAmount = record.welcomeAmount || amount;
+        record.lastDailyClaimAt = record.lastDailyClaimAt || at;
+      }
+    } else if (record.lastReservationId !== pending.id) {
+      record.totalClaimed = (cleanNumber(record.totalClaimed, 0) || 0) + amount;
+      record.lastDailyClaimAt = at;
+      record.dailyClaimCount = (cleanNumber(record.dailyClaimCount, 0) || 0) + 1;
+    }
+    record.lastSignature = sig || record.lastSignature || '';
+    record.lastReservationId = pending.id;
+    record.lastAmount = amount;
+    record.updatedAt = at;
+  }
+
+  // Step C: turn a payout outcome into the wallet record + the HTTP answer.
+  async finalize(wallet, pending, res) {
+    let response = null;
+    let paidEvent = null;
+    try {
+      response = await this.state.blockConcurrencyWhile(async () => {
+        const record = await this.readWallet(wallet);
+        const fin = Date.now();
+        const cur = record.pendingReservation;
+        const sameRes = !!(cur && cur.id === pending.id);
+        if (record.lastReservationId === pending.id && res.outcome !== 'released') {
+          return json({ ok: true, sig: record.lastSignature || res.sig || '', amount: record.lastAmount || pending.amount, kind: pending.kind, state: publicFaucetState(record, fin), idempotent: true }, 200, { 'cache-control': 'no-store' });
+        }
+        if (res.outcome === 'paid') {
+          // Recorded as paid EVEN IF the reservation was meanwhile released:
+          // the money moved, so the slot is used.
+          this.applyClaim(record, pending, res.sig, fin);
+          if (sameRes) delete record.pendingReservation;
+          await this.writeWallet(wallet, record);
+          await this.state.storage.delete(FAUCET_PAYING_PREFIX + wallet);
+          paidEvent = { record, fin };
+          return json({ ok: true, sig: res.sig, amount: pending.amount, kind: pending.kind, state: publicFaucetState(record, fin) }, 200, { 'cache-control': 'no-store' });
+        }
+        if (res.outcome === 'already') {
+          // The welcome was paid earlier under another id: repair the record.
+          if (pending.kind === 'welcome' && !record.welcomeClaimedAt) {
+            record.welcomeClaimedAt = fin; record.welcomeAmount = record.welcomeAmount || pending.amount;
+            record.lastDailyClaimAt = record.lastDailyClaimAt || fin;
+            record.totalClaimed = (cleanNumber(record.totalClaimed, 0) || 0) + (cleanNumber(pending.amount, 0) || 0);
+            if (res.sig) record.lastSignature = res.sig;
+          }
+          if (sameRes) delete record.pendingReservation;
+          record.updatedAt = fin;
+          await this.writeWallet(wallet, record);
+          await this.state.storage.delete(FAUCET_PAYING_PREFIX + wallet);
+          return json({ ok: false, error: 'already_claimed', code: 'already_paid', sig: res.sig || '', message: res.message || 'This wallet already received its 100 OST welcome.', state: publicFaucetState(record, fin) }, 409, { 'cache-control': 'no-store' });
+        }
+        if (res.outcome === 'released') {
+          if (sameRes) delete record.pendingReservation;
+          record.updatedAt = fin;
+          await this.writeWallet(wallet, record);
+          await this.state.storage.delete(FAUCET_PAYING_PREFIX + wallet);
+          const status = res.httpStatus >= 400 && res.httpStatus < 600 ? res.httpStatus : 503;
+          const inner = String(res.message || 'The payout was refused.')
+            .replace(/\s*[—-]\s*nothing was sent,\s*/ig, ' — ')
+            .replace(/\s*nothing was sent[,.]?\s*/ig, ' ').trim();
+          const msg = 'Nothing was sent. ' + inner + (/try again|contact support/i.test(inner) ? '' : ' You can try again.');
+          return json({ ok: false, error: 'payout_failed', code: res.code || 'payout_failed', message: msg, retryable: res.retryable !== false, state: publicFaucetState(record, fin) }, status, { 'cache-control': 'no-store' });
+        }
+        // pending / unknown: keep the reservation PAYING; remember the sig.
+        if (sameRes) {
+          if (res.sig) cur.sig = res.sig;
+          cur.lastCheckAt = fin;
+          record.pendingReservation = cur;
+          record.updatedAt = fin;
+          await this.writeWallet(wallet, record);
+        }
+        return json({ ok: true, pending: true, reservationId: pending.id, sig: res.sig || (cur && cur.sig) || '', amount: pending.amount, kind: pending.kind, message: 'Confirming your claim on Solana — this usually takes a few seconds. A retry never pays twice.', state: publicFaucetState(record, fin) }, 202, { 'cache-control': 'no-store' });
+      });
+    } catch (err) {
+      // Storage failed AFTER the outcome was known. If it was paid, say so —
+      // the alarm / next read repairs the record from PayoutGate.
+      if (res.outcome === 'paid') return json({ ok: true, sig: res.sig, amount: pending.amount, kind: pending.kind, state: null, note: 'paid; record repair pending' }, 200, { 'cache-control': 'no-store' });
+      return json({ ok: true, pending: true, reservationId: pending.id, sig: res.sig || '', amount: pending.amount, kind: pending.kind, message: 'Confirming your claim on Solana. A retry never pays twice.', state: null }, 202, { 'cache-control': 'no-store' });
+    }
+    if (paidEvent) {
+      const { record, fin } = paidEvent;
+      try {
+        await recordFaucetWalletEvent(this.env, {
+          id: pending.id, wallet,
+          kind: pending.kind === 'welcome' ? 'faucet-welcome' : 'faucet-daily',
+          amount: pending.amount, sig: res.sig,
+          label: pending.kind === 'welcome' ? '100 OST head start' : 'Daily 1 OST faucet',
+          ts: fin
+        });
+      } catch (_) {}
+      try {
+        const state = publicFaucetState(record, fin);
+        publishRealtimeEvent(this.env, {
+          type: 'faucet.claim', public: true,
+          channels: ['all', 'faucet', walletChannelForRealtime(wallet)],
+          wallet, amount: pending.amount, token: 'OST',
+          title: 'Faucet claim confirmed',
+          message: '+' + pending.amount + ' OST ' + (pending.kind === 'welcome' ? 'head start' : 'daily claim'),
+          payload: { state, reservationId: pending.id, signature: res.sig, kind: pending.kind }
+        }).catch(() => {});
+      } catch (_) {}
+    }
+    return response;
+  }
+
+  // Bring a PAYING reservation to its real outcome. drive=true re-POSTs the
+  // payout (idempotent by payoutId); otherwise only reads PayoutGate's status.
+  async reconcileWallet(wallet, opts = {}) {
+    const record = await this.readWallet(wallet);
+    const p = record.pendingReservation;
+    if (!p || !p.paying) return record;
+    const age = Date.now() - (cleanNumber(p.payingAt, 0) || cleanNumber(p.reservedAt, 0) || 0);
+    if (!opts.force && age < FAUCET_RECONCILE_AFTER_MS) return record;
+    let res;
+    if (opts.drive && age >= FAUCET_DRIVE_AFTER_MS) {
+      res = await this.drivePayout(wallet, p);
+    } else {
+      const st = await this.payoutStatus(p.payoutId || ('faucet-' + p.id), wallet);
+      if (st.status === 'confirmed') res = { outcome: 'paid', sig: st.sig };
+      else if (st.status === 'failed') res = { outcome: 'released', code: 'tx_failed', message: 'the payout never landed.', httpStatus: 409, retryable: true };
+      // PayoutGate never saw it (the commit died before reaching it): re-drive
+      // it — idempotent by payoutId, so this can only ever be the one payout.
+      else if (st.status === 'not_found' && age >= FAUCET_DRIVE_AFTER_MS) res = await this.drivePayout(wallet, p);
+      else res = { outcome: 'pending', sig: st.sig || '' };
+    }
+    if (res.outcome === 'paid' || res.outcome === 'released' || res.outcome === 'already') {
+      await this.finalize(wallet, p, res);
+    } else {
+      // Still paying: make sure the alarm will finish it even if nobody asks
+      // again (covers reservations from the previous worker, which were never
+      // indexed, and a reset between Step A and the alarm being set).
+      try {
+        await this.state.storage.put(FAUCET_PAYING_PREFIX + wallet, { reservationId: p.id, since: cleanNumber(p.payingAt, 0) || Date.now() });
+        await this.scheduleAlarm(Date.now() + FAUCET_ALARM_MS);
+      } catch (_) {}
+    }
+    return await this.readWallet(wallet);
+  }
+
+  // OPS-2 auto-repair: a wallet whose welcome was paid but never recorded
+  // (paid before the deterministic id existed) is recognised from PayoutGate.
+  async repairWelcome(wallet, record, force) {
+    if (record.welcomeClaimedAt) return { record, status: 'claimed' };
+    const now = Date.now();
+    // "Not paid" answers are remembered IN MEMORY only, so reading the state
+    // of an arbitrary address never writes storage.
+    if (!this._welcomeChecked) this._welcomeChecked = new Map();
+    const checkedAt = this._welcomeChecked.get(wallet) || cleanNumber(record.welcomeCheckedAt, 0) || 0;
+    if (!force && checkedAt && now - checkedAt < FAUCET_WELCOME_RECHECK_MS) return { record, status: 'cached' };
+    const st = await this.payoutStatus('faucet-welcome-' + wallet, wallet);
+    if (st.status !== 'confirmed') {
+      if (st.status === 'not_found' || st.status === 'failed') {
+        if (this._welcomeChecked.size > 5000) this._welcomeChecked.clear();
+        this._welcomeChecked.set(wallet, now);
+      }
+      return { record, status: st.status };
+    }
+    this._welcomeChecked.delete(wallet);
+    const fixed = await this.state.blockConcurrencyWhile(async () => {
+      const rec = await this.readWallet(wallet);
+      if (rec.welcomeClaimedAt) return rec;
+      const at = st.createdAt || now;
+      rec.welcomeClaimedAt = at;
+      rec.welcomeAmount = rec.welcomeAmount || FAUCET_WELCOME_AMOUNT;
+      rec.lastDailyClaimAt = rec.lastDailyClaimAt || at;
+      rec.totalClaimed = (cleanNumber(rec.totalClaimed, 0) || 0) + FAUCET_WELCOME_AMOUNT;
+      rec.lastSignature = st.sig || rec.lastSignature || '';
+      rec.welcomeRepairedFrom = st.payoutId || '';
+      rec.updatedAt = now;
+      await this.writeWallet(wallet, rec);
+      return rec;
+    });
+    return { record: fixed, status: st.status };
+  }
+
+  async alarm() {
+    let remaining = 0;
+    let list;
+    try { list = await this.state.storage.list({ prefix: FAUCET_PAYING_PREFIX, limit: 50 }); }
+    catch (_) { await this.scheduleAlarm(Date.now() + FAUCET_ALARM_MS); return; }
+    for (const [key] of list) {
+      const wallet = key.slice(FAUCET_PAYING_PREFIX.length);
+      try {
+        const rec = await this.reconcileWallet(wallet, { force: true, drive: true });
+        if (rec.pendingReservation && rec.pendingReservation.paying) remaining++;
+        else if (!rec.pendingReservation || !rec.pendingReservation.paying) await this.state.storage.delete(key);
+      } catch (_) { remaining++; }
+    }
+    if (remaining || list.size >= 50) await this.scheduleAlarm(Date.now() + FAUCET_ALARM_MS);
   }
 
   async handle(request) {
@@ -2470,161 +2843,134 @@ export class FaucetGate {
     const stateMatch = path.match(/^\/faucet\/v1\/state\/([^/]+)$/);
     if (stateMatch && method === 'GET') {
       const wallet = normalizeFaucetWallet(decodeURIComponent(stateMatch[1]));
-      if (!wallet) return json({ error: 'invalid_wallet' }, 400);
-      const record = await this.readWallet(wallet);
+      if (!wallet) return json({ error: 'invalid_wallet', code: 'invalid_wallet', message: 'That is not a valid Solana wallet address.' }, 400);
+      let record = await this.reconcileWallet(wallet);
+      if (!record.welcomeClaimedAt && !record.pendingReservation) record = (await this.repairWelcome(wallet, record, false)).record;
       return json({ ok: true, state: publicFaucetState(record) }, 200, { 'cache-control': 'no-store' });
     }
 
     if (path === '/faucet/v1/reserve' && method === 'POST') {
       let body;
-      try { body = await request.json(); } catch (_) { return json({ error: 'invalid_json' }, 400); }
+      try { body = await request.json(); } catch (_) { return json({ error: 'invalid_json', code: 'invalid_json', message: 'Request body must be JSON.' }, 400); }
       const wallet = normalizeFaucetWallet(body && body.wallet);
-      if (!wallet) return json({ error: 'invalid_wallet' }, 400);
-      const now = Date.now();
-      const record = await this.readWallet(wallet);
-      const current = publicFaucetState(record, now);
-      if (current.pendingReservation) {
-        return json({ ok: false, error: 'claim_in_progress', state: current }, 409, { 'cache-control': 'no-store' });
+      if (!wallet) return json({ error: 'invalid_wallet', code: 'invalid_wallet', message: 'That is not a valid Solana wallet address.' }, 400);
+      // Unlocked: settle any paying claim, and recognise an already-paid welcome.
+      let pre = await this.reconcileWallet(wallet, { force: true });
+      let welcomeStatus = '';
+      if (!pre.welcomeClaimedAt && !pre.pendingReservation) {
+        const rw = await this.repairWelcome(wallet, pre, true);
+        pre = rw.record; welcomeStatus = rw.status;
       }
-      let kind = 'welcome';
-      let amount = FAUCET_WELCOME_AMOUNT;
-      if (current.welcomeClaimed) {
-        if (!current.dailyReady) {
-          return json({ ok: false, error: 'cooldown', state: current, nextDailyClaimAt: current.nextDailyClaimAt }, 409, { 'cache-control': 'no-store' });
+      return await this.state.blockConcurrencyWhile(async () => {
+        const now = Date.now();
+        const record = await this.readWallet(wallet);
+        const current = publicFaucetState(record, now);
+        if (current.pendingReservation) {
+          return json({ ok: false, error: 'claim_in_progress', code: 'claim_in_progress', message: current.paying ? 'Your claim is being paid — confirming on Solana.' : 'A claim is already in progress for this wallet.', state: current }, 409, { 'cache-control': 'no-store' });
         }
-        kind = 'daily';
-        amount = FAUCET_DAILY_AMOUNT;
-      }
-      const reservation = {
-        id: crypto.randomUUID(),
-        wallet,
-        kind,
-        amount,
-        reservedAt: now,
-        expiresAt: now + FAUCET_RESERVATION_MS
-      };
-      record.pendingReservation = reservation;
-      record.updatedAt = now;
-      await this.writeWallet(wallet, record);
-      await this.state.storage.put(`faucet:v1:reservation:${reservation.id}`, reservation);
-      return json({ ok: true, reservationId: reservation.id, kind, amount, expiresAt: reservation.expiresAt, state: publicFaucetState(record, now) }, 200, { 'cache-control': 'no-store' });
+        if (!current.welcomeClaimed && welcomeStatus === 'pending') {
+          return json({ ok: false, error: 'claim_in_progress', code: 'claim_in_progress', message: 'Your 100 OST welcome is already on its way — confirming on Solana.', state: current }, 409, { 'cache-control': 'no-store' });
+        }
+        let kind = 'welcome';
+        let amount = FAUCET_WELCOME_AMOUNT;
+        if (current.welcomeClaimed) {
+          if (!current.dailyReady) {
+            const waitMs = Math.max(0, current.nextDailyClaimAt - now);
+            return json({ ok: false, error: 'cooldown', code: 'daily_cooldown', nextAt: current.nextDailyClaimAt, nextDailyClaimAt: current.nextDailyClaimAt, message: 'Next free OST in ' + faucetWaitText(waitMs) + '.', state: current }, 409, { 'cache-control': 'no-store' });
+          }
+          kind = 'daily';
+          amount = FAUCET_DAILY_AMOUNT;
+        }
+        const reservation = {
+          id: crypto.randomUUID(),
+          wallet,
+          kind,
+          amount,
+          reservedAt: now,
+          expiresAt: now + FAUCET_RESERVATION_MS,
+          payoutId: faucetPayoutId(wallet, kind, now)
+        };
+        record.pendingReservation = reservation;
+        record.updatedAt = now;
+        await this.writeWallet(wallet, record);
+        await this.state.storage.put(`faucet:v1:reservation:${reservation.id}`, reservation);
+        return json({ ok: true, reservationId: reservation.id, kind, amount, expiresAt: reservation.expiresAt, payoutId: reservation.payoutId, state: publicFaucetState(record, now) }, 200, { 'cache-control': 'no-store' });
+      });
     }
 
     if (path === '/faucet/v1/commit' && method === 'POST') {
       let body;
-      try { body = await request.json(); } catch (_) { return json({ error: 'invalid_json' }, 400); }
+      try { body = await request.json(); } catch (_) { return json({ error: 'invalid_json', code: 'invalid_json', message: 'Request body must be JSON.' }, 400); }
       const wallet = normalizeFaucetWallet(body && body.wallet);
       const reservationId = cleanText(body && body.reservationId, 80);
-      if (!wallet || !reservationId) return json({ error: 'missing_fields', required: ['wallet', 'reservationId'] }, 400);
-      const now = Date.now();
+      if (!wallet || !reservationId) return json({ error: 'missing_fields', code: 'missing_fields', required: ['wallet', 'reservationId'], message: 'wallet and reservationId are required.' }, 400);
 
-      // ── Step A (locked, fast): validate and mark the reservation as PAYING so a
-      // concurrent commit for the same reservation cannot double-pay.
+      // ── Step A (locked, fast): validate and mark the reservation PAYING. A
+      // re-commit of a reservation that is already paying RESUMES it (same
+      // payoutId), it never starts a second payout.
       const decided = await this.state.blockConcurrencyWhile(async () => {
+        const now = Date.now();
         const record = await this.readWallet(wallet);
         if (record.lastReservationId === reservationId) {
           return { response: json({ ok: true, sig: record.lastSignature || '', amount: record.lastAmount || 0, state: publicFaucetState(record, now), idempotent: true }, 200, { 'cache-control': 'no-store' }) };
         }
         const pending = record.pendingReservation;
-        if (!pending || pending.id !== reservationId) return { response: json({ error: 'reservation_not_active', state: publicFaucetState(record, now) }, 409) };
-        if (pending.expiresAt <= now) {
+        if (!pending || pending.id !== reservationId) return { response: json({ ok: false, error: 'reservation_not_active', code: 'reservation_not_active', message: 'This claim is no longer active — start a new claim.', state: publicFaucetState(record, now) }, 409, { 'cache-control': 'no-store' }) };
+        if (!pending.paying && pending.expiresAt <= now) {
           delete record.pendingReservation;
           await this.writeWallet(wallet, record);
-          return { response: json({ error: 'reservation_expired', state: publicFaucetState(record, now) }, 409) };
+          return { response: json({ ok: false, error: 'reservation_expired', code: 'reservation_expired', message: 'This claim expired before it was confirmed — start a new claim.', state: publicFaucetState(record, now) }, 409, { 'cache-control': 'no-store' }) };
         }
-        if (pending.paying) return { response: json({ ok: false, error: 'payout_in_progress', message: 'This claim is being paid — it lands in a few seconds.', state: publicFaucetState(record, now) }, 409, { 'cache-control': 'no-store' }) };
-        pending.paying = true; pending.payingAt = now;
+        // Reservations made by the previous worker keep their old payout id so
+        // any payout already in flight for them is resumed, not duplicated.
+        if (!pending.payoutId) pending.payoutId = 'faucet-' + reservationId;
+        if (!pending.paying) { pending.paying = true; pending.payingAt = now; }
+        pending.attempts = (cleanNumber(pending.attempts, 0) || 0) + 1;
         record.pendingReservation = pending; record.updatedAt = now;
         await this.writeWallet(wallet, record);
-        return { pending };
+        await this.state.storage.put(FAUCET_PAYING_PREFIX + wallet, { reservationId, since: pending.payingAt });
+        // The alarm finishes the claim even if THIS request dies mid-payout.
+        // Set inside the same locked section as the PAYING mark, so there is no
+        // window where a claim is paying with no alarm to finish it.
+        await this.scheduleAlarm(now + FAUCET_ALARM_MS);
+        return { pending: Object.assign({}, pending) };
       });
       if (decided.response) return decided.response;
-      const pending = decided.pending;
 
-      // ── Step B (UNLOCKED, slow): the SERVER pays the RESERVATION's amount through
-      // PayoutGate. Idempotent by payoutId = the reservation id, so a retry after a
-      // crash cannot pay twice. Never the client's amount.
-      const amount = pending.amount;
-      const payoutId = 'faucet-' + reservationId;
-      let signature = '';
-      let payErr = null;
-      try {
-        if (!this.env.PAYOUT_GATE || !this.env.INTERNAL_MUTATION_KEY) throw new Error('payout_gate_not_configured');
-        const pg = this.env.PAYOUT_GATE.get(this.env.PAYOUT_GATE.idFromName('global'));
-        const memo = JSON.stringify({ k: 'ost-new-here', kind: pending.kind, amount, wallet, reservation: reservationId, t: now });
-        const pr = await pg.fetch('https://payout-gate/wallet/payout', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-ost-internal': this.env.INTERNAL_MUTATION_KEY },
-          body: JSON.stringify({ wallet, amountOst: amount, memo, payoutId })
-        });
-        const pj = await pr.json().catch(() => null);
-        if (!pr.ok || !pj || !pj.ok || !pj.sig) throw new Error((pj && (pj.message || pj.error)) || ('payout_failed_' + pr.status));
-        signature = String(pj.sig);
-      } catch (err) { payErr = err; }
+      // ── Step B (UNLOCKED, slow): the SERVER pays the RESERVATION's amount
+      // through PayoutGate, idempotent by the claim slot's payoutId.
+      let res = await this.drivePayout(wallet, decided.pending);
+      // The PayoutGate call died after it may have broadcast (gate_reset): ask
+      // for the record once, so the 202 carries the signature (contract C4 —
+      // and a client can show "confirming <sig>" instead of a bare failure).
+      if ((res.outcome === 'unknown' || res.outcome === 'pending') && !res.sig) {
+        const st = await this.payoutStatus(decided.pending.payoutId || ('faucet-' + decided.pending.id), wallet);
+        if (st.status === 'confirmed' && st.sig) res = { outcome: 'paid', sig: st.sig };
+        else if (st.sig) res = Object.assign({}, res, { sig: st.sig });
+      }
 
-      // ── Step C (locked, fast): finalize — record the claim, or release the
-      // reservation so the user can retry right away.
-      return await this.state.blockConcurrencyWhile(async () => {
-        const record = await this.readWallet(wallet);
-        const fin = Date.now();
-        if (payErr) {
-          delete record.pendingReservation; record.updatedAt = fin;
-          await this.writeWallet(wallet, record);
-          return json({ ok: false, error: 'payout_failed', message: String((payErr && payErr.message) || payErr).slice(0, 200), state: publicFaucetState(record, fin) }, 502, { 'cache-control': 'no-store' });
-        }
-        record.totalClaimed = (cleanNumber(record.totalClaimed, 0) || 0) + amount;
-        record.lastSignature = signature;
-        record.lastReservationId = reservationId;
-        record.lastAmount = amount;
-        record.updatedAt = fin;
-        if (pending.kind === 'welcome') {
-          record.welcomeClaimedAt = record.welcomeClaimedAt || fin;
-          record.welcomeAmount = record.welcomeAmount || amount;
-          record.lastDailyClaimAt = record.lastDailyClaimAt || fin;
-        } else {
-          record.lastDailyClaimAt = fin;
-          record.dailyClaimCount = (cleanNumber(record.dailyClaimCount, 0) || 0) + 1;
-        }
-        delete record.pendingReservation;
-        await this.writeWallet(wallet, record);
-        await recordFaucetWalletEvent(this.env, {
-          id: reservationId,
-          wallet,
-          kind: pending.kind === 'welcome' ? 'faucet-welcome' : 'faucet-daily',
-          amount,
-          sig: signature,
-          label: pending.kind === 'welcome' ? '100 OST head start' : 'Daily 1 OST faucet',
-          ts: fin
-        });
-        const state = publicFaucetState(record, fin);
-        publishRealtimeEvent(this.env, {
-          type: 'faucet.claim',
-          public: true,
-          channels: ['all', 'faucet', walletChannelForRealtime(wallet)],
-          wallet,
-          amount,
-          token: 'OST',
-          title: 'Faucet claim confirmed',
-          message: '+' + amount + ' OST ' + (pending.kind === 'welcome' ? 'head start' : 'daily claim'),
-          payload: { state, reservationId, signature, kind: pending.kind }
-        }).catch(() => {});
-        return json({ ok: true, sig: signature, amount, kind: pending.kind, state }, 200, { 'cache-control': 'no-store' });
-      });
+      // ── Step C (locked, fast): finalize paid / released / still confirming.
+      return await this.finalize(wallet, decided.pending, res);
     }
 
     if (path === '/faucet/v1/cancel' && method === 'POST') {
       let body;
-      try { body = await request.json(); } catch (_) { return json({ error: 'invalid_json' }, 400); }
+      try { body = await request.json(); } catch (_) { return json({ error: 'invalid_json', code: 'invalid_json', message: 'Request body must be JSON.' }, 400); }
       const wallet = normalizeFaucetWallet(body && body.wallet);
       const reservationId = cleanText(body && body.reservationId, 80);
-      if (!wallet || !reservationId) return json({ error: 'missing_fields', required: ['wallet', 'reservationId'] }, 400);
-      const record = await this.readWallet(wallet);
-      if (record.pendingReservation && record.pendingReservation.id === reservationId) {
-        delete record.pendingReservation;
-        record.updatedAt = Date.now();
-        await this.writeWallet(wallet, record);
-      }
-      return json({ ok: true, state: publicFaucetState(record) }, 200, { 'cache-control': 'no-store' });
+      if (!wallet || !reservationId) return json({ error: 'missing_fields', code: 'missing_fields', required: ['wallet', 'reservationId'], message: 'wallet and reservationId are required.' }, 400);
+      return await this.state.blockConcurrencyWhile(async () => {
+        const record = await this.readWallet(wallet);
+        const p = record.pendingReservation;
+        if (p && p.id === reservationId) {
+          // A paying claim cannot be cancelled: its payout may already be on chain.
+          if (p.paying) return json({ ok: false, error: 'payout_in_progress', code: 'claim_in_progress', message: 'This claim is already being paid and cannot be cancelled.', state: publicFaucetState(record) }, 409, { 'cache-control': 'no-store' });
+          delete record.pendingReservation;
+          record.updatedAt = Date.now();
+          await this.writeWallet(wallet, record);
+        }
+        return json({ ok: true, state: publicFaucetState(record) }, 200, { 'cache-control': 'no-store' });
+      });
     }
 
     return json({ error: 'unknown_faucet_endpoint', path }, 404);
@@ -2827,6 +3173,10 @@ async function deliverTopupIntent(env, intentId, origin) {
     });
     status = pr.status; pj = await pr.json().catch(() => null);
   } catch (e) { return { ok: false, error: 'payout_unreachable', retryable: true }; }
+  // 202 = broadcast, not confirmed yet: keep the intent 'paid' (queued). A
+  // retry re-asks PayoutGate with the SAME payoutId, which resumes that one
+  // payout (it never pays twice) and returns its sig once confirmed.
+  if (pj && pj.ok && pj.pending) return { ok: false, error: 'payout_pending', pending: true, sig: String(pj.sig || ''), retryable: true };
   if (!pj || !pj.ok || !pj.sig) return { ok: false, error: (pj && (pj.error || pj.message)) || ('payout_failed_' + status), retryable: true };
   const fresh = (await loadIntent(env, intent.id)) || intent;
   if (fresh.status === 'sent') return { ok: true, intent: fresh, replay: true };
@@ -2901,18 +3251,13 @@ function topupRpcUrls(env, cluster) {
       'https://api.mainnet-beta.solana.com'
     ].filter(Boolean);
   }
-  // api.devnet.solana.com 403s Cloudflare Workers' shared egress IPs
-  // ("Your IP or provider is blocked from this endpoint" — confirmed
-  // directly against this deployed worker) and rpc.ankr.com/solana_devnet
-  // now requires an API key too, so both were silently failing every devnet
-  // topup verification. Helius' public devnet endpoint and Alchemy's demo
-  // endpoint verified working from this worker's actual egress.
-  return [
-    env.SOLANA_DEVNET_RPC,
-    'https://devnet.helius-rpc.com/?api-key=public',
-    'https://solana-devnet.g.alchemy.com/v2/demo',
-    'https://api.devnet.solana.com'
-  ].filter(Boolean);
+  // SRV-4: ONE server list, shared with the pool signer (solana-pool.js): the
+  // dedicated SOLANA_DEVNET_RPC* keys. The old public fallbacks here were dead
+  // from Cloudflare's egress (helius ?api-key=public 401s real methods,
+  // alchemy /v2/demo 429s everything, api.devnet 403s Cloudflare IPs) — they
+  // only added latency in front of the real error.
+  poolEnsureRpc(env);
+  return poolRpcEndpointList();
 }
 
 async function fetchSolUsd() {
@@ -3187,7 +3532,7 @@ function adminAuthorized(request, env) {
 
 // ── router ───────────────────────────────────────────────────────────────────
 
-export default {
+const OST_ROUTER = {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const path = url.pathname.replace(/\/$/, '') || '/';
@@ -3356,7 +3701,9 @@ export default {
     }
 
     // Server-side pool payouts (Phase 0 — replaces browser-held pool secret key).
-    if (path === '/wallet/payout' || path === '/wallet/ata-rent' || path.startsWith('/wallet/cosign')) {
+    // GET /wallet/payout/status/:id and /wallet/cosign/status/:id are open reads
+    // (contract C4); every POST here is wallet-signed (isProtectedPath).
+    if (path === '/wallet/payout' || path === '/wallet/ata-rent' || path.startsWith('/wallet/cosign') || path.startsWith('/wallet/payout/status/')) {
       const g = await walletAuthGuard(request, env, path, method);
       if (g.response) return g.response;
       return withAuthTag(await handleWalletPayoutsRequest(g.request, env), g.authTag);
@@ -3582,10 +3929,10 @@ export default {
         // REFUSE rather than fabricate: a BTC round with no fresh price used to open
         // at a silent 50/50 — a made-up price on a money path.
         if (isBtcRound && !priced) return json({ ok: false, error: 'price_unavailable', note: 'No fresh BTC price to price this position. Try again in a moment.' }, 503);
-        return await stub.fetch('https://prediction-ledger/open', {
+        return await doStubFetch(stub, 'https://prediction-ledger/open', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(Object.assign({}, b, { oddsYes, priceToBeat }))
-        });
+        }, 'prediction ledger');
       }
       if (pop === 'cashout' && method === 'POST') {
         let b; try { b = await request.json(); } catch { return json({ ok: false, error: 'invalid_json' }, 400); }
@@ -3627,10 +3974,10 @@ export default {
           }
         } catch (e) { console.warn('[predict/cashout] pricing failed', String(e && e.message || e).slice(0, 120)); }
         if (!priced) return json({ ok: false, error: 'price_unavailable', note: 'No fresh price to value this position right now. Try again in a moment — it still settles automatically at close.' }, 503);
-        return await stub.fetch('https://prediction-ledger/sell', {
+        return await doStubFetch(stub, 'https://prediction-ledger/sell', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(Object.assign({}, b, { oddsYes }))
-        });
+        }, 'prediction ledger');
       }
       if (pop === 'resolve' && method === 'POST') {
         let b; try { b = await request.json(); } catch { return json({ ok: false, error: 'invalid_json' }, 400); }
@@ -3649,13 +3996,13 @@ export default {
           const rr = await getBtcRoundResult(env, openAt);
           if (rr && Number.isFinite(Number(rr.closePrice)) && Number(rr.closePrice) > 0) settlePrice = Number(rr.closePrice);
         }
-        return await stub.fetch('https://prediction-ledger/resolve', {
+        return await doStubFetch(stub, 'https://prediction-ledger/resolve', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(Object.assign({}, b, { settlePrice }))
-        });
+        }, 'prediction ledger');
       }
-      if (pop === 'get' && method === 'GET') return await stub.fetch('https://prediction-ledger/get?id=' + encodeURIComponent(url.searchParams.get('id') || ''));
-      if (pop === 'health') return await stub.fetch('https://prediction-ledger/health');
+      if (pop === 'get' && method === 'GET') return await doStubFetch(stub, 'https://prediction-ledger/get?id=' + encodeURIComponent(url.searchParams.get('id') || ''), undefined, 'prediction ledger');
+      if (pop === 'health') return await doStubFetch(stub, 'https://prediction-ledger/health', undefined, 'prediction ledger');
       return json({ ok: false, error: 'unknown prediction op' }, 404);
     }
 
@@ -3679,8 +4026,9 @@ export default {
     if (path.startsWith('/play/') || path === '/health/play') {
       const g = await walletAuthGuard(request, env, path, method);
       if (g.response) return g.response;
+      if (!env.PLAY_LEDGER) return json({ ok: false, error: 'play_ledger_not_configured', code: 'play_ledger_not_configured', message: 'The play ledger is not configured.' }, 503);
       const id = env.PLAY_LEDGER.idFromName('global');
-      return withAuthTag(await env.PLAY_LEDGER.get(id).fetch(g.request), g.authTag);
+      return withAuthTag(await doStubFetch(env.PLAY_LEDGER.get(id), g.request, undefined, 'play ledger'), g.authTag);
     }
 
     // OST Live Price — devnet synthetic price engine. Additive, isolated.
@@ -3706,15 +4054,15 @@ export default {
       const id = env.FAUCET_GATE.idFromName('global');
       const aliasUrl = new URL(request.url);
       aliasUrl.pathname = '/faucet/v1/state/' + encodeURIComponent(wallet);
-      return env.FAUCET_GATE.get(id).fetch(new Request(aliasUrl.toString(), request));
+      return doStubFetch(env.FAUCET_GATE.get(id), new Request(aliasUrl.toString(), request), undefined, 'faucet');
     }
     if (path.startsWith('/faucet/v1/')) {
       const g = await walletAuthGuard(request, env, path, method);
       if (g.response) return g.response;
       request = g.request;
-      if (!env.FAUCET_GATE) return json({ error: 'faucet_gate_not_configured' }, 503);
+      if (!env.FAUCET_GATE) return json({ error: 'faucet_gate_not_configured', code: 'faucet_gate_not_configured', message: 'The faucet is not configured.' }, 503);
       const id = env.FAUCET_GATE.idFromName('global');
-      return env.FAUCET_GATE.get(id).fetch(request);
+      return withAuthTag(await doStubFetch(env.FAUCET_GATE.get(id), request, undefined, 'faucet'), g.authTag);
     }
 
     // ── Polymarket relay: /gamma/* /clob/* /data/* ───────────────────────────
@@ -3863,6 +4211,14 @@ export default {
       return json(r, r.ok ? 200 : 401);
     }
     if (path === '/rpc-config' && method === 'GET') {
+      // NET-2: once a domain-restricted BROWSER key exists (secret
+      // SOLANA_BROWSER_RPC), browsers get ONLY that — the worker's own
+      // SOLANA_DEVNET_RPC* keys stay server-side. Until it is set, keep serving
+      // the current list so nothing regresses (rotating the exposed keys is OPS-5).
+      const browserRpc = String(env.SOLANA_BROWSER_RPC || '').trim();
+      if (/^https:\/\//.test(browserRpc)) {
+        return json({ rpc: browserRpc, fallbacks: [], source: 'browser-key' }, 200, { 'cache-control': 'public, max-age=300' });
+      }
       const fallbacks = [env.SOLANA_DEVNET_RPC_2, env.SOLANA_DEVNET_RPC_3, env.SOLANA_DEVNET_RPC_4].filter(function (u) { return u && /^https:\/\//.test(u); });
       return json({ rpc: env.SOLANA_DEVNET_RPC || null, fallbacks: fallbacks }, 200, { 'cache-control': 'public, max-age=300' });
     }
@@ -3894,13 +4250,36 @@ export default {
       // junk here so a malformed payload can't trigger the withRpc retry storm.
       if (raw.length < 100) return json({ ok: false, error: 'invalid_tx', message: 'transaction too small to be valid' }, 400);
       const skipPreflight = body && body.skipPreflight === true;
+      // Contract C4: the txid is the first signature in the signed bytes, known
+      // before sending — every answer carries it so the client can confirm by
+      // sig instead of guessing (and never re-sign after an unknown outcome).
+      let knownSig = '';
+      try { if (raw[0] >= 1 && raw[0] < 128 && raw.length >= 65) knownSig = bs58.encode(raw.slice(1, 65)); } catch (_) {}
+      // Same broadcaster as the pool's own sends (Pool.sendSerialized): once ANY
+      // endpoint attempt timed out or lost its connection the tx may already be
+      // out, and a later endpoint's preflight refusal ("Blockhash not found" on
+      // a lagging node, or "insufficient funds" because the first copy landed)
+      // is then NOT proof that nothing moved — that answer is 503 state_unknown
+      // with the sig, never 422 "Nothing moved" (review R6, contract C4).
       try {
-        const sig = await poolWithRpc('proxy-send', function (conn) {
-          return conn.sendRawTransaction(raw, { skipPreflight: skipPreflight, preflightCommitment: 'confirmed', maxRetries: 3 });
-        });
-        return json({ ok: true, sig: sig });
+        const sent = await poolSendSerialized(raw, knownSig, { label: 'Relayed transaction', skipPreflight: skipPreflight });
+        const sig = sent.sig || knownSig;
+        if (sent.uncertain) {
+          return json({ ok: false, error: 'state_unknown', code: 'state_unknown', send_failed: true, sig: sig || undefined, retryable: true, message: 'Could not confirm the transaction was sent. Check this signature before signing again: it may still land.' }, 503);
+        }
+        return json({ ok: true, sig: sig, alreadyProcessed: sent.alreadyProcessed ? true : undefined });
       } catch (e) {
-        return json({ ok: false, error: 'send_failed', message: String((e && e.message) || e).slice(0, 300) }, 502);
+        const msg = String((e && e.message) || e);
+        if (e && e.preBroadcast) {
+          // Definitive: every attempt was refused before broadcast — nothing moved.
+          if (e.code === 'rpc_unavailable' || e.code === 'rpc_not_configured') {
+            return json({ ok: false, error: 'rpc_unavailable', code: 'rpc_unavailable', sig: knownSig || undefined, retryable: true, message: 'Solana could not be reached. Nothing was sent — try again.' }, 503);
+          }
+          const expired = e.code === 'blockhash_expired' || e.reason === 'blockhash_expired';
+          const code = expired ? 'blockhash_expired' : (e.reason || e.code || 'simulation_failed');
+          return json({ ok: false, error: 'simulation_failed', code: code, sig: knownSig || undefined, retryable: expired || e.code === 'rpc_refused', message: 'The network refused this transaction before it was sent. Nothing moved. ' + msg.slice(0, 200) }, 422);
+        }
+        return json({ ok: false, error: 'state_unknown', code: 'state_unknown', send_failed: true, sig: knownSig || undefined, retryable: true, message: 'Could not confirm the transaction was sent. Check this signature before signing again: it may still land. ' + msg.slice(0, 160) }, 503);
       }
     }
 
@@ -4457,16 +4836,45 @@ export default {
     }
 
     // ── POST /positions ───────────────────────────────────────────────────────
+    // SRV-3: wallet-signed (isProtectedPath) — body.wallet must be the signer,
+    // so nobody can write a "won" record into another wallet's list.
+    // NET-3: idempotent by id — an unchanged re-post writes nothing and
+    // publishes nothing (every tab used to re-POST up to 80 orders per event).
+    // PRD-4: a client-shared fill / cash-out is not re-priced after the fact.
     if (path === '/positions' && method === 'POST') {
+      const g = await walletAuthGuard(request, env, path, method);
+      if (g.response) return g.response;
+      request = g.request;
       let body;
       try { body = await request.json(); } catch (_) { return json({ error: 'invalid_json' }, 400); }
       const { wallet, marketId, marketTitle, side, stake, price, ts, signature } = body || {};
       if (!wallet || !marketId || !side || !Number.isFinite(Number(stake))) {
         return json({ error: 'missing_fields', required: ['wallet', 'marketId', 'side', 'stake'] }, 400);
       }
+      // A verified signer may only write ITS OWN list (bodyWalletMatches skips
+      // short pseudo-wallet names, so check the exact value here).
+      if (String(g.authTag || '').indexOf('ok:') === 0 && String(wallet) !== String(request.headers.get('x-ost-wallet') || '')) {
+        return json({ ok: false, error: 'wallet_auth_required', code: 'wallet_auth_required', reason: 'wallet_mismatch', serverTime: Date.now(), message: 'You can only record positions for the wallet that signed this request.' }, 401);
+      }
       if (!env.OST_KV) return json({ ok: true, stored: false, note: 'KV not configured — position not persisted server-side' });
       const createdAt = toMs(body.createdAt || ts);
-      const nativeMarketStateBefore = isOstNativeMarketId(marketId, body.source)
+      const incomingId = cleanText(body.id || signature || '', 128);
+      const walletKey = `positions:${wallet}`;
+      const walletBucket = await kvGet(env, walletKey, []);
+      const prior = incomingId && Array.isArray(walletBucket)
+        ? walletBucket.find(item => item && (item.id === incomingId || (signature && item.signature === signature)))
+        : null;
+      const fp = positionFingerprint(body);
+      if (prior && prior.fp === fp) {
+        return withAuthTag(json({ ok: true, stored: true, unchanged: true, record: prior, marketState: null, flowRecord: null }), g.authTag);
+      }
+      // The server re-prices only markets IT quotes (the BTC 5-min desk and
+      // native-*). ETH/SOL fast markets and server-ledger tickets (p_…) keep
+      // the client's own fill: re-pricing them made the stored shares/payout
+      // disagree with what the user was quoted and paid (PRD-4).
+      const serverQuoted = isServerQuotedMarket(marketId, incomingId);
+      const paidCashout = !!cleanText(body.cashoutSig || '', 128);
+      const nativeMarketStateBefore = serverQuoted && !paidCashout && isOstNativeMarketId(marketId, body.source)
         ? await getNativeMarketState(env, String(marketId), body.baseYesPrice != null ? body.baseYesPrice : body.fairYesPrice)
         : null;
       const sideUp = String(side).toUpperCase() === 'NO' ? 'NO' : 'YES';
@@ -4503,7 +4911,7 @@ export default {
       const nativeSelectedBid = nativeVaultTrade ? nativeTradePriceFromState(nativeMarketStateBefore, sideUp, 'sell') : null;
       const nativeSelectedAsk = nativeVaultTrade ? nativeTradePriceFromState(nativeMarketStateBefore, sideUp, 'buy') : null;
       const record = {
-        id: cleanText(body.id || signature || crypto.randomUUID(), 128),
+        id: incomingId || crypto.randomUUID(),
         wallet: String(wallet).slice(0, 64),
         walletShort: String(wallet).slice(0, 4) + '…' + String(wallet).slice(-4),
         marketId: String(marketId).slice(0, 128),
@@ -4553,11 +4961,29 @@ export default {
         vaultGrossOutOst: nativeSellPosition && safeSellValue != null ? safeSellValue : 0,
         sharesCreated: nativeOpenPosition ? inferredShares : 0,
         sharesRedeemed: nativeSellPosition ? inferredShares : 0,
+        fp,
         syncedAt: Date.now()
       };
+      if (prior) {
+        // First write wins for the ENTRY fill: a later re-post (status change,
+        // another tab) never re-prices what the user already bought.
+        for (const k of ['price', 'yesPrice', 'noPrice', 'shares', 'potentialReturn', 'askPrice', 'quotePrice', 'sharesCreated', 'vaultGrossInOst']) {
+          if (prior[k] != null && Number.isFinite(Number(prior[k])) && Number(prior[k]) > 0) record[k] = prior[k];
+        }
+        // A cash-out that was already paid keeps the amount it was paid at.
+        if (prior.cashoutSig && Number.isFinite(Number(prior.cashoutOst)) && (!record.cashoutSig || record.cashoutSig === prior.cashoutSig)) {
+          record.cashoutSig = prior.cashoutSig;
+          record.cashoutOst = prior.cashoutOst;
+          if (prior.sellValue != null) record.sellValue = prior.sellValue;
+        }
+      }
+      if (paidCashout && !(prior && prior.cashoutSig)) {
+        // The payout already happened (it has a signature): record what was
+        // actually paid, never a server re-quote taken later.
+        const paid = cleanNumber(body.cashoutOst, null) ?? cleanNumber(body.sellValue, null);
+        if (paid != null && paid >= 0) { record.cashoutOst = paid; record.sellValue = cleanNumber(body.sellValue, paid); }
+      }
       // Per-wallet bucket (keep last 100, newest first)
-      const walletKey = `positions:${wallet}`;
-      const walletBucket = await kvGet(env, walletKey, []);
       await kvPut(env, walletKey, mergeNewest(walletBucket, record, 100));
       // Global recent feed (keep last 100)
       const recent = await kvGet(env, 'positions:recent', []);
@@ -4566,7 +4992,7 @@ export default {
       await kvPut(env, 'positions:recent', mergeNewest(recent, flowRecord, 100), 60 * 60 * 24 * 7);
       const marketState = await applyNativePositionToMarketState(env, record, nativeMarketStateBefore ? nativeMarketStateBefore.baseYesPrice : null);
       publishPositionRealtime(env, record, marketState, flowRecord);
-      return json({ ok: true, stored: true, record, marketState, flowRecord: flowRecord !== record ? flowRecord : null });
+      return withAuthTag(json({ ok: true, stored: true, record, marketState, flowRecord: flowRecord !== record ? flowRecord : null }), g.authTag);
     }
 
     // ── GET /wallet/events/:wallet ──────────────────────────────────────────
@@ -5648,5 +6074,30 @@ export default {
     }
 
     return json({ error: 'not_found', message: 'Unknown endpoint. GET /health for the full endpoint list.' }, 404);
+  }
+};
+
+// Contract C4: nothing escapes the router as an opaque platform error. A thrown
+// Durable Object call (reset / overload) becomes a readable, CORS-enabled 503
+// the client can act on; anything else a CORS-enabled 500. Money handlers
+// catch their own post-broadcast errors and always answer with the signature.
+export default {
+  async fetch(request, env, ctx) {
+    try {
+      return await OST_ROUTER.fetch(request, env, ctx);
+    } catch (err) {
+      const msg = String((err && err.message) || err || '');
+      const isGate = /durable object|reset because|code was updated|overloaded|exceeded|network connection lost|internal error in durable/i.test(msg);
+      return json({
+        ok: false,
+        error: isGate ? 'gate_reset' : 'internal_error',
+        code: isGate ? 'gate_reset' : 'internal_error',
+        retryable: true,
+        message: isGate
+          ? 'An OST service restarted mid-request. Check your balance before retrying — money calls never pay twice.'
+          : 'Something went wrong on the OST server. Try again in a moment.',
+        detail: msg.slice(0, 160)
+      }, isGate ? 503 : 500, { 'cache-control': 'no-store' });
+    }
   }
 };

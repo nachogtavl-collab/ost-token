@@ -1,7 +1,7 @@
 /* ==========================================================================
  * OST Nexus — the living home + a HUD that reaches every area.
  *
- *   · Living OST panel   model price (odometer + sparkline), your OSTC/OSTG,
+ *   · Living OST panel   model price (odometer + sparkline), your OST/OSTG,
  *                        network vitals, live BTC
  *   · Pulse              real network events (bets, faucet claims, new coins,
  *                        game results) streamed across the home; each one pings
@@ -157,8 +157,21 @@
       case 'wallet': return openWalletPanel(arg || 'access');
       case 'convert': return openWalletPanel('convert');
       case 'connect': {
-        var b = $('walletBtn'); if (b) b.click(); else openWalletPanel('access');
+        // WAL-1 / WAL-3 / C9: never click #walletBtn (that used to DISCONNECT a
+        // connected wallet). Connected -> open the wallet; otherwise the single
+        // get-started path (wallet home: Create / Restore / Phantom / Solflare / Backpack).
+        var W = window.OST_WALLET;
+        if (W && typeof W.pubkey === 'function' && W.pubkey()) {
+          if (window.OST_WALLET_HOME && OST_WALLET_HOME.open) OST_WALLET_HOME.open('home'); else openWalletPanel('access');
+        } else if (W && typeof W.requireWallet === 'function') W.requireWallet({ reason: 'start' });
+        else openWalletPanel('access');
         return;
+      }
+      case 'bridge': {
+        // BRG-5: the real OST <-> OSTG bridge card, never Portals.
+        if (window.OST_BRIDGE_UI && typeof OST_BRIDGE_UI.open === 'function') { OST_BRIDGE_UI.open(); return; }
+        if (typeof window.OST_OPEN_BRIDGE === 'function') { window.OST_OPEN_BRIDGE(); return; }
+        return openWalletPanel('convert');
       }
       case 'mesh':
         // ONE Mesh UI: the OST Mesh app (ost-mesh-app.js, eager). Only 'play' (peer games)
@@ -505,9 +518,12 @@
       { id: 'a:academy', grp: 'Go to', ico: 'code', t: 'Code Academy', s: 'Learn to code, earn OST', run: function () { go('academy'); }, kw: 'learn course programming' },
       { id: 'a:shop', grp: 'Go to', ico: 'cart', t: 'Shop', s: 'Goods, gift cards, fuel', run: function () { go('commerce'); }, kw: 'buy store commerce gift card gas' },
       { id: 'a:world', grp: 'Go to', ico: 'globe', t: 'OST World', s: 'Browse the open web', run: function () { go('world'); }, kw: 'browser internet web' },
-      { id: 'x:connect', grp: 'Do', ico: 'wallet', t: 'Connect wallet', s: 'Phantom, Solflare or an OST wallet', run: function () { go('connect'); }, kw: 'login sign in phantom solflare' },
+      (walletConnected()
+        ? { id: 'x:connect', grp: 'Do', ico: 'wallet', t: 'Open wallet', s: 'Balances, send, receive, backup, disconnect', run: function () { go('connect'); }, kw: 'wallet account connect login phantom solflare disconnect' }
+        : { id: 'x:connect', grp: 'Do', ico: 'wallet', t: 'Connect or create a wallet', s: 'Free OST wallet in this browser, or Phantom / Solflare / Backpack', run: function () { go('connect'); }, kw: 'connect create start login sign in phantom solflare backpack wallet' }),
       { id: 'x:faucet', grp: 'Do', ico: 'arrow', t: 'Claim free OST', s: 'Faucet and first balance', run: function () { go('new-here'); }, kw: 'faucet free get ost start' },
-      { id: 'x:convert', grp: 'Do', ico: 'coin', t: 'Convert SOL ↔ OST', s: 'Swap and transfer rail', run: function () { go('convert'); }, kw: 'swap exchange buy ost sol' },
+      { id: 'x:convert', grp: 'Do', ico: 'coin', t: 'Convert SOL ↔ OST', s: 'Devnet test rail', run: function () { go('convert'); }, kw: 'swap exchange buy ost sol' },
+      { id: 'x:bridge', grp: 'Do', ico: 'coin', t: 'Convert OST ⇄ OSTG', s: '1:1 bridge · on-chain · fees paid by OST', run: function () { go('bridge'); }, kw: 'bridge ostg ostc game token convert 1:1' },
       { id: 'x:trade', grp: 'Do', ico: 'ticket', t: 'Open trade ticket', s: 'Quick buy / sell', run: function () { go('trade'); }, kw: 'ticket order' },
       { id: 'x:parlay', grp: 'Do', ico: 'layers', t: 'Build a parlay', s: 'Combine outcomes', run: function () { go('parlay'); }, kw: 'combo multi' },
       { id: 'x:card', grp: 'Do', ico: 'ticket', t: 'OST Tap Ticket', s: 'Your pay card', run: function () { go('card'); }, kw: 'card pay tap' }
@@ -670,7 +686,7 @@
     var btn = function (k, ico, tip) { return '<button type="button" class="nx-dock__btn" data-dk="' + k + '" data-tip="' + tip + '" aria-label="' + tip + '">' + svg(ico) + '</button>'; };
     dock.innerHTML =
       '<button type="button" class="nx-dock__chip" data-dk="home" title="OST model price — FX-anchored index, devnet"><span class="k">OST</span><span class="v" id="nxDkPx">—</span></button>' +
-      '<button type="button" class="nx-dock__chip" data-dk="wallet" title="Your on-chain OSTC"><span class="k">Balance</span><span class="v" id="nxDkBal">—</span></button>' +
+      '<button type="button" class="nx-dock__chip" data-dk="wallet" title="Your on-chain OST"><span class="k">Balance</span><span class="v" id="nxDkBal">—</span></button>' +
       '<span class="nx-dock__sep" aria-hidden="true"></span>' +
       btn('markets', 'trend', 'Markets') + btn('trade', 'ticket', 'Trade ticket') + btn('parlay', 'layers', 'Parlay') +
       btn('ghost', 'ghost', 'Ghost AI') + btn('mesh', 'mesh', 'Mesh') + btn('world', 'globe', 'OST World') + btn('card', 'wallet', 'Tap Ticket') +
@@ -700,7 +716,7 @@
     var be = $('nxDkBal');
     if (be) {
       var b = balances();
-      be.textContent = walletConnected() ? (b.ostc === undefined ? '—' : fmtAmt(b.ostc) + ' OSTC') : 'Connect';
+      be.textContent = walletConnected() ? (b.ostc === undefined ? '—' : fmtAmt(b.ostc) + ' OST') : 'Connect';
     }
   }
   var dockMq = window.matchMedia('(max-width: 820px), (pointer: coarse) and (max-width: 1024px)');

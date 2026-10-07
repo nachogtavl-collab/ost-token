@@ -14,7 +14,26 @@
   'use strict';
 
   // ----------------------------------------------------------- helpers
-  function activateCompartment(id) {
+  // The Mesh overlays (classic pavilion, OST Mesh app) sit above the page: a
+  // page section opened underneath them looked like a dead button (BRG-5).
+  // Close them first, then navigate once their own Back entry has unwound (it
+  // would otherwise undo the navigation).
+  function leaveMesh(then) {
+    var pav = document.getElementById('ost-mesh-pavilion');
+    var pavOpen = !!(pav && pav.classList.contains('is-open'));
+    var appOpen = false;
+    try { appOpen = !!document.querySelector('#ostMeshApp.open'); } catch (_) {}
+    if (!pavOpen && !appOpen) { then(); return; }
+    try { if (pavOpen && window.OST_MESH && typeof window.OST_MESH.close === 'function') window.OST_MESH.close(); } catch (_) {}
+    try { if (appOpen && window.OST_MESH_APP && typeof window.OST_MESH_APP.close === 'function') window.OST_MESH_APP.close(); } catch (_) {}
+    var done = false;
+    function go() { if (done) return; done = true; window.removeEventListener('popstate', onPop); try { then(); } catch (_) {} }
+    function onPop() { setTimeout(go, 30); }
+    window.addEventListener('popstate', onPop);
+    setTimeout(go, 500);
+  }
+
+  function activateCompartmentNow(id) {
     if (!id) return false;
     if (window.OST_COMPARTMENTS && typeof window.OST_COMPARTMENTS.activate === 'function') {
       try { window.OST_COMPARTMENTS.activate(id, true); return true; }
@@ -22,6 +41,11 @@
     }
     try { location.hash = '#' + id; return true; }
     catch (_) { return false; }
+  }
+  function activateCompartment(id) {
+    if (!id) return false;
+    leaveMesh(function () { activateCompartmentNow(id); });
+    return true;
   }
 
   function clickTab(selector, delay) {
@@ -78,14 +102,18 @@
   }
 
   function openWallet(panel) {
-    activateCompartment('wallet');
-    if (panel) clickTab('[data-wallet-tab="' + panel + '"], [data-wallet-panel-target="' + panel + '"]', 240);
+    leaveMesh(function () {
+      activateCompartmentNow('wallet');
+      if (panel) clickTab('[data-wallet-tab="' + panel + '"], [data-wallet-panel-target="' + panel + '"]', 240);
+    });
     return true;
   }
 
   function openCommerce(tab) {
-    activateCompartment('commerce');
-    if (tab) clickTab('[data-store-tab="' + tab + '"], [data-tab="' + tab + '"]', 240);
+    leaveMesh(function () {
+      activateCompartmentNow('commerce');
+      if (tab) clickTab('[data-store-tab="' + tab + '"], [data-tab="' + tab + '"]', 240);
+    });
     return true;
   }
 
@@ -117,7 +145,11 @@
     'wallet:portals': function () { return openWallet('portals'); },
     'predictions':   function () { return openWallet('market'); },
     'convert':       function () { return openWallet('convert'); },
-    'bridge':        function () { return openWallet('portals'); },
+    // BRG-5: the OST ⇄ OSTG bridge itself, not the external Portals list.
+    'bridge':        function () {
+      if (window.OST_BRIDGE_UI && typeof window.OST_BRIDGE_UI.open === 'function') return window.OST_BRIDGE_UI.open();
+      return openWallet('convert');
+    },
     'stock':         function () { return openWallet('market'); },
     // Standalone compartments
     'launchpad':     function () { return activateCompartment('launchpad'); },

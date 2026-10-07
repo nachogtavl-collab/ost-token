@@ -6,7 +6,8 @@
  * for every line ("what you just typed and why"). The user types each line
  * exactly; once correct, the next line unlocks and the explanation expands.
  *
- * - Reuses the same credit balance as faucet-hub.js  (`ost.faucet.hub.v2`)
+ * - Rewards are POINTS (decision D1: legacy credits are retired). Points are
+ *   for fun, have no cash value and are never converted to OST.
  * - Adds: lesson picker, live "what does this do" panel, run-output preview
  *   for safe JS lessons, level progression saved per user.
  * - Hooks the existing #fhTaskBtn button (Open Code Academy) by overriding
@@ -23,18 +24,19 @@
   function loadAcademy() { try { return JSON.parse(localStorage.getItem(ACADEMY_KEY) || '{}'); } catch (_) { return {}; } }
   function saveAcademy(s) { try { localStorage.setItem(ACADEMY_KEY, JSON.stringify(s)); } catch (_) {} }
 
-  function award(amount, source) {
-    var s = loadBank();
-    s.credits = Number(s.credits || 0) + Number(amount || 0);
-    s.lifetime = Number(s.lifetime || 0) + Number(amount || 0);
-    saveBank(s);
-    var fh = document.getElementById('fhCredits');
-    if (fh) fh.textContent = Number(s.credits || 0).toFixed(2);
-    document.querySelectorAll('[data-ostg-balance]').forEach(function (e) {
-      e.textContent = Number(s.credits || 0).toFixed(2);
-    });
-    try { window.dispatchEvent(new CustomEvent('ost-faucet-hub-award', { detail: { credits: amount, source: source || 'academy', total: s.credits }})); } catch (_) {}
+  // Points only — no cash value, never OST, never the retired credits pool.
+  function points() { return Number(loadAcademy().points || 0) || 0; }
+  function paintPoints() {
+    document.querySelectorAll('[data-academy-points]').forEach(function (e) { e.textContent = String(points()); });
   }
+  function award(amount, source) {
+    var a = loadAcademy();
+    a.points = Number(a.points || 0) + Number(amount || 0);
+    saveAcademy(a);
+    paintPoints();
+    try { window.dispatchEvent(new CustomEvent('ost:academy-points', { detail: { points: amount, source: source || 'academy', total: a.points } })); } catch (_) {}
+  }
+  void loadBank; void saveBank;
 
   // ────────────────────────────────────────────────────────────────────────
   // Curriculum — every line has an explanation
@@ -417,7 +419,7 @@
           '<div class="oac-title">💻 OST Code Academy <span style="color:#94a3b8;font-weight:400;font-size:13px;">· from zero to builder</span></div>' +
           '<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">' +
             '<a class="oac-studio" id="oacStudio" href="studio.html" target="_blank" rel="noopener" title="OST Studio: a VS Code-style editor to build, run and deploy your own apps">💻 Open OST Studio</a>' +
-            '<span class="oac-balance">Balance: <strong data-ostg-balance>0.00</strong> OST</span>' +
+            '<span class="oac-balance" title="Points are for fun and have no cash value">Points: <strong data-academy-points>0</strong> · no cash value</span>' +
             '<button class="oac-close" id="oacClose">×</button>' +
           '</div>' +
         '</div>' +
@@ -458,9 +460,7 @@
     var pick = LESSONS.find(function (l) { return !done[l.id]; }) || LESSONS[0];
     loadLesson(pick.id);
 
-    document.querySelectorAll('[data-ostg-balance]').forEach(function (e) {
-      e.textContent = Number(loadBank().credits || 0).toFixed(2);
-    });
+    paintPoints();
   }
 
   function paintSidebar() {
@@ -491,7 +491,7 @@
 
     document.getElementById('oacIntro').innerHTML =
       '<div class="oac-intro-row"><div>' +
-      '<h4>' + escapeHtml(lesson.title) + ' · earn ' + lesson.reward + ' OST</h4>' +
+      '<h4>' + escapeHtml(lesson.title) + ' · earn ' + lesson.reward + ' points</h4>' +
       '<p>' + escapeHtml(lesson.intro) + '</p>' +
       '</div><a class="oac-studio" id="oacOpenInStudio" href="' + escapeHtml(studioLink(lesson)) + '" target="_blank" rel="noopener" title="Open this lesson as a project in OST Studio: edit it freely, run it in a sandbox, deploy it">↗ Open in Studio</a></div>';
 
@@ -628,7 +628,7 @@
       if (b.dataset.id === current.lesson.id) b.classList.add('is-done', 'is-active');
     });
     var cur = document.getElementById('oacCurrent');
-    cur.innerHTML = '<p style="color:#86efac;">+ ' + current.lesson.reward + ' OST credited to your bonus balance. Pick another lesson →</p>';
+    cur.innerHTML = '<p style="color:#86efac;">+ ' + current.lesson.reward + ' points (no cash value). Pick another lesson →</p>';
     document.getElementById('oacClaim').disabled = true;
   }
 

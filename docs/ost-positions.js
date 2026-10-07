@@ -27,7 +27,33 @@
     try { return a.list() || []; } catch (_) { return []; }
   }
   function num(n) { var v = Number(n); return Number.isFinite(v) ? v : 0; }
+  // PRD-1: tickets whose win the OST server (play rail, BTC 5-min) or the
+  // on-chain program pays itself. The client never claims them, never counts
+  // them as "owed", and the HUD never offers a Claim for them.
+  function serverSettled(b) {
+    if (!b) return false;
+    if (b.serverSettled || b.rail === 'play' || b.rail === 'onchain' || b.onChain) return true;
+    var f = String(b.fundedBy || '');
+    if (f === 'ostg-native' || f === 'ostg' || f === 'onchain') return true;
+    return !!(b.serverPositionId || /^p_\d+_/.test(String(b.signature || b.id || '').replace(/^desk-/, '')));
+  }
+  // Legacy credits tickets are retired (D1): never claimable, never owed.
+  // PRD-7: a ticket with no real on-chain stake (legacy 'local-'/'sim-'
+  // receipts) moved no OST — it is never owed or claimable either.
+  function creditsTicket(b) {
+    if (!b) return false;
+    if (b.fundedBy === 'credits' || /^credits-/.test(String(b.signature || ''))) return true;
+    return !b.onChain && !/^[1-9A-HJ-NP-Za-km-z]{64,90}$/.test(String(b.signature || ''));
+  }
   function fmt(n) { return num(n).toFixed(2); }
+  // PRD-6: "to claim" uses the SAME rule as the Portfolio and the cash-out
+  // (prediction-extras deskClaimable -> OST_PREDICTION_API.actionFor). A legacy
+  // extras-store bet ("won" by a hash of its market id) is never owed.
+  function owedWin(b) {
+    if (!b || b.claimed || b.cashoutPending) return false;
+    if (b.desk) return !!b.claimableWin;
+    return false;
+  }
 
   function autoClaimOn() {
     try { return localStorage.getItem(AUTO_KEY) !== '0'; } catch (_) { return true; }
@@ -53,9 +79,11 @@
     list.forEach(function (b) {
       var stake = num(b.stake);
       s.staked += stake;
+      if (owedWin(b)) { s.toClaim++; s.owed += netOwed(b); return; }
       if (b.status === 'won') {
         if (b.claimed) { s.paid++; s.paidTotal += num(b.paidOut); }
-        else { s.toClaim++; s.owed += netOwed(b); }
+        else if (serverSettled(b)) { s.paid++; }
+        // a legacy / unverified "won" is not money: neither owed nor paid
       } else if (b.status === 'lost') {
         s.lost++;
       } else {
@@ -66,7 +94,7 @@
     // everything already settled (won + lost). Open bets are not counted.
     var settledStake = 0;
     list.forEach(function (b) {
-      if (b.status === 'won' || b.status === 'lost') settledStake += num(b.stake);
+      if (owedWin(b) || (b.status === 'won' && (b.claimed || serverSettled(b))) || b.status === 'lost') settledStake += num(b.stake);
     });
     s.pnl = (s.paidTotal + s.owed) - settledStake;
     return s;
@@ -79,9 +107,10 @@
     var deadClaims = [];   // marked claimed but paid 0 -> the old dead-end bug
     var suspectDupes = []; // paid noticeably more than the win was worth
     list.forEach(function (b) {
-      if (b.status !== 'won') return;
+      if (owedWin(b)) { unpaidWins.push({ id: b.id, title: b.title, owed: netOwed(b) }); return; }
+      if (b.status !== 'won' || serverSettled(b) || creditsTicket(b) || !b.desk) return;
       var owed = netOwed(b);
-      if (!b.claimed) { unpaidWins.push({ id: b.id, title: b.title, owed: owed }); return; }
+      if (!b.claimed) return;   // not owed under the shared rule (legacy / unverified / not yet resolved)
       var paid = num(b.paidOut);
       if (paid <= 0) { deadClaims.push({ id: b.id, title: b.title, owed: owed }); return; }
       if (owed > 0 && paid > owed * 1.5 + 0.01) {
@@ -103,7 +132,8 @@
   var busy = false;
   function claimable() {
     return positions().filter(function (b) {
-      return b && b.status === 'won' && !b.claimed && !(api() && api().isClaiming && api().isClaiming(b.id));
+      return b && owedWin(b) && !serverSettled(b) && !creditsTicket(b) &&
+        !(api() && api().isClaiming && api().isClaiming(b.id));
     });
   }
   // A payout that keeps failing (dead RPC) must not be retried forever — that
@@ -220,7 +250,7 @@
           '<button type="button" class="ost-pos-btn" data-pos-act="claim-all">Claim all</button></div>'
         : ''),
       (a.deadClaims.length
-        ? '<div class="ost-pos-hud__warn">' + a.deadClaims.length + ' win(s) were marked claimed but never paid — worth ' + fmt(a.deadClaims.reduce(function (t, x) { return t + x.owed; }, 0)) + ' OST. Tap “Claim all” to recover.</div>'
+        ? '<div class="ost-pos-hud__warn">' + a.deadClaims.length + ' older win(s) are marked paid with no payout amount recorded. Check your wallet history before contacting support.</div>'
         : ''),
       '<label class="ost-pos-hud__auto"><input type="checkbox" data-pos-act="toggle-auto" ' + (autoClaimOn() ? 'checked' : '') + '> Auto-claim wins</label>'
     ].join('');

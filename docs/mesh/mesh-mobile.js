@@ -9,7 +9,8 @@
  * Steps delivered:
  *   A · Feed    — stories bar (OST_MESH_STORIES) + a wallet-signed post feed.
  *   B · Chats   — the existing connect/session UI, framed as a chat surface.
- *   D · Pay     — real send of OSTC (OST_RESCUE.sendPeerOst) or SOL (SystemProgram
+ *   D · Pay     — real send of OST or SOL through the shared Send rail (OST_SEND.send:
+ *                 balance, address, rent and fee checks; OST pays the fee) (was SystemProgram
  *                 transfer via OST_WALLET.sign) to a wallet address.
  *   Profile     — the wallet-linked hero + identity/QR.
  *   Play        — mesh games.
@@ -368,11 +369,11 @@
       '<div class="omm-paybox">' +
         '<div class="omm-pay-tabs" id="omm-pay-tabs"><button data-pt="send" class="on">Send</button><button data-pt="receive">Receive</button></div>' +
         '<div id="omm-pay-send-pane">' +
-          '<div class="omm-toggle" id="omm-tok"><button data-tok="ostc" class="on">OSTC</button><button data-tok="sol">SOL</button></div>' +
+          '<div class="omm-toggle" id="omm-tok"><button data-tok="ost" class="on">OST</button><button data-tok="sol">SOL</button></div>' +
           '<div class="omm-field" style="margin-top:11px"><label>Recipient wallet</label><div class="omm-scanrow"><input id="omm-pay-to" placeholder="Wallet address" autocomplete="off"><button class="omm-scanbtn" id="omm-pay-scan">&#128247; Scan</button></div></div>' +
           '<div class="omm-field"><label>Amount</label><input id="omm-pay-amt" type="number" min="0" step="any" inputmode="decimal" placeholder="0.00"></div>' +
-          '<button class="omm-send" id="omm-pay-send">Send OSTC</button>' +
-          '<div class="omm-pay-status" id="omm-pay-status">Sends real devnet value from your connected wallet.</div>' +
+          '<button class="omm-send" id="omm-pay-send">Send OST</button>' +
+          '<div class="omm-pay-status" id="omm-pay-status">Sends devnet OST or SOL from your connected wallet. OST pays the network fee. Devnet tokens have no cash value.</div>' +
         '</div>' +
         '<div id="omm-pay-recv-pane" hidden><div class="omm-recv"><div class="omm-recv-qr" id="omm-recv-qr"></div><div class="omm-recv-addr" id="omm-recv-addr"></div><button class="omm-send" id="omm-recv-copy" style="background:rgba(94,234,212,.16);color:#7ff0d8">Copy my address</button><div class="omm-pay-status">Have someone scan this to pay you.</div></div></div>' +
         '<div class="omm-scan-overlay" id="omm-scan-overlay" hidden><video id="omm-scan-video" playsinline muted></video><div class="omm-scan-frame"></div><label class="omm-scan-close" style="bottom:calc(84px + env(safe-area-inset-bottom));background:rgba(0,255,176,.18);color:#00ffb0;border:1px solid rgba(0,255,176,.5)">&#128247; Use a photo<input id="omm-scan-file" type="file" accept="image/*" hidden></label><button class="omm-scan-close" id="omm-scan-close">Cancel</button></div>' +
@@ -400,35 +401,57 @@
       }).catch(function () { toast('Could not read that image.'); });
     });
     sec.querySelector('#omm-recv-copy').addEventListener('click', function () { var w = wallet(); if (w && navigator.clipboard) navigator.clipboard.writeText(w).then(function () { toast('Address copied'); }); });
-    var tok = 'ostc';
+    var tok = 'ost';
     sec.querySelectorAll('#omm-tok button').forEach(function (b) {
       b.addEventListener('click', function () { tok = b.getAttribute('data-tok'); sec.querySelectorAll('#omm-tok button').forEach(function (x) { x.classList.remove('on'); }); b.classList.add('on'); sec.querySelector('#omm-pay-send').textContent = 'Send ' + tok.toUpperCase(); });
     });
     sec.querySelector('#omm-pay-send').addEventListener('click', function () { doPay(tok, sec); });
   }
+  // Mesh Pay goes through the ONE shared Send rail (wallet-extras OST_SEND.send):
+  // it validates the address (refuses a mint / token account / self), checks
+  // the balance and the SOL rent rules, and OST pays the fee. This tab used to
+  // build its own transfers: it sent OST to the OST mint address and submitted
+  // over-balance and 0-SOL transfers that then failed on chain.
+  var payBusy = false;
+  function payErrText(e) {
+    try {
+      if (window.OST_MONEY_ERRORS && typeof OST_MONEY_ERRORS.humanize === 'function') {
+        var h = OST_MONEY_ERRORS.humanize(e);
+        if (h && h.title) return h.title + (h.body ? ' ' + h.body : '');
+      }
+    } catch (_) {}
+    return String((e && e.message) || 'Send failed').replace(/\.$/, '') + '.';
+  }
   function doPay(tok, sec) {
     var to = (sec.querySelector('#omm-pay-to').value || '').trim();
-    var amt = parseFloat(sec.querySelector('#omm-pay-amt').value);
+    var amtText = String(sec.querySelector('#omm-pay-amt').value || '').trim();
+    var amt = parseFloat(amtText);
+    var asset = tok === 'sol' ? 'SOL' : 'OST';
     var st = sec.querySelector('#omm-pay-status'); var btn = sec.querySelector('#omm-pay-send');
     var say = function (m) { if (st) st.textContent = m; };
-    if (!wallet()) return say('Connect your wallet first.');
-    if (!to || to.length < 32) return say('Enter a valid recipient wallet address.');
+    if (payBusy) return;
+    if (!wallet()) {
+      say('Connect your wallet first.');
+      try { if (window.OST_WALLET && typeof OST_WALLET.requireWallet === 'function') OST_WALLET.requireWallet({ reason: 'send' }); } catch (_) {}
+      return;
+    }
+    if (!to) return say('Enter the recipient wallet address.');
     if (!(amt > 0)) return say('Enter an amount greater than zero.');
-    btn.disabled = true; var orig = btn.textContent; btn.textContent = 'Sending…'; say('Submitting ' + amt + ' ' + tok.toUpperCase() + '…');
-    var done = function (sig) { btn.disabled = false; btn.textContent = orig; say('✓ Sent ' + amt + ' ' + tok.toUpperCase() + (sig ? ' (' + String(sig).slice(0, 8) + '…)' : '') + ' to ' + shortW(to)); sec.querySelector('#omm-pay-amt').value = ''; try { window.dispatchEvent(new CustomEvent('ost:money:change')); } catch (_) {} };
-    var fail = function (e) { btn.disabled = false; btn.textContent = orig; say('✗ ' + ((e && e.message) || 'Send failed') + '.'); };
-    try {
-      if (tok === 'ostc') {
-        if (!(window.OST_RESCUE && OST_RESCUE.sendPeerOst)) return fail(new Error('OSTC rail not ready'));
-        Promise.resolve(OST_RESCUE.sendPeerOst(to, amt, 'mesh-pay')).then(done).catch(fail);
-      } else {
-        if (!(window.OST_WALLET && OST_WALLET.sign && window.solanaWeb3)) return fail(new Error('SOL rail not ready'));
-        var conn = OST_WALLET.getConnection && OST_WALLET.getConnection();
-        var from = new solanaWeb3.PublicKey(wallet());
-        var tx = new solanaWeb3.Transaction().add(solanaWeb3.SystemProgram.transfer({ fromPubkey: from, toPubkey: new solanaWeb3.PublicKey(to), lamports: Math.round(amt * 1e9) }));
-        Promise.resolve(OST_WALLET.sign(tx)).then(done).catch(fail);
-      }
-    } catch (e) { fail(e); }
+    if (!(window.OST_SEND && typeof OST_SEND.send === 'function')) return say('Send is still loading — try again in a second. Nothing was sent.');
+    payBusy = true;
+    btn.disabled = true; var orig = btn.textContent; btn.textContent = 'Sending…'; say('Submitting ' + amtText + ' ' + asset + '…');
+    var finish = function () { payBusy = false; btn.disabled = false; btn.textContent = orig; };
+    Promise.resolve(OST_SEND.send({ asset: asset, to: to, amount: amtText, source: 'mesh-pay' })).then(function (r) {
+      finish();
+      var sig = r && r.sig ? String(r.sig) : '';
+      if (r && r.pending) say('Sent ' + amtText + ' ' + asset + ' to ' + shortW(to) + ' — still confirming' + (sig ? ' (' + sig.slice(0, 8) + '…)' : '') + '. Check the balance before sending again.');
+      else say('✓ Sent ' + amtText + ' ' + asset + (sig ? ' (' + sig.slice(0, 8) + '…)' : '') + ' to ' + shortW(to));
+      sec.querySelector('#omm-pay-amt').value = '';
+      try { window.dispatchEvent(new CustomEvent('ost:money:change')); } catch (_) {}
+    }, function (e) {
+      finish();
+      say('✗ ' + payErrText(e));
+    });
   }
 
   function statTile(n, l) { return '<div class="omm-stat"><b>' + n + '</b><span>' + l + '</span></div>'; }
@@ -529,10 +552,10 @@
   function buildPlay(shell) {
     var sec = document.createElement('div'); sec.className = 'omm-section'; sec.setAttribute('data-mesh-view', 'play');
     sec.innerHTML = '<div class="omm-paybox">' +
-      '<div class="omm-h">⚔ Fair games — provably fair, for OSTC</div>' +
+      '<div class="omm-h">⚔ Fair games — provably fair, for devnet OST</div>' +
       '<button class="omm-send" id="omm-fair" style="background:linear-gradient(135deg,#00d4ff,#00ff9f);color:#04121a">Open Fair Games arena</button>' +
       '<div class="omm-h" style="margin-top:16px">🎮 Peer games</div><div class="omm-games" id="omm-games"><div class="omm-empty">Loading games…</div></div>' +
-      '<div class="omm-pay-status">Peer games run directly with a connected contact — moves are exchanged P2P and verified. Fair games settle in OSTC with a provably-fair seed.</div></div>';
+      '<div class="omm-pay-status">Peer games run directly with a connected contact — moves are exchanged P2P and verified. Fair games settle in devnet OST with a provably-fair seed.</div></div>';
     shell.appendChild(sec);
     sec.querySelector('#omm-fair').addEventListener('click', function () { try { if (window.OST_MESH_ARENA && OST_MESH_ARENA.open) openArena(); else window.dispatchEvent(new CustomEvent('mesh:open-games')); } catch (_) {} });
     renderGames();

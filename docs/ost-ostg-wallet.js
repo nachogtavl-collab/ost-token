@@ -10,9 +10,8 @@
  *   • Play OSTG    — the server play balance (games/markets/stocks)
  *
  * Self-contained + additive: if the wallet card isn't on the page it no-ops.
- * REACTIVE — repaints the instant a balance-moving event flows (ost:wallet-
- * changed / ost:play:balance), plus a slow VISIBLE-only heartbeat. No blind
- * polling, so it never drains RPC/KV in an idle tab.
+ * REACTIVE — repaints on `ost:balance` (emitted by OST_BALANCE, contract C6)
+ * and play-balance events. It reads no chain data and runs no timer itself.
  * ========================================================================== */
 (function () {
   'use strict';
@@ -21,8 +20,6 @@
 
   var SERIES_KEY = 'ost.ostg.wallet.series.v1';
   var MAX_PTS = 240;
-  var lastFetchAt = 0;
-  var FETCH_MIN_GAP_MS = 6000;
   var el = null, spark = null;
 
   function fmt(n) {
@@ -56,7 +53,7 @@
     card.innerHTML =
       '<span class="wd-bal-icon">&#9670;</span>' +
       '<div class="wd-bal-info">' +
-        '<div class="wd-bal-amount" data-ostg-total>0.00</div>' +
+        '<div class="wd-bal-amount" data-ostg-total>—</div>' +
         '<div class="wd-bal-label">OSTG &middot; Game token</div>' +
         '<div class="ostg-wallet-split">' +
           '<span>Wallet <b data-ostg-wallet>—</b></span>' +
@@ -106,25 +103,30 @@
     catch (_) { return ''; }
   }
 
-  async function refresh(force) {
+  // C6: reads OST_BALANCE (the one balance authority) - no RPC of its own,
+  // no polling loop. Unknown renders "—", never 0.
+  function num(v) { return (v === undefined || v === null || !Number.isFinite(Number(v))) ? null : Number(v); }
+  function refresh() {
     if (!inject()) { setTimeout(function () { refresh(); }, 600); return; }
-    if (typeof document !== 'undefined' && document.hidden && !force) return;
-    if (!force && Date.now() - lastFetchAt < FETCH_MIN_GAP_MS) return;
-    lastFetchAt = Date.now();
-
-    // Play balance is a cached server value (no RPC). Wallet OSTG is on-chain via
-    // the bridge UI's balance reader (returns [OSTC, OSTG]).
-    var play = 0;
-    try { var pb = window.OST_PLAY && window.OST_PLAY.balance ? window.OST_PLAY.balance() : undefined; if (typeof pb === 'number') play = pb; } catch (_) {}
-    var wallet = null;
-    if (walletAddr() && window.OST_BRIDGE_UI && window.OST_BRIDGE_UI.balances) {
-      try { var b = await window.OST_BRIDGE_UI.balances(); if (Array.isArray(b)) wallet = Number(b[1]) || 0; } catch (_) {}
+    if (!walletAddr()) {
+      if (el.wallet) el.wallet.textContent = '—';
+      if (el.play) el.play.textContent = '—';
+      if (el.total) el.total.textContent = '—';
+      return;
+    }
+    var B = window.OST_BALANCE && typeof window.OST_BALANCE.get === 'function' ? window.OST_BALANCE.get() : {};
+    var wallet = num(B.ostg);
+    var play = num(B.play);
+    if (play == null) {
+      try { var pb = window.OST_PLAY && window.OST_PLAY.balance ? window.OST_PLAY.balance() : undefined; if (typeof pb === 'number' && Number.isFinite(pb)) play = pb; } catch (_) {}
     }
     if (el.wallet) el.wallet.textContent = wallet == null ? '—' : fmt(wallet);
-    if (el.play) el.play.textContent = fmt(play);
-    var total = (wallet || 0) + play;
-    if (el.total) el.total.textContent = fmt(total);
-    if (el.usd && window.OST_FX && window.OST_FX.hint) { try { el.usd.textContent = window.OST_FX.hint(total) || ''; } catch (_) {} }
+    if (el.play) el.play.textContent = play == null ? '—' : fmt(play);
+    var known = wallet != null && play != null;
+    var total = (wallet || 0) + (play || 0);
+    if (el.total) el.total.textContent = known ? fmt(total) : '—';
+    if (el.usd) { try { el.usd.textContent = (known && window.OST_FX && window.OST_FX.hint) ? (window.OST_FX.hint(total) || '') : ''; } catch (_) {} }
+    if (!known) return;
 
     var series = loadSeries();
     var last = series[series.length - 1];
@@ -135,13 +137,11 @@
     drawSpark();
   }
 
-  // Reactive: repaint the instant balances move; slow visible-only heartbeat.
-  window.addEventListener('ost:wallet-changed', function () { refresh(); });
+  // Reactive only: OST_BALANCE emits `ost:balance` after every read.
+  window.addEventListener('ost:balance', function () { refresh(); });
   window.addEventListener('ost:play:balance', function () { refresh(); });
-  window.addEventListener('ost-faucet-hub-award', function () { refresh(); });
-  document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') refresh(); });
-  setInterval(function () { refresh(); }, 90000);
+  window.addEventListener('ost:wallet-changed', function () { refresh(); });
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { refresh(true); });
-  else refresh(true);
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { refresh(); });
+  else refresh();
 })();

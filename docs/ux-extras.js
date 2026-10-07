@@ -202,7 +202,7 @@
     var totals = window.OST_TREASURY.totals();
     var list = window.OST_TREASURY.reserves().slice(0, 30);
     if (!list.length) {
-      host.innerHTML = '<div class="ost-treasury-empty">No reserves yet. Convert any currency from the <strong>Convert</strong> panel — the OST treasury will hold it as backing.</div>';
+      host.innerHTML = '<div class="ost-treasury-empty">No conversions recorded in this browser yet. This list only shows conversions made from this browser on devnet — it is not the treasury balance.</div>';
       return;
     }
     var byCur = totals.byCurrency;
@@ -211,8 +211,8 @@
     }).join('');
     host.innerHTML = [
       '<div class="ost-treasury-summary">',
-        '<div><span class="ost-treasury-label">Total backing</span><strong>' + fmtUsd(totals.totalUsd) + '</strong></div>',
-        '<div><span class="ost-treasury-label">OST issued</span><strong>' + fmtNum(totals.totalOst, 2) + ' OST</strong></div>',
+        '<div><span class="ost-treasury-label">Value converted (devnet)</span><strong>' + fmtUsd(totals.totalUsd) + '</strong></div>',
+        '<div><span class="ost-treasury-label">OST received</span><strong>' + fmtNum(totals.totalOst, 2) + ' OST</strong></div>',
         '<div><span class="ost-treasury-label">Entries</span><strong>' + totals.count + '</strong></div>',
       '</div>',
       '<div class="ost-treasury-chips">' + chips + '</div>',
@@ -225,7 +225,7 @@
           '<td>' + fmtNum(e.amount, 6) + '</td>' +
           '<td>' + fmtUsd(e.usd) + '</td>' +
           '<td>' + fmtNum(e.ost, 4) + '</td>' +
-          '<td>' + (e.kind === 'on-chain-swap' ? 'on-chain' : 'IOU') + '</td>' +
+          '<td>' + (e.kind === 'on-chain-swap' ? 'on-chain' : 'record only') + '</td>' +
           '</tr>';
       }).join(''),
       '</tbody></table>'
@@ -243,7 +243,7 @@
     var host = document.createElement('section');
     host.id = 'ost-treasury-panel';
     host.className = 'ost-treasury-panel';
-    host.innerHTML = '<header><h3>🏦 OST Treasury reserves</h3><button type="button" id="ost-treasury-refresh">Refresh</button></header><div id="ost-treasury-body"></div>';
+    host.innerHTML = '<header><h3>🧾 Your conversions (this browser)</h3><button type="button" id="ost-treasury-refresh">Refresh</button></header><p style="margin:4px 0 8px;font-size:.78rem;color:#94a3b8;">Devnet only, read from this browser’s storage — not the treasury’s on-chain balance.</p><div id="ost-treasury-body"></div>';
     anchor.parentNode.insertBefore(host, anchor.nextSibling);
     var body = host.querySelector('#ost-treasury-body');
     host.querySelector('#ost-treasury-refresh').addEventListener('click', function () { renderTreasury(body); });

@@ -153,20 +153,34 @@
   // round-trip just to re-read a settled result. (Unresolved markets are never
   // cached here; the router keeps those warm on a short TTL.)
   var resolvedCache = {};
+  // NET-3 (D4: the crank is silent, so rounds have no on-chain market): a
+  // round with NO market account is remembered for 2 minutes, and concurrent
+  // lookups share one getAccountInfo — callers across the app (router warm-up,
+  // 1-tap offer, auto-claim) no longer poll the chain for a market that is not there.
+  var missCache = {};
+  var MISS_MS = 120000;
+  var lookups = {};
 
   function marketFor(openAtSec) {
     if (!available()) return Promise.resolve(null);
     if (resolvedCache[openAtSec]) return Promise.resolve(resolvedCache[openAtSec]);
+    var miss = missCache[openAtSec];
+    if (miss && Date.now() - miss.at < MISS_MS) return Promise.resolve(miss.val);
+    if (lookups[openAtSec]) return lookups[openAtSec];
     var d = derive(openAtSec);
-    return conn().getAccountInfo(d.market).then(function (info) {
-      if (!info) return { market: d.market, vault: d.vault, exists: false };
+    var p = conn().getAccountInfo(d.market).then(function (info) {
+      if (!info) { var none = { market: d.market, vault: d.vault, exists: false }; missCache[openAtSec] = { at: Date.now(), val: none }; return none; }
       var m = parseMarket(new Uint8Array(info.data));
       if (!m) return { market: d.market, vault: d.vault, exists: false };
       var out = Object.assign({ market: d.market, vault: d.vault, exists: true }, m);
       // Settled result — safe to remember forever.
       if (out.resolved) resolvedCache[openAtSec] = out;
+      delete missCache[openAtSec];
       return out;
     }).catch(function () { return null; });
+    lookups[openAtSec] = p;
+    p.then(function () { delete lookups[openAtSec]; }, function () { delete lookups[openAtSec]; });
+    return p;
   }
 
   // Odds implied by the pools — pari-mutuel, so this IS the on-chain price.

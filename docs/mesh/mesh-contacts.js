@@ -28,13 +28,16 @@
   function b64(buf) { var s = '', u = new Uint8Array(buf); for (var i = 0; i < u.length; i++) s += String.fromCharCode(u[i]); return btoa(s); }
 
   // OST-MESH|v1|<addr>|<METHOD>|<path+query>|<sha256hex(body)>|<ts>|<nonce>
-  function signedFetch(method, pathq, bodyObj) {
+  // C11: sign with the server-corrected clock (OST_AUTH learns the offset).
+  function meshNow() { try { if (window.OST_AUTH && typeof OST_AUTH.now === 'function') { var n = Number(OST_AUTH.now()); if (isFinite(n) && n > 0) return n; } } catch (_) {} return Date.now(); }
+  function signedFetch(method, pathq, bodyObj, _retried) {
     var p = pav();
     if (!p || !p.identity || !p.identity.sig || !p.identity.sig.privateKey || !p.address) {
       return Promise.reject(new Error('Your mesh identity is still loading — try again in a moment.'));
     }
     var bodyText = bodyObj ? JSON.stringify(bodyObj) : '';
-    var ts = Date.now(), nonce = hex(crypto.getRandomValues(new Uint8Array(12)));
+    var ts = meshNow(), nonce = hex(crypto.getRandomValues(new Uint8Array(12)));
+    var sentAt = Date.now();
     var enc = new TextEncoder();
     return crypto.subtle.digest('SHA-256', enc.encode(bodyText)).then(function (d) {
       var msg = 'OST-MESH|v1|' + p.address + '|' + method + '|' + pathq + '|' + hex(d) + '|' + ts + '|' + nonce;
@@ -47,6 +50,17 @@
       return r.json().catch(function () { return null; }).then(function (j) {
         if (r.ok && j && j.ok !== false) return j;
         var code = (j && j.error) || ('http_' + r.status);
+        // C11: clock skew — learn the server time once and re-sign.
+        if (!_retried && r.status === 401 && code === 'mesh_auth_stale' && window.OST_AUTH) {
+          var used = ts - sentAt;
+          var moved = function () { try { return Math.abs(Number(OST_AUTH.clockOffset()) - used) > 30000; } catch (_) { return false; } };
+          try { if (!moved() && typeof OST_AUTH.learnFrom === 'function') OST_AUTH.learnFrom(r, sentAt, Date.now()); } catch (_) {}
+          var ready = moved() || typeof OST_AUTH.learnClock !== 'function' ? Promise.resolve() : Promise.resolve(OST_AUTH.learnClock()).catch(function () {});
+          return ready.then(function () {
+            if (moved()) return signedFetch(method, pathq, bodyObj, true);
+            var e0 = new Error(explain(code)); e0.code = code; throw e0;
+          });
+        }
         // The hub only knows keys that were announced. Announce once, then the caller may retry.
         if (code === 'mesh_identity_unknown' && p._announce) { try { Promise.resolve(p._announce()).catch(function () {}); } catch (_) {} }
         var e = new Error(explain(code)); e.code = code; throw e;

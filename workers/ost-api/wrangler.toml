@@ -172,6 +172,37 @@ OST_VAULT_MIN_RESERVE = "0"
 OST_VAULT_MAX_PAYOUT_FRACTION = "0.02"
 OST_VAULT_LOW_WATER = "1000000000"
 
+# ---- Money-rails fix (2026-10) — OPTIONAL settings, all have safe defaults ----
+# SRV-8 pool-sponsored recipient account creation (peer-transfer to a wallet
+# with no OST/OSTG account). Defaults when unset: 10 per sender per UTC day and
+# a 0.5 SOL (500000000 lamports) global daily rent budget.
+# OST_SPONSOR_PER_SENDER_DAILY = "10"
+# OST_SPONSOR_DAILY_LAMPORTS = "500000000"
+#
+# (Optional) ticket payout bound while fast/venue results are client-asserted
+# (decision D3 Phase 1): a wallet ticket pays at most stake x this. Default 3.
+# OST_TICKET_MAX_MULTIPLE = "3"
+#
+# POST /positions is wallet-signed (SRV-3), but browsers still running the
+# previous site build POST it unsigned. This release ships with "log" (verify
+# and tag, never block) so position sync keeps working for them. Switch to
+# "enforce" (delete this line) once the ost-auth.js build that signs
+# /positions has been live for a few days. Payouts never read /positions.
+POSITIONS_AUTH_MODE = "log"
+#
+# STAGING ONLY — never set on production: "1" makes /wallet/payout and
+# /wallet/cosign/submit throw right after broadcasting (simulated Durable
+# Object reset) to exercise the recovery paths (plan §5 worker acceptance 2).
+# FAULT_AFTER_BROADCAST = "1"
+#
+# Secrets (wrangler secret put …), none required for the site to work:
+#   SOLANA_DEVNET_RPC, _2, _3, _4  server-only RPC keys; the pool signer uses
+#                                  ONLY these (no public fallbacks, SRV-4).
+#                                  _4 should be a non-Helius provider (OPS-4).
+#   SOLANA_BROWSER_RPC             domain-restricted browser key. When set,
+#                                  GET /rpc-config returns ONLY this (NET-2);
+#                                  when unset it keeps returning today's list.
+
 # Secrets — set via:  npx wrangler secret put STRIPE_SECRET_KEY
 #                     npx wrangler secret put STRIPE_WEBHOOK_SECRET
 #                     npx wrangler secret put TOPUP_ADMIN_TOKEN

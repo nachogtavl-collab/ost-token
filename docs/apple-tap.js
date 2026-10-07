@@ -33,7 +33,18 @@
         }
       }
     } catch (_) {}
-    return String(window.OST_CONNECTED_WALLET || '').trim();
+    return '';
+  }
+
+  // WAL-8 / C9: a real create/connect path (wallet home), then back to this card.
+  function needWallet() {
+    try {
+      if (window.OST_WALLET && typeof window.OST_WALLET.requireWallet === 'function') {
+        window.OST_WALLET.requireWallet({ reason: 'apple-tap', label: 'use tap-to-pay', resume: function () { setTimeout(function () { try { refresh(); } catch (_) {} }, 250); } });
+        return;
+      }
+    } catch (_) {}
+    setStatus('Wallet is still loading — try again in a second.', 'error');
   }
 
   function detectPlatform() {
@@ -206,7 +217,7 @@
       +   '<img id="ostAppleNfcQr" alt="OST tap-to-pay QR" width="160" height="160" style="border-radius:12px;background:#fff;padding:8px;min-width:160px;">'
       +   '<div style="display:grid;gap:6px;font-size:.78rem;color:rgba(226,232,240,0.78);word-break:break-all;">'
       +     '<span style="color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em;font-size:.68rem;">Tap / scan opens</span>'
-      +     '<a id="ostAppleNfcUrl" href="#walletBtn" style="color:#7dd3fc;text-decoration:none;"></a>'
+      +     '<a id="ostAppleNfcUrl" href="#wallet" style="color:#7dd3fc;text-decoration:none;"></a>'
       +   '</div>'
       + '</div>'
       + '<div style="display:flex;flex-wrap:wrap;gap:8px;">'
@@ -221,12 +232,14 @@
     if (shareBtn) shareBtn.addEventListener('click', shareTap);
     if (copyBtn) copyBtn.addEventListener('click', copyPayUrl);
     if (writeBtn) writeBtn.addEventListener('click', writeNfcTag);
+    var urlLink = $('ostAppleNfcUrl');
+    if (urlLink) urlLink.addEventListener('click', function (e) { if (!walletAddress()) { e.preventDefault(); needWallet(); } });
     return card;
   }
 
   async function shareTap() {
     const address = walletAddress();
-    if (!address) { setStatus('Connect a wallet first.', 'error'); return; }
+    if (!address) { needWallet(); return; }
     const url = payUrl(address, readAmount());
     if (navigator.share) {
       try {
@@ -241,7 +254,7 @@
 
   async function copyPayUrl() {
     const address = walletAddress();
-    if (!address) { setStatus('Connect a wallet first.', 'error'); return; }
+    if (!address) { needWallet(); return; }
     try { await navigator.clipboard.writeText(payUrl(address, readAmount())); setStatus('Pay link copied. Paste into Shortcuts or NFC writer.', 'success'); }
     catch (_) { setStatus('Clipboard write failed.', 'error'); }
   }
@@ -249,7 +262,7 @@
   async function writeNfcTag() {
     const platform = detectPlatform();
     const address = walletAddress();
-    if (!address) { setStatus('Connect a wallet first.', 'error'); return; }
+    if (!address) { needWallet(); return; }
     const url = payUrl(address, readAmount());
     if (!webNfcSupported()) {
       // Replace the old "not compatible with browser" with platform-specific
@@ -283,8 +296,8 @@
     var url = payUrl(address, amount);
     if (qrImg) qrImg.src = qrImageUrl(url, 320);
     if (urlEl) {
-      urlEl.href = address ? url : '#walletBtn';
-      urlEl.textContent = address ? url : 'Connect a wallet to generate a pay link';
+      urlEl.href = address ? url : '#wallet';
+      urlEl.textContent = address ? url : 'Create a free wallet or connect one to get a pay link';
     }
     if (badge) {
       if (platform.isIos) { badge.textContent = 'iPhone-ready (read NFC)'; badge.style.color = '#86efac'; }
@@ -367,8 +380,8 @@
     }
     if (payloadEl) payloadEl.textContent = tapPayload(address, amount);
     if (payBtn) {
-      payBtn.disabled = !address;
-      payBtn.textContent = stripeOn
+      payBtn.disabled = false;
+      payBtn.textContent = !address ? 'Create free wallet / Connect' : stripeOn
         ? (platform.isApple ? 'Open Apple Pay / Card Checkout (' + stripeMode + ')' : 'Open Card Checkout (' + stripeMode + ')')
         : 'Buy SOL on Onramper (external, mainnet)';
     }
@@ -376,7 +389,7 @@
     refreshNfcCard(address, amount, platform);
 
     if (!address) {
-      setStatus('Connect a wallet first. Apple Pay top-ups, the tap payload, and the QR / NFC link all bind to your real OST receive address.', 'warning');
+      setStatus('No wallet yet. Create a free one or connect yours: the tap payload and the QR / NFC link bind to your real OST receive address.', 'warning');
       return;
     }
     if (config && config.stripeEnabled) {
@@ -392,11 +405,7 @@
 
   async function openCheckout() {
     const address = walletAddress();
-    if (!address) {
-      if (window.setWalletPanel) window.setWalletPanel('access', { scroll: true });
-      setStatus('Connect a wallet first. Apple checkout needs a real OST destination address.', 'error');
-      return;
-    }
+    if (!address) { needWallet(); return; }
     const amount = readAmount();
     writeAmount(amount);
     const config = await loadTopupConfig();
@@ -420,15 +429,15 @@
   }
 
   function openReceiveRail() {
-    if (window.setWalletPanel) window.setWalletPanel('access', { scroll: true });
-    const receiveBtn = $('wdReceiveBtn');
-    if (receiveBtn) receiveBtn.click();
+    if (!walletAddress()) { needWallet(); return; }
+    if (window.OST_WALLET_HOME && typeof window.OST_WALLET_HOME.open === 'function') window.OST_WALLET_HOME.open('receive');
+    else if (window.setWalletPanel) window.setWalletPanel('access', { scroll: true });
     setStatus('Receive rail opened. Use the QR / address as the fallback tap target for Apple devices.', 'success');
   }
 
   async function copyPayload() {
     const address = walletAddress();
-    if (!address) { setStatus('Connect a wallet first so the tap payload points at a real OST address.', 'error'); return; }
+    if (!address) { needWallet(); return; }
     try {
       await navigator.clipboard.writeText(tapPayload(address, readAmount()));
       setStatus('Tap payload copied. Write it to an NFC tag (Android NFC Tools / Flipper) or hand it to a Wallet pass issuer.', 'success');
