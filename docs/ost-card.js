@@ -153,16 +153,23 @@
     if (!Number.isFinite(state.usdPerOst) || state.usdPerOst <= 0) state.usdPerOst = DEFAULT_OST_USD;
   }
 
+  // C6: the shared OST_BALANCE first (no balance RPC of our own); unknown is
+  // null and renders as "—", never as "0.00 OST".
   async function loadBalance() {
     var address = walletAddress();
-    if (!address) { state.ostBalance = 0; return; }
+    if (!address) { state.ostBalance = null; return; }
     try {
+      if (window.OST_BALANCE && typeof window.OST_BALANCE.onchainOstc === 'function') {
+        var b0 = window.OST_BALANCE.onchainOstc();
+        if (b0 != null && isFinite(b0)) { state.ostBalance = Math.max(0, Number(b0)); return; }
+      }
       if (window.OST_WALLET && typeof window.OST_WALLET.getOstBalance === 'function') {
         var bal = await window.OST_WALLET.getOstBalance(address);
-        state.ostBalance = Math.max(0, Number(bal) || 0);
+        if (bal != null && isFinite(bal)) state.ostBalance = Math.max(0, Number(bal));
       }
     } catch (_) {}
   }
+  function ostKnown() { return state.ostBalance != null && isFinite(state.ostBalance); }
 
   function setStatus(msg, tone) {
     var el = $('ostCardStatus');
@@ -246,8 +253,8 @@
     if (!profile || !address) {
       if ($('ostCardHandle')) $('ostCardHandle').textContent = 'Connect wallet';
       if ($('ostCardWalletRow')) $('ostCardWalletRow').textContent = 'Connect a wallet to mint card';
-      if ($('ostCardBalance')) $('ostCardBalance').textContent = '0.00 OST';
-      if ($('ostCardBalanceUsd')) $('ostCardBalanceUsd').textContent = '~ $0.00 USD';
+      if ($('ostCardBalance')) $('ostCardBalance').textContent = '— OST';
+      if ($('ostCardBalanceUsd')) $('ostCardBalanceUsd').textContent = '';
       var qrEl0 = $('ostCardQr'); if (qrEl0) qrEl0.src = qrUrl(PUBLIC_SITE_URL, 220);
       setStatus('Connect a wallet to mint your OST Card.', 'warning');
       return;
@@ -262,8 +269,9 @@
     if ($('ostCardWalletRow')) $('ostCardWalletRow').textContent = address;
     var ost = Number(state.ostBalance) || 0;
     var usd = ost * (Number(state.usdPerOst) || DEFAULT_OST_USD);
-    if ($('ostCardBalance')) $('ostCardBalance').textContent = ost.toFixed(2) + ' OST';
-    if ($('ostCardBalanceUsd')) {
+    if ($('ostCardBalance')) $('ostCardBalance').textContent = ostKnown() ? ost.toFixed(2) + ' OST' : '— OST';
+    if ($('ostCardBalanceUsd') && !ostKnown()) $('ostCardBalanceUsd').textContent = '';
+    else if ($('ostCardBalanceUsd')) {
       // Show the card's value in the user's chosen currency — same OST value the
       // wallet, pulse and convert rail use — not a hardcoded USD figure.
       var fiat;
@@ -639,7 +647,7 @@
         +   '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'
         +     '<div style="background:rgba(2,6,23,0.45);border:1px solid rgba(148,163,184,0.18);border-radius:14px;padding:12px;">'
         +       '<div style="font-size:.66rem;text-transform:uppercase;letter-spacing:.12em;color:rgba(226,232,240,0.6);">Balance</div>'
-        +       '<div style="margin-top:4px;font-size:1.2rem;font-weight:800;">' + ost.toFixed(2) + ' OST</div>'
+        +       '<div style="margin-top:4px;font-size:1.2rem;font-weight:800;">' + (ostKnown() ? ost.toFixed(2) : '—') + ' OST</div>'
         +       '<div style="font-size:.78rem;color:#bbf7d0;">~ $' + usd.toFixed(2) + '</div>'
         +     '</div>'
         +     '<div style="background:rgba(2,6,23,0.45);border:1px solid rgba(148,163,184,0.18);border-radius:14px;padding:12px;">'
@@ -735,7 +743,7 @@
         +       '<img alt="OST Card QR" src="' + qrUrl(landing, 260) + '" style="width:128px;height:128px;border-radius:16px;background:#fff;padding:8px;" />'
         +       '<div style="flex:1;">'
         +         '<div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.1em;color:rgba(226,232,240,0.6);">Balance</div>'
-        +         '<div style="font-size:1.6rem;font-weight:800;">' + ost.toFixed(2) + ' OST</div>'
+        +         '<div style="font-size:1.6rem;font-weight:800;">' + (ostKnown() ? ost.toFixed(2) : '—') + ' OST</div>'
         +         '<div style="font-size:.95rem;color:#bbf7d0;">~ $' + usd.toFixed(2) + ' USD</div>'
         +         '<div style="margin-top:8px;font-size:.78rem;color:rgba(226,232,240,0.7);">Pay request: $' + Number(amount).toFixed(2) + '</div>'
         +       '</div>'

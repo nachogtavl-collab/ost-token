@@ -99,7 +99,10 @@
     }
     return Promise.resolve(syncVaultFromPlatformLedger());
   }
+  // D1: legacy credits are retired — nothing grants new ones.
   function award(credits, source) {
+    void credits; void source;
+    if (credits !== '__never__') return;
     var s = load();
     s.credits = Number(s.credits || 0) + Number(credits || 0);
     s.lifetime = Number(s.lifetime || 0) + Number(credits || 0);
@@ -141,11 +144,11 @@
   var TEMPLATE =
     '<div class="container">' +
     '<div class="fh-section" id="ostFaucetHub">' +
-      '<h3>🎰 OST Rewards Vault</h3>' +
-      '<p class="fh-sub">Earn bonus OST through provably-fair games and the Code Academy. Cash out to your real wallet whenever you hit the minimum.</p>' +
+      '<h3>🎁 Free devnet OST &amp; rewards</h3>' +
+      '<p class="fh-sub">Real devnet OST comes from the free claim (100 OST head start, then daily). Legacy bonus credits were retired on 2026-09-25: they have no cash value and cannot be cashed out.</p>' +
       '<div class="fh-bank">' +
-        '<span>Your earned bonus credits · paid from on-chain rewards vault</span>' +
-        '<span><strong id="fhCredits">0.00</strong> OST <button class="fh-btn fh-btn-alt" id="fhCashout" style="margin-left:14px;width:auto;padding:8px 14px;">Cash out from vault</button> <a class="fh-vault-link" id="fhVaultLink" target="_blank" rel="noopener">🔗 view rewards vault</a></span>' +
+        '<span>Retired legacy credits (not cashable)</span>' +
+        '<span><strong id="fhCredits">0.00</strong> credits <button class="fh-btn fh-btn-alt" id="fhCashout" disabled title="Retired legacy credits are not cashable" style="margin-left:14px;width:auto;padding:8px 14px;">Not cashable</button></span>' +
       '</div>' +
       '<div class="fh-grid">' +
         // Manual daily reward pointer
@@ -157,10 +160,10 @@
         '</div>' +
         // Code Academy (educational, not gambling — kept)
         '<div class="fh-card">' +
-          '<div class="fh-card-title">💻 Learn to Code · earn OST</div>' +
+          '<div class="fh-card-title">💻 Learn to Code · earn points</div>' +
           '<div class="fh-emoji">⌨️🧑‍💻</div>' +
           '<button class="fh-btn" id="fhTaskBtn">Open Code Academy</button>' +
-          '<div class="fh-card-meta">Kid-friendly lessons start at zero, explain every line, and grow from tiny wins into real projects.</div>' +
+          '<div class="fh-card-meta">Kid-friendly lessons start at zero, explain every line, and grow from tiny wins into real projects. Points are for fun — no cash value.</div>' +
         '</div>' +
         // Streak (display only)
         '<div class="fh-card">' +
@@ -172,7 +175,7 @@
         '<div class="fh-card">' +
           '<div class="fh-card-title">🎲 Provably-Fair Arcade</div>' +
           '<div class="fh-emoji">💣🚀🎡💎</div>' +
-          '<div class="fh-card-meta">18 HMAC-verifiable instant originals inspired by Stake/Rainbet: Mines, Crash, Plinko, Double, Slide, Pump, Dragon Tower, Case Battle, Scarab Spin and more — all paid from this same vault.</div>' +
+          '<div class="fh-card-meta">18 HMAC-verifiable instant originals: Mines, Crash, Plinko, Double, Slide, Pump, Dragon Tower, Case Battle, Scarab Spin and more — played with OSTG on devnet (no cash value).</div>' +
           '<button class="fh-btn" id="fhGoGames">Open games ↓</button>' +
         '</div>' +
         // Family grow vault pointer
@@ -207,6 +210,10 @@
     on('fhTaskBtn', 'click', openCodeAcademy);
     on('fhCashout', 'click', onCashout);
     on('fhDailyClaim', 'click', function () {
+      // WAL-8 / C9: no wallet yet -> the one get-started path.
+      var W = window.OST_WALLET;
+      var hasW = !!(W && W.session && W.session.publicKey);
+      if (!hasW && W && typeof W.requireWallet === 'function') { try { W.requireWallet({ reason: 'start' }); } catch (e) {} return; }
       var f = document.getElementById('faucetSection');
       if (f) f.scrollIntoView({ behavior: 'smooth', block: 'center' });
       var btn = document.getElementById('claimFaucetBtn');
@@ -243,8 +250,8 @@
     }
     var cash = document.getElementById('fhCashout');
     if (cash) {
-      cash.disabled = !(Number(s.credits || 0) >= MIN_PAYOUT);
-      cash.title = cash.disabled ? 'Earn at least ' + MIN_PAYOUT + ' OST in credits to cash out' : 'Send earned OST to your wallet';
+      cash.disabled = true;     // D1: retired legacy credits are not cashable
+      cash.title = 'Retired legacy credits are not cashable';
     }
   }
 
@@ -586,7 +593,7 @@
     jumper.running = false;
     cancelAnimationFrame(jumper.raf);
     var earned = Math.round(jumper.sessionEarned * 100) / 100;
-    if (earned > 0) {
+    if (earned > 0 && earned === '__never__') {   // D1: no new credits
       var s = load();
       s.credits = Number(s.credits || 0) + earned;
       s.lifetime = Number(s.lifetime || 0) + earned;
@@ -699,7 +706,7 @@
         // and farm this in a loop. The treasury Durable Object enforces the
         // daily cap server-side, where the client cannot reach it.
         var api = (window.OST_API_BASE || 'https://ost-api.nachogtavl.workers.dev');
-        var uid = (window.OST_WALLET && window.OST_WALLET.address) || 'anon';
+        var uid = (window.OST_WALLET && typeof window.OST_WALLET.pubkey === 'function' && window.OST_WALLET.pubkey()) || getActiveWalletAddress() || 'anon';
         var paid = earnedSoFar;
         fetch(api + '/ads/view', {
           method: 'POST',
@@ -939,102 +946,12 @@
   }); }
 
   // ============================================================
-  // 6) CASH OUT — pool transfers OST → user wallet (real on-chain)
+  // 6) CASH OUT — retired (decision D1). Legacy credits have no cash value;
+  //    the worker refuses them (403 credits_retired), so nothing is sent.
   // ============================================================
-  async function onCashout() {
-    var s = load();
-    if (Number(s.cashoutLockUntil || 0) > Date.now()) {
-      pop('Cash-out already syncing. Wait a moment.');
-      return;
-    }
-    var amount = Number(s.credits || 0);
-    // Legacy credits are being RETIRED (founder-approved hard reset; OSTG is the
-    // one game currency). 7-day notice from 2026-09-18; the server enforces the date.
-    var CREDITS_RETIRE_AT = Date.parse('2026-09-25T00:00:00Z');
-    if (Date.now() >= CREDITS_RETIRE_AT) { pop('Legacy credits were retired on Sep 25, 2026 — play with OSTG now.'); return; }
-    pop('Notice: legacy credits stop being cashable on Sep 25, 2026. Cash out before then.');
-    if (amount < MIN_PAYOUT) { pop('Earn at least ' + MIN_PAYOUT + ' OST first'); return; }
-    var w = window.OST_WALLET;
-    if (!w || !w.session || !w.session.publicKey) {
-      pop('Connect a wallet first');
-      try {
-        var btnConnect = document.getElementById('walletBtn') || document.getElementById('connectWalletBtn');
-        if (btnConnect) btnConnect.click();
-      } catch(e) {}
-      return;
-    }
-    if (!window.OST_SWAP_POOL) {
-      pop('Rewards vault not loaded — refresh the page');
-      return;
-    }
-    if (!window.solanaWeb3) { pop('Solana SDK still loading — try again'); return; }
-
-    var btn = document.getElementById('fhCashout');
-    btn.disabled = true; var prev = btn.textContent; btn.textContent = 'Sending…';
-    try {
-      s.cashoutLockUntil = Date.now() + 2 * 60 * 1000;
-      save(s);
-      // Use the pool-paid payout API: pool covers the SOL fee and (if needed)
-      // the user's OST ATA rent. The user's wallet does not need any devnet SOL.
-      if (!window.OST_RESCUE || !window.OST_RESCUE.payoutOst) {
-        throw new Error('Vault helpers still loading — try again in a second.');
-      }
-      btn.textContent = 'Sending OST…';
-      // Optimistic UX: show the result *before* the wallet round-trip completes.
-      // If the on-chain call fails, the catch below dispatches a compensating hint.
-      if (window.OST_OPTIMISTIC) {
-        try {
-          window.OST_OPTIMISTIC.toast('+' + amount.toFixed(2) + ' OST sending…', 'pending');
-          window.OST_OPTIMISTIC.balanceHint({ deltaOst: +amount, source: 'faucet-hub-cashout', pending: true });
-        } catch (e) {}
-      }
-      var memo = JSON.stringify({ k:'faucet-hub-cashout', amt: amount, lifetime: Number(s.lifetime||0), t: Date.now() });
-      var result = await window.OST_RESCUE.payoutOst(w.session.publicKey, amount, memo);
-      var toSend = result.ost;
-      var sig = result.sig;
-
-      // Persist new state — only after the on-chain confirm so failures keep credits
-      var s2 = load();
-      var remaining = Math.max(0, Number(s2.credits || 0) - toSend);
-      s2.credits = toSend + 0.000001 >= amount ? 0 : remaining;
-      s2.lastCashout = Date.now();
-      delete s2.cashoutLockUntil;
-      save(s2);
-      broadcastVaultBalanceChanged();
-      pop('+' + toSend.toFixed(2) + ' OST sent!');
-      vaultDrop();
-      btn.textContent = '✓ Sent · ' + String(sig).slice(0, 8) + '…';
-      if (typeof window.recordOstPlatformEvent === 'function') {
-        window.recordOstPlatformEvent({
-          kind: 'faucet-hub-cashout',
-          source: 'faucet-hub',
-          amount: toSend,
-          sig: sig,
-          label: 'Rewards vault cash-out',
-          token: 'OST',
-          gameCredits: Number(s2.credits || 0)
-        });
-      }
-      try { window.dispatchEvent(new CustomEvent('ost:wallet-changed')); } catch(e) {}
-      setTimeout(function(){ btn.textContent = prev; refreshUi(); }, 4500);
-    } catch (err) {
-      console.warn('[fh] cashout failed', err);
-      var s3 = load();
-      delete s3.cashoutLockUntil;
-      save(s3);
-      // Roll back the optimistic balance hint so any UI listener can reconcile.
-      if (window.OST_OPTIMISTIC) {
-        try {
-          window.OST_OPTIMISTIC.balanceHint({ deltaOst: -amount, source: 'faucet-hub-cashout', rollback: true });
-        } catch (e) {}
-      }
-      var msg = (err && err.message) ? err.message : 'Cash-out failed';
-      // Show the real error so the user knows what to fix
-      pop(msg.length > 60 ? msg.slice(0, 60) + '…' : msg);
-      try { alert('Cash-out failed:\n\n' + msg); } catch(e) {}
-      btn.disabled = false; btn.textContent = prev;
-      refreshUi();
-    }
+  function onCashout() {
+    pop('Retired legacy credits have no cash value and cannot be cashed out.');
+    return Promise.resolve({ ok: false, code: 'credits_retired' });
   }
 
   window.addEventListener('ost-faucet-hub-award', function (event) {

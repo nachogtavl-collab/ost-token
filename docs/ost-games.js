@@ -35,6 +35,13 @@
   function saveGames(s) { try { localStorage.setItem(GAMES_STATE_KEY, JSON.stringify(s)); } catch (_) {} }
 
   function fmt(n) { return Number(n || 0).toFixed(2); }
+  // C2 / UX-1: money results go through OST_NOTIFY (a blocking alert() was
+  // inconsistent and easy to miss on phones).
+  function gnotify(kind, title, body, extra) {
+    try { if (typeof window.OST_NOTIFY === 'function') { window.OST_NOTIFY(Object.assign({ kind: kind, title: title, body: body || '' }, extra || {})); return; } } catch (_) {}
+    try { if (typeof window.toast === 'function') { window.toast(kind === 'error' ? '⚠️' : 'ℹ️', title + (body ? ' ' + body : '')); return; } } catch (_) {}
+    console.warn('[ostg]', title, body || '');
+  }
   function clamp(n, min, max) { return Math.min(max, Math.max(min, Number(n) || 0)); }
   function fmtMult(n) { return 'x' + Number(n || 0).toFixed(Number(n || 0) >= 100 ? 0 : 2); }
   function shortMult(n) { return Number(n || 0).toFixed(Number(n || 0) >= 100 ? 0 : 2) + 'x'; }
@@ -71,6 +78,18 @@
   // Plinko settle many rounds a second — this used to stack an unbounded pile
   // of toasts and made the app unusable. Dedup identical messages, rate-limit,
   // and never stack more than 3.
+  // WAL-8 / C9: every games wallet gate goes to the single get-started path
+  // (wallet home) and resumes `then` once a wallet exists.
+  function requireGamesWallet(label, then) {
+    try {
+      if (window.OST_WALLET && typeof window.OST_WALLET.requireWallet === 'function') {
+        window.OST_WALLET.requireWallet({ reason: 'games', label: label || 'play', resume: function () { if (typeof then === 'function') setTimeout(then, 300); } });
+        return;
+      }
+    } catch (_) {}
+    toast('Wallet is still loading — try again in a second.', 'error');
+  }
+
   var _tTimes = [];
   var _tLast = Object.create(null);
   function toast(message, kind) {
@@ -590,7 +609,7 @@
         if (isOfflineVaultActive()) {
           var vault = offlineVaultApi();
           if (vault && vault.sync) {
-            try { await vault.sync(); } catch (e) { alert('Offline sync failed: ' + (e && e.message ? e.message : e)); }
+            try { await vault.sync(); } catch (e) { gnotify('error', 'Offline sync failed.', String(e && e.message ? e.message : e)); }
           }
           return;
         }
@@ -598,11 +617,11 @@
         if (bal < 1) return;
         var w = window.OST_WALLET;
         if (!w || !w.session || !w.session.publicKey) {
-          var b = document.getElementById('walletBtn') || document.getElementById('connectWalletBtn'); if (b) b.click();
+          requireGamesWallet('cash out your play balance');
           return;
         }
         if (!window.OST_PLAY || !window.OST_PLAY.cashout) {
-          alert('Play service still loading — try again in a second.');
+          gnotify('warn', 'Play service still loading — try again in a second.');
           return;
         }
         // Withdraw the OSTG-backed play balance to the wallet as OSTG (gas-free,
@@ -612,19 +631,20 @@
         var raw = prompt('How much of your ' + fmt(bal) + ' OSTG play balance to cash out to your wallet?', bal.toFixed(2));
         if (raw === null) return;
         amt = parseFloat(raw);
-        if (!Number.isFinite(amt) || amt <= 0) { alert('Enter a positive amount.'); return; }
-        if (amt > bal + 1e-9) { alert('You only have ' + fmt(bal) + ' OSTG in the play balance.'); return; }
+        if (!Number.isFinite(amt) || amt <= 0) { gnotify('warn', 'Enter a positive amount.'); return; }
+        if (amt > bal + 1e-9) { gnotify('warn', 'You only have ' + fmt(bal) + ' OSTG in the play balance.', 'Nothing was sent.'); return; }
         var prev = cashBtn.textContent; cashBtn.disabled = true; cashBtn.textContent = 'Sending…';
-        if (window.OST_OPTIMISTIC) { try { window.OST_OPTIMISTIC.toast('Cashing out ' + amt.toFixed(2) + ' OSTG…', 'pending'); } catch (e) {} }
+        var cashId = 'ostg-cashout-' + Date.now();
+        gnotify('pending', 'Cashing out ' + amt.toFixed(2) + ' OSTG…', '', { id: cashId });
         try {
           var r = await window.OST_PLAY.cashout(amt);
           cashBtn.textContent = '✓ Sent ' + Number(r.sent || amt).toFixed(2) + ' OSTG';
+          gnotify('ok', 'Cashed out ' + Number(r.sent || amt).toFixed(2) + ' OSTG to your wallet', '', { id: cashId, sig: (r && (r.sig || r.signature)) || '' });
           fireBalanceChange();
           try { window.dispatchEvent(new CustomEvent('ost:wallet-changed')); } catch (_) {}
         } catch (e) {
           console.warn('[ostg] cashout failed', e);
-          if (window.OST_OPTIMISTIC) { try { window.OST_OPTIMISTIC.toast('Cash-out failed', 'error'); } catch (er) {} }
-          alert('Cash-out failed: ' + playErrMsg(e));
+          gnotify('error', 'Cash-out failed.', playErrMsg(e), { id: cashId });
           cashBtn.textContent = prev;
         } finally {
           setTimeout(function () { cashBtn.textContent = prev; sync(); }, 3500);
@@ -675,21 +695,29 @@
       var connected = !!(w && w.session && w.session.publicKey);
       if (!connected) {
         dot.dataset.state = 'off';
-        text.innerHTML = '<a href="#walletBtn" id="ostgConnectLink" style="color:#bfdbfe;text-decoration:underline;">Connect wallet</a> to deposit real OST';
-        if (depBtn) { depBtn.disabled = true; depBtn.title = 'Connect a wallet first'; }
+        text.innerHTML = '<a href="#wallet" id="ostgConnectLink" style="color:#bfdbfe;text-decoration:underline;">Create a free wallet or connect one</a> to deposit devnet OST';
+        if (depBtn) { depBtn.disabled = false; depBtn.title = 'Create or connect a wallet first'; }
         var link = document.getElementById('ostgConnectLink');
         if (link) link.addEventListener('click', function (e) {
           e.preventDefault();
-          var b = document.getElementById('walletBtn') || document.getElementById('connectWalletBtn');
-          if (b) b.click();
+          requireGamesWallet('deposit OST to play', refresh);
         });
         return;
       }
       var addr = w.session.publicKey.toBase58 ? w.session.publicKey.toBase58() : String(w.session.publicKey);
       dot.dataset.state = 'on';
       try {
-        var bal = await w.getOstBalance(w.session.publicKey);
+        // C6 / NET-3: read the shared OST_BALANCE (no balance RPC of our own);
+        // unknown renders as "balance unavailable", never "0.00 OST".
+        var bal;
+        if (window.OST_BALANCE && typeof window.OST_BALANCE.onchainOstc === 'function') bal = window.OST_BALANCE.onchainOstc();
+        else bal = await w.getOstBalance(w.session.publicKey);
         lastBal = bal; lastAddr = addr;
+        if (bal == null || !isFinite(bal)) {
+          text.innerHTML = 'Wallet <code>' + shortAddr(addr) + '</code> · balance unavailable';
+          if (depBtn) { depBtn.disabled = false; depBtn.title = 'Deposit OST into play balance'; }
+          return;
+        }
         text.innerHTML = 'Wallet <code>' + shortAddr(addr) + '</code> · <strong>' + fmt(bal) + ' OST</strong>';
         if (depBtn) {
           depBtn.disabled = !(bal > 0);
@@ -700,8 +728,12 @@
       }
     }
     refresh();
-    setInterval(refresh, 6000);
+    // NET-3: one balance read a minute while visible (was every 6 s per tab);
+    // money events refresh it straight away.
+    setInterval(function () { if (!document.hidden) refresh(); }, 60000);
     window.addEventListener('ost:wallet-changed', refresh);
+    window.addEventListener('ost:wallet-tx', function () { setTimeout(refresh, 2500); });
+    window.addEventListener('ost:balance', function () { refresh(); });
     window.addEventListener('ost:offline-vault-changed', refresh);
   }
 
@@ -717,19 +749,20 @@
       }
       var w = window.OST_WALLET;
       if (!w || !w.session || !w.session.publicKey) {
-        var b = document.getElementById('walletBtn') || document.getElementById('connectWalletBtn'); if (b) b.click();
+        requireGamesWallet('deposit OST to play', function () { try { depBtn.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (_) {} });
         return;
       }
       if (!window.OST_PLAY || !window.OST_PLAY.deposit) {
-        alert('Play service still loading — try again in a second.');
+        gnotify('warn', 'Play service still loading — try again in a second.');
         return;
       }
       var raw = prompt('How much to deposit into your play balance?\n(OST is auto-converted to OSTG 1:1, gas-free. Cash out anytime.)', '5');
       if (raw === null) return;
       var amt = parseFloat(raw);
-      if (!Number.isFinite(amt) || amt <= 0) { alert('Enter a positive amount'); return; }
+      if (!Number.isFinite(amt) || amt <= 0) { gnotify('warn', 'Enter a positive amount.'); return; }
       var prev = depBtn.textContent; depBtn.disabled = true; depBtn.textContent = 'Sending…';
-      if (window.OST_OPTIMISTIC) { try { window.OST_OPTIMISTIC.toast('Depositing ' + amt.toFixed(2) + ' OSTG…', 'pending'); } catch (e) {} }
+      var depId = 'ostg-deposit-' + Date.now();
+      gnotify('pending', 'Depositing ' + amt.toFixed(2) + ' OSTG…', '', { id: depId });
       try {
         // The play balance is backed by OSTG. Ensure the wallet has enough OSTG,
         // bridging OST -> OSTG (1:1, gas-free) for any shortfall first.
@@ -747,12 +780,12 @@
         depBtn.textContent = 'Depositing…';
         var r = await window.OST_PLAY.deposit(amt);               // OSTG -> pool -> play balance
         depBtn.textContent = '✓ +' + Number((r && r.credited != null) ? r.credited : amt).toFixed(2) + ' OSTG';
+        gnotify('ok', 'Deposited ' + Number((r && r.credited != null) ? r.credited : amt).toFixed(2) + ' OSTG to your play balance', '', { id: depId, sig: (r && (r.sig || r.signature)) || '' });
         fireBalanceChange();
         try { window.dispatchEvent(new CustomEvent('ost:wallet-changed')); } catch (_) {}
       } catch (e) {
         console.warn('[ostg] deposit failed', e);
-        if (window.OST_OPTIMISTIC) { try { window.OST_OPTIMISTIC.toast('Deposit failed', 'error'); } catch (er) {} }
-        alert('Deposit failed: ' + playErrMsg(e));
+        gnotify('error', 'Deposit failed.', playErrMsg(e), { id: depId });
         depBtn.textContent = prev;
       } finally {
         setTimeout(function () { depBtn.disabled = false; depBtn.textContent = prev; }, 3500);

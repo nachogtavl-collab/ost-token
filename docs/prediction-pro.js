@@ -823,13 +823,29 @@
     } catch (_) {}
     return BTC_REFRESH_MS;   // no round known yet: fetch soon to get one
   }
+  // NET-3: with no market page on screen (Home, Wallet, Games…) the round is
+  // re-read at most once a minute — its state only changes every 5 minutes and
+  // the live price streams from Pyth in the browser.
+  var lastIdleBtcPollAt = 0;
+  function btcSurfaceOnScreen() {
+    try {
+      var cur = window.OST_PREDICT_MOBILE && typeof window.OST_PREDICT_MOBILE.current === 'function' ? window.OST_PREDICT_MOBILE.current() : null;
+      if (cur) return true;
+      if (/^#?(markets|predict|predictions|trade)\b/i.test(String(location.hash || '').replace(/^#\/?/, '#'))) return true;
+      var modal = document.getElementById('ost-market-modal');
+      if (modal && modal.getBoundingClientRect().height > 0) return true;
+    } catch (_) {}
+    return false;
+  }
   function scheduleBtcPoll() {
     if (btcPollTimer) clearTimeout(btcPollTimer);
     btcPollTimer = setTimeout(function () {
       var hidden = (typeof document !== 'undefined' && document.hidden);        // hidden tab: no polling
       var gated = !!(window.OST_IDLE_GUARD && OST_IDLE_GUARD.isGated());       // user away >5min: no drain
       var pushFresh = (Date.now() - lastPushedRoundAt) < 20000;   // socket delivering: no request needed
-      if (!hidden && !gated && !pushFresh) pollBtcMarket();
+      var onScreen = btcSurfaceOnScreen();
+      var idleOk = onScreen || Date.now() - lastIdleBtcPollAt >= 60000;
+      if (!hidden && !gated && !pushFresh && idleOk) { if (!onScreen) lastIdleBtcPollAt = Date.now(); pollBtcMarket(); }
       scheduleBtcPoll();
     }, nextBtcPollDelay());
   }
@@ -1137,6 +1153,18 @@
 
   var btcSettlementInFlight = false;
 
+  // A ticket whose payout belongs to a server ledger or the on-chain program.
+  // fundedBy 'ostg-native' = the server PredictionLedger (position ids p_…);
+  // 'ostg' = the server PlayLedger; 'onchain' = the betting program vault.
+  function isServerSettledOrder(o) {
+    if (!o) return false;
+    var f = String(o.fundedBy || '');
+    if (f === 'ostg-native' || f === 'ostg' || f === 'onchain' || o.onChain) return true;
+    if (o.rail === 'play' || o.rail === 'onchain' || o.serverSettled) return true;
+    if (o.serverPositionId || /^p_\d+_/.test(String(o.signature || o.sig || o.id || ''))) return true;
+    return false;
+  }
+
   function finalizeClosedBtcRounds() {
     var rounds = readRounds();
     var orders = readOrders();
@@ -1183,6 +1211,11 @@
     orders.forEach(function (o) {
       if (o.cashedOut || o.resolved) return;
       if (!o.marketId || o.marketId.indexOf('ost-btc5m-') !== 0) return;
+      // PRD-1: server-ledger (play rail) and on-chain tickets are settled by
+      // the OST server / the program, never by this browser's own feed. Marking
+      // them won here is what fed the client auto-claim, which paid the same
+      // win a second time from the OST pool. Leave them to their own rail.
+      if (isServerSettledOrder(o)) return;
       var openAt = String(o.marketId.replace('ost-btc5m-', ''));
       var r = rounds[openAt];
       if (!r || !r.settled) return;

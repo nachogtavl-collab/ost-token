@@ -891,31 +891,25 @@
   }
 
   /* ---------- PAYMENTS (tips + chat sends) ---------- */
+  // OST and OSTG go through the pool-paid peer-transfer rail (OST pays the fee
+  // AND creates the recipient's account — no SOL needed, TRF-1/TRF-2); SOL is a
+  // native transfer under Solana's rent rule (RNT-1). One shared rail:
+  // wallet-extras OST_SEND. Resolves to the signature (a String that also
+  // carries { ok, sig, pending }).
   async function payTo({ wallet, amount, ccy, memo }) {
-    const w = window.OST_WALLET; const W3 = window.solanaWeb3;
-    if (!w || !w.session || !w.session.publicKey) throw new Error('Connect a wallet first (Wallet → Connect).');
-    if (!W3) throw new Error('Wallet core still loading — try again.');
-    const to = w.toPublicKey(wallet), from = w.session.publicKey;
-    if (to.toBase58() === from.toBase58()) throw new Error('That is your own wallet.');
-    const tx = new W3.Transaction();
-    if (memo) tx.add(w.memoIx(memo, from));
-    if (ccy === 'SOL') {
-      const lam = Math.round(amount * W3.LAMPORTS_PER_SOL);
-      const bal = await w.getConnection().getBalance(from);
-      if (bal < lam + 10000) throw new Error('Not enough devnet SOL (you have ' + (bal / 1e9).toFixed(4) + ').');
-      tx.add(W3.SystemProgram.transfer({ fromPubkey: from, toPubkey: to, lamports: lam }));
-    } else {
-      const c = w.constants; const mint = new W3.PublicKey(ccy === 'OSTG' ? MINT.OSTG : window.OST_CONFIG.mint);
-      const src = w.associatedAddress(mint, from, false, c.TOKEN_2022_PROGRAM_ID, c.ASSOCIATED_TOKEN_PROGRAM_ID);
-      const dst = w.associatedAddress(mint, to, false, c.TOKEN_2022_PROGRAM_ID, c.ASSOCIATED_TOKEN_PROGRAM_ID);
-      try { await w.ensureFee(from); } catch (_) { throw new Error('You need a little devnet SOL for the network fee.'); }
-      const info = await w.getConnection().getAccountInfo(dst);
-      if (!info) tx.add(w.associatedAccountIx(from, dst, to, mint, c.TOKEN_2022_PROGRAM_ID, c.ASSOCIATED_TOKEN_PROGRAM_ID));
-      tx.add(w.transferChecked(src, mint, dst, from, w.toBaseUnits(amount, 9), 9, c.TOKEN_2022_PROGRAM_ID));
-    }
-    const sig = await w.sign(tx);
-    try { window.dispatchEvent(new CustomEvent('ost:wallet-changed')); } catch (_) {}
+    const w = window.OST_WALLET;
+    if (!w || !w.session || !w.session.publicKey) throw Object.assign(new Error('Connect a wallet first (Wallet → Connect).'), { code: 'no_wallet' });
+    if (!window.OST_SEND || typeof window.OST_SEND.send !== 'function') throw Object.assign(new Error('The send rail is still loading — try again in a moment.'), { code: 'bad_response' });
+    const r = await window.OST_SEND.send({ asset: ccy, to: wallet, amount: String(amount), memo, source: 'mesh-pay' });
+    const sig = new String(r.sig);
+    sig.ok = true; sig.sig = r.sig; sig.pending = !!r.pending;
     return sig;
+  }
+  // The error's own stage (a failed quote = nothing sent) and asset win; the
+  // chosen currency is only the fallback, so a short SOL tip says SOL.
+  function payErrText(e, ccy) {
+    try { if (window.OST_MONEY_ERRORS) return window.OST_MONEY_ERRORS.text(e, { stage: 'submit', asset: (e && e.asset) || ccy || 'OST' }); } catch (_) {}
+    return 'Payment didn’t go through — try again in a moment.';
   }
   async function walletOf(addr) {
     let u = SS.users[addr];
@@ -929,7 +923,7 @@
     let ccy = 'OST', amount = 5;
     const draw = () => {
       sheet(`<h3>${postId ? 'Tip' : 'Send'} ${esc(dname(addr))}</h3>
-        <div class="omx-note" style="margin-top:0">Real devnet transfer from your wallet to <b>${esc(wallet.slice(0, 4) + '…' + wallet.slice(-4))}</b> (signature-verified). Devnet tokens have no cash value.</div>
+        <div class="omx-note" style="margin-top:0">Real devnet transfer from your wallet to <b>${esc(wallet.slice(0, 4) + '…' + wallet.slice(-4))}</b> (signature-verified). ${ccy === 'SOL' ? 'OST pays the network fee; a new address must receive at least 0.00089 SOL.' : 'OST pays the fee and creates their account — no SOL needed.'} Devnet tokens have no cash value.</div>
         <div class="osl-seg">${['OST', 'OSTG', 'SOL'].map((k) => `<button data-ccy="${k}" class="${k === ccy ? 'on' : ''}">${k}</button>`).join('')}</div>
         <div class="osl-chips">${chips[ccy].map((v) => `<button data-amt="${v}" class="${v === amount ? 'on' : ''}">${v}</button>`).join('')}</div>
         <input class="omx-input" id="oslPayAmt" type="number" min="0" step="any" value="${amount}">
@@ -945,7 +939,10 @@
         const go = $('oslPayGo'), st = $('oslPaySt'); go.disabled = true; go.textContent = 'Approve in your wallet…';
         try {
           const sig = await payTo({ wallet, amount, ccy, memo: postId ? 'ost-tip:' + postId : 'ost-mesh-pay' });
-          st.textContent = 'Sent ✓ ' + sig.slice(0, 10) + '… confirming';
+          const doneMsg = sig.pending
+            ? 'Still confirming ' + amount + ' ' + ccy + ' to ' + dname(addr) + ' (tx ' + sig.slice(0, 8) + '…). Check your balance before retrying.'
+            : 'Sent ' + amount + ' ' + ccy + ' to ' + dname(addr) + ' ✓ (tx ' + sig.slice(0, 8) + '…)';
+          st.textContent = doneMsg;
           if (postId) {
             let r = null, err = null;
             // Worth another try: the transaction is not visible to the RPC yet (tx_not_found, rpc_*), the first check of this
@@ -953,14 +950,17 @@
             const again = (e) => !!e && (/^(tx_not_found|tip_in_flight|hub_busy|rate_limited)$/.test(e.code || '') || /^rpc/.test(e.code || '') || !!e.transient || /tx not found|rpc/i.test(e.message || ''));
             for (let i = 0; i < 6 && !r; i++) { try { r = await signed('POST', '/mesh/v1/social/tip', { from: me(), postId, sig, ccy }); } catch (e) { err = e; if (!again(e) || i === 5) break; await new Promise((res) => setTimeout(res, 2500)); } }
             if (r) { const p = findPost(postId); if (p) updatePost(Object.assign({}, p, { tips: r.tips, tipCount: r.tipCount })); toast('Tip verified on-chain ✓'); }
-            else toast('Sent, but the tip could not be verified yet (' + (err && err.message) + ').', 'err');
+            else toast('Sent, but the tip could not be verified yet — it will show once the network catches up.', 'err');
           }
           if (chat || core.contact(addr)) {
             const note = ($('oslPayNote') || {}).value || '';
             core.sendInner(addr, { k: 'pay', ccy, amount, sig, note }, { kind: 'pay', ccy, amount, sig, note }).catch(() => {});
           }
           closeSheet();
-        } catch (e) { go.disabled = false; go.textContent = (postId ? 'Tip ' : 'Send ') + amount + ' ' + ccy; st.textContent = e.message || 'Payment failed'; toast(e.message || 'Payment failed', 'err'); }
+          // C2: a user-initiated result always shows — the sheet is gone, so
+          // say it where the person is looking (tips also get "verified ✓").
+          if (!postId) toast(doneMsg);
+        } catch (e) { go.disabled = false; go.textContent = (postId ? 'Tip ' : 'Send ') + amount + ' ' + ccy; const m = payErrText(e, ccy); st.textContent = m; toast(m, 'err'); }
       };
     };
     draw();
@@ -1252,10 +1252,18 @@
     t.querySelector('button').onclick = () => { t.remove(); fn(); }; host.appendChild(t);
     setTimeout(() => { t.classList.add('out'); setTimeout(() => t.remove(), 300); }, 7000);
   }
-  window.addEventListener('ost:prediction-order-recorded', () => {
+  // Only for a bet that really exists: an optimistic wallet stake is still
+  // confirming (and may yet fail), so it is offered on ...-confirmed instead.
+  function offerShare() {
     if (Date.now() - lastOffer < 10 * 60 * 1000) return; lastOffer = Date.now();
     setTimeout(() => actionToast('Bet placed — share it on OST Mesh?', 'Share', () => { const opts = attachOptions().filter((x) => x.kind === 'bet'); compose({ embed: opts[0] || null }); }), 1200);
+  }
+  window.addEventListener('ost:prediction-order-recorded', (ev) => {
+    const d = (ev && ev.detail) || {};
+    if (d.pending || d.optimistic || /pending|confirming|funding/i.test(String(d.fundingState || ''))) return;
+    offerShare();
   });
+  window.addEventListener('ost:prediction-order-confirmed', () => offerShare());
   // Desktop nav link (#navLinks is static markup: added once the document is parsed, no polling)
   onDom(() => {
     const nav = $('navLinks');
@@ -1294,7 +1302,7 @@
   core.register('search', { parent: 'feed', render: renderSearch });
   core.register('edit', { parent: 'me', render: renderEdit });
   X.badges.feed = () => SS.notifs.unread;
-  X.attach.push({ ico: '💸', lbl: 'Send OST / SOL', run: (peer) => paySheet({ addr: peer, chat: true }) });
+  X.attach.push({ ico: '💸', lbl: 'Send OST / OSTG / SOL', run: (peer) => paySheet({ addr: peer, chat: true }) });
 
   const A = X.actions;
   A['sx-back'] = back;

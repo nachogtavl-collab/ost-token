@@ -806,15 +806,29 @@
     if (raw == null) return;
     var amount = Number(String(raw).replace(',', '.'));
     if (!Number.isFinite(amount) || amount <= 0) return setStatus(p, 'Enter a positive OST amount.', 'warn');
-    var arena = window.OST_MESH_ARENA;
-    if (!arena || typeof arena.sendOstTo !== 'function') {
-      setStatus(p, 'OST Mesh Arena is still loading. Try again in a moment.', 'warn');
+    // One shared Send rail (wallet-extras OST_SEND.send): address, balance and
+    // fee checks; OST pays the fee. The result says what really happened.
+    if (!(window.OST_SEND && typeof window.OST_SEND.send === 'function')) {
+      setStatus(p, 'Send is still loading. Try again in a moment. Nothing was sent.', 'warn');
       return;
     }
-    setStatus(p, 'Opening Arena to send OST...', 'ok');
-    Promise.resolve(arena.sendOstTo(address, amount, 'OST Mesh contact send'))
-      .then(function () { setStatus(p, 'OST send queued through Mesh Arena.', 'ok'); })
-      .catch(function (err) { setStatus(p, 'Send failed: ' + (err && err.message ? err.message : err), 'err'); });
+    var human = function (err) {
+      try {
+        if (window.OST_MONEY_ERRORS && typeof window.OST_MONEY_ERRORS.humanize === 'function') {
+          var h = window.OST_MONEY_ERRORS.humanize(err);
+          if (h && h.title) return h.title + (h.body ? ' ' + h.body : '');
+        }
+      } catch (_) {}
+      return String((err && err.message) || 'Send failed.');
+    };
+    setStatus(p, 'Sending ' + amount + ' OST…', 'ok');
+    Promise.resolve(window.OST_SEND.send({ asset: 'OST', to: address, amount: String(amount), memo: 'OST Mesh contact send', source: 'mesh-contact' }))
+      .then(function (r) {
+        var sig = r && r.sig ? String(r.sig) : '';
+        if (r && r.pending) setStatus(p, 'Sent ' + amount + ' OST — still confirming' + (sig ? ' (tx ' + sig.slice(0, 8) + '…)' : '') + '. Check the balance before sending again.', 'warn');
+        else setStatus(p, 'Sent ' + amount + ' OST' + (sig ? ' (tx ' + sig.slice(0, 8) + '…)' : '') + '.', 'ok');
+      })
+      .catch(function (err) { setStatus(p, human(err), 'err'); });
   }
 
   // ContactChallenge: open Arena Games tab pre-targeted at a saved contact.

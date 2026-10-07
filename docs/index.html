@@ -404,7 +404,7 @@
           <button class="ancient-toggle" id="ancientToggle" type="button" aria-pressed="false" title="Toggle Ancient Hieroglyphic Mode">
           <span id="ancientToggleText">&#x13171; Ancient</span>
         </button>
-        <button class="wallet-btn" id="walletBtn" aria-label="Connect Wallet">
+        <button class="wallet-btn" id="walletBtn" type="button" aria-label="Connect or create a wallet">
           <span class="wallet-icon">&#128091;</span>
           <span class="wallet-text" id="walletText" data-i18n="nav.connect">Connect Wallet</span>
         </button>
@@ -448,15 +448,15 @@
       <!-- Left: Text Content -->
       <div class="hero-content">
         <div class="hero-badge-row">
-          <span class="hero-live-badge"><span class="live-dot"></span> Live on Solana</span>
+          <span class="hero-live-badge"><span class="live-dot"></span> Live on Solana devnet</span>
           <span class="hero-era-badge">Est. 2025 &middot; Panama</span>
         </div>
         <p class="hero-tag" data-i18n="hero.tag">The Next Step After Bitcoin</p>
         <h1 data-i18n="hero.title">We are all <span class="gradient-text">one family.</span></h1>
         <p class="hero-sub" data-i18n="hero.sub">OST is the digital cash made for every citizen of the world - private, instant, and connected to any currency you already have.</p>
         <div class="hero-free-banner">
-          <span class="hero-free-badge" data-i18n="hero.free">&#128176; FREE FOREVER</span>
-          <span class="hero-free-text" data-i18n="hero.freetext">Zero transaction fees. No hidden costs. Funded by donations &amp; investors.</span>
+          <span class="hero-free-badge" data-i18n="hero.free">&#128176; FREE TO TRY</span>
+          <span class="hero-free-text" data-i18n="hero.freetext">Devnet test network: OST pays every network fee, so trying it costs you nothing. No real money.</span>
         </div>
         <!-- OST Nexus: the living currency. Static skeleton (no layout shift); ost-nexus.js
              fills it from real sources only - unknown values stay "—". -->
@@ -477,7 +477,7 @@
           <div class="nx-side">
             <div class="nx-card">
               <div class="nx-card__title"><svg class="nx-ic" viewBox="0 0 24 24"><path d="M3 7h18v10H3z"/><path d="M16 12h2"/><path d="M3 10h18"/></svg>Your money</div>
-              <div class="nx-kv"><span class="k">OSTC wallet</span><span class="v" id="nxBalOstc">&mdash;</span></div>
+              <div class="nx-kv"><span class="k">OST wallet</span><span class="v" id="nxBalOstc">&mdash;</span></div>
               <div class="nx-kv"><span class="k" title="OSTG is the play and trade token. 1 OSTG = 1 OST.">OSTG play</span><span class="v violet" id="nxBalOstg">&mdash;</span></div>
               <button type="button" class="nx-connect" id="nxConnect">Connect wallet</button>
             </div>
@@ -508,12 +508,15 @@
           </div>
           <div class="ost-mobile-home__status"><span>Live devnet app</span><p>Touch targets, popouts, and bottom navigation are managed as one mobile shell.</p></div>
         </div>
+        <p class="hero-try-line" data-i18n="hero.trynote" style="margin:0 0 10px;font-weight:700;font-size:1rem;color:var(--text,#e4e7f1);">Try OST free &mdash; devnet wallet in 2 taps</p>
         <div class="hero-actions">
-            <a href="#commerce" class="btn btn-primary btn-glow btn-pulse" data-i18n="hero.cta1">Explore Commerce</a>
+          <button type="button" class="btn btn-primary btn-glow btn-pulse" data-ost-start="start" data-i18n="hero.createwallet">Start free</button>
+          <button type="button" class="btn btn-outline" data-ost-start="start" data-i18n="hero.havewallet">I already have Phantom / Solflare / Backpack</button>
           <a href="#new-here" class="btn btn-outline" data-i18n="hero.cta2">Get OST Now</a>
-          <a href="#wallet" class="btn btn-outline" data-i18n="hero.createwallet">Create Wallet</a>
+          <a href="#commerce" class="btn btn-outline" data-i18n="hero.cta1">Explore Commerce</a>
           <button class="btn btn-transmit" id="transmitBtn" type="button" data-i18n="transmit.button">&#x13087; Transmit to Space</button>
         </div>
+        <p class="hero-devnet-note" style="margin:10px 0 0;font-size:.8rem;color:var(--text-muted);">Devnet test network &mdash; OST here has no cash value. A free wallet takes two taps; OST pays every network fee.</p>
         <div class="hero-stats">
           <div class="stat"><span class="stat-num">0</span><span class="stat-label" data-i18n="hero.premine">Pre-mine</span></div>
           <div class="stat-divider"></div>
@@ -525,7 +528,7 @@
         </div>
         <!-- Live OST Price Ticker -->
         <div class="hero-ticker" id="heroTicker">
-          <span class="ticker-label" title="OST runs on Solana devnet. This is a simulated index for the test token - it has no cash value.">Devnet test index:</span>
+          <span class="ticker-label" title="OST runs on Solana devnet. This is a display index for the test token - it has no cash value and is not the conversion rate (1 OST = $0.0118 on the devnet rails).">OST index (display):</span>
           <span class="ticker-price" id="tickerPrice">Live price ready</span>
           <span class="ticker-change" id="tickerChange"></span>
         </div>
@@ -653,8 +656,8 @@
           <div class="faucet-drop-zone" id="faucetDropZone"></div>
           <div class="faucet-pool"><div class="faucet-amount" id="faucetAmount">0.00</div><div class="faucet-label">OST</div></div>
         </div>
+        <div class="faucet-status" id="faucetStatus" role="status" aria-live="polite"></div>
         <button class="btn btn-primary btn-glow faucet-btn" id="claimFaucetBtn"><span class="pay-icon">&#9673;</span> <span data-i18n="getost.faucetbtn">Claim 100 OST Head Start</span></button>
-        <div class="faucet-status" id="faucetStatus"></div>
       </div>
       <section class="topup-section converter-hub" id="converter-hub" aria-label="OST converter hub"></section>
 
@@ -857,7 +860,8 @@
         <div class="depin-header">
           <div class="depin-icon-ring"><span>&#128752;</span></div>
           <h3 data-i18n="depin.title">DePIN Data-Center Faucet</h3>
-          <p class="text-muted" data-i18n="depin.sub">Share bandwidth, GPU, CPU, or satellite capacity &mdash; earn OST for building the decentralized data centers and satellite internet. Big rewards for real contributions.</p>
+          <span class="ost-rd-badge" style="display:inline-block;margin:6px 0 8px;padding:4px 12px;border-radius:999px;background:rgba(245,196,104,.14);border:1px solid rgba(245,196,104,.45);color:#f5c468;font-weight:800;font-size:.78rem;letter-spacing:.04em;">R&amp;D &mdash; not live, no rewards are paid</span>
+          <p class="text-muted" data-i18n="depin.sub">Research preview of a future program that would reward shared bandwidth, GPU, CPU or satellite capacity. It is not live: nothing is verified and no OST is paid.</p>
         </div>
 
         <div class="depin-rewards-grid">
@@ -903,81 +907,9 @@
             <span class="depin-r-amount">100,000 OST/day</span>
             <span class="depin-r-minute">&#9889; 69.44 OST/min</span>
           </div>
-          <p class="depin-note" style="grid-column:1/-1;text-align:center;color:var(--text-muted);font-size:.85rem;margin-top:8px;">&#128200; Rewards decrease as OST price appreciates &mdash; early contributors earn the most.</p>
+          <p class="depin-note" style="grid-column:1/-1;text-align:center;color:var(--text-muted);font-size:.85rem;margin-top:8px;">Future plan only &mdash; these figures are a draft, not an offer. No contribution is checked and no reward is paid today.</p>
         </div>
 
-        <button class="btn btn-primary btn-glow depin-open-modal-btn" id="depinOpenModal">
-          <span class="pay-icon">&#128752;</span> Claim DePIN Reward
-        </button>
-
-        <!-- DePIN Claim Modal Overlay -->
-        <div class="ost-modal-overlay" id="depinModalOverlay">
-          <div class="ost-modal ost-modal-lg">
-            <button class="ost-modal-close" id="depinModalClose" aria-label="Close">&times;</button>
-            <h4 class="depin-claim-title">&#128752; Claim DePIN Reward</h4>
-            <p class="depin-claim-label">Select your contribution type, provide proof, and we verify your resource is real.</p>
-
-          <div class="depin-form-row">
-            <label class="depin-form-label">Resource Type <span class="gv-req">*</span></label>
-            <select class="depin-form-input" id="depinResourceType" aria-label="DePIN resource type">
-              <option value="">Select resource...</option>
-              <option value="bandwidth">&#128246; Bandwidth (ISP upload sharing)</option>
-              <option value="gpu">&#127918; GPU (CUDA/OpenCL compute)</option>
-              <option value="cpu">&#128187; CPU (processing power)</option>
-              <option value="storage">&#128190; Storage (disk space sharing)</option>
-              <option value="lora5g">&#128225; LoRa/5G (wireless gateway)</option>
-              <option value="satellite">&#128752; Satellite (ground station / LEO link)</option>
-              <option value="datacenter">&#127981; Data Center (rack/colocation)</option>
-            </select>
-          </div>
-
-          <!-- Dynamic fields rendered by JS based on resource type -->
-          <div id="depinDynFields"></div>
-
-          <div class="depin-form-row depin-form-hidden" id="depinProofSection">
-            <label class="depin-form-label">Proof of Resource <span class="gv-req">*</span></label>
-            <div class="depin-proof-options">
-              <label class="depin-proof-option">
-                <input type="radio" name="depinProofType" value="speedtest" checked> Speed Test / Benchmark URL
-              </label>
-              <label class="depin-proof-option">
-                <input type="radio" name="depinProofType" value="screenshot"> Screenshot Upload
-              </label>
-              <label class="depin-proof-option">
-                <input type="radio" name="depinProofType" value="api"> API Key / Node ID
-              </label>
-            </div>
-            <input type="text" class="depin-form-input" id="depinProofValue" placeholder="Paste URL, node ID, or upload path..." aria-label="Paste URL, node ID, or upload path...">
-          </div>
-
-          <div class="depin-form-row depin-form-hidden" id="depinWalletSection">
-            <label class="depin-form-label">Your Solana Wallet <span class="gv-req">*</span></label>
-            <input type="text" class="depin-form-input" id="depinWalletAddr" placeholder="Connect wallet above" readonly aria-label="Connect wallet above">
-          </div>
-
-          <div class="depin-form-row depin-form-hidden" id="depinLocationSection">
-            <label class="depin-form-label">Node Location (city, country)</label>
-            <input type="text" class="depin-form-input" id="depinLocation" placeholder="e.g. Austin, TX, USA" maxlength="100" aria-label="e.g. Austin, TX, USA">
-          </div>
-
-          <div class="depin-verify-status" id="depinVerifyStatus"></div>
-
-          <div class="depin-verify-checklist depin-form-hidden" id="depinChecklist">
-            <div class="depin-check-item" id="dpChk1"><span class="depin-chk-icon">&#9898;</span> Wallet connected</div>
-            <div class="depin-check-item" id="dpChk2"><span class="depin-chk-icon">&#9898;</span> Resource type selected</div>
-            <div class="depin-check-item" id="dpChk3"><span class="depin-chk-icon">&#9898;</span> Resource specs verified</div>
-            <div class="depin-check-item" id="dpChk4"><span class="depin-chk-icon">&#9898;</span> Proof submitted</div>
-            <div class="depin-check-item" id="dpChk5"><span class="depin-chk-icon">&#9898;</span> Node reachable</div>
-            <div class="depin-check-item" id="dpChk6"><span class="depin-chk-icon">&#9898;</span> Reward calculated</div>
-          </div>
-
-          <button class="btn btn-primary btn-glow depin-claim-btn" id="depinClaimBtn" disabled>
-            <span class="pay-icon">&#128752;</span> Verify &amp; Claim Reward
-          </button>
-          <div class="depin-claim-status" id="depinClaimStatus"></div>
-          <p class="depin-claim-note">Verification and cooldown sync in the background.</p>
-          </div><!-- /.ost-modal -->
-        </div><!-- /.ost-modal-overlay -->
       </div>
     </div>
   </section>
@@ -1093,22 +1025,23 @@
         <div class="feature-card glow-card sr">
           <div class="feature-icon">&#127757;</div>
           <h3 data-i18n="features.f3.title">Any-to-OST Bridge</h3>
-          <p data-i18n="features.f3.text">Bitcoin, Ethereum, USDC, bank transfers - everything converts.</p>
+          <span class="ost-rd-badge" style="display:inline-block;margin:0 0 8px;padding:3px 10px;border-radius:999px;background:rgba(245,196,104,.14);border:1px solid rgba(245,196,104,.45);color:#f5c468;font-weight:800;font-size:.72rem;">R&amp;D &mdash; not live</span>
+          <p>Cross-chain and fiat conversion into OST is R&amp;D. Live today on devnet: SOL/USDC &rarr; OST and OST &rArr; OSTG in Wallet &rarr; Convert.</p>
           <div class="feature-detail">
             <img src="https://images.unsplash.com/photo-1620321023374-d1a68fbc720d?w=400&h=180&fit=crop" alt="Bridge" class="feature-img" loading="lazy">
             <ul class="feature-bullets">
-              <li>Wormhole cross-chain bridge</li>
-              <li>Jupiter DEX aggregator</li>
-              <li>15+ fiat on-ramps</li>
-              <li>100+ countries supported</li>
+              <li>Planned: Wormhole cross-chain bridge</li>
+              <li>Planned: fiat on-ramps</li>
+              <li>Live (devnet): OST &rArr; OSTG, 1:1</li>
+              <li>Live (devnet): SOL/USDC &rarr; OST test rail</li>
             </ul>
-            <div class="feature-compare"><span class="compare-bad">Banks: 3-5 days, $25-50 fees</span><span class="compare-good">OST: Instant, zero fees</span></div>
+            <div class="feature-compare"><span class="compare-bad">Banks: 3-5 days, $25-50 fees</span><span class="compare-good">OST (devnet): network fees paid by OST</span></div>
           </div>
         </div>
         <div class="feature-card glow-card sr">
           <div class="feature-icon">&#127963;&#65039;</div>
-          <h3 data-i18n="features.f4.title">Forever Free</h3>
-          <p data-i18n="features.f4.text">Zero transaction fees. Funded by donations &amp; investors. On-chain transparency.</p>
+          <h3 data-i18n="features.f4.title">Free to Try</h3>
+          <p data-i18n="features.f4.text">Devnet test network: OST pays every network fee, so trying it costs you nothing. No real money. On-chain transparency.</p>
           <div class="feature-detail">
             <img src="https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?w=400&h=180&fit=crop" alt="Satellite" class="feature-img" loading="lazy">
             <ul class="feature-bullets">
@@ -1386,7 +1319,7 @@
               </div>
               <div class="pa-conv-row pa-conv-fee">
                 <span class="pa-conv-label" data-i18n="pay.afee">Network Fee:</span>
-                <span class="pa-conv-value">$0.00 (free forever)</span>
+                <span class="pa-conv-value">$0.00 &middot; paid by OST (devnet)</span>
               </div>
             </div>
 
@@ -1962,7 +1895,7 @@
         <div class="wallet-command-hero">
           <div class="wallet-command-copy">
             <span class="wallet-command-kicker" data-i18n="wallet.commandKicker">Wallet + conversion rail</span>
-            <h3 data-i18n="wallet.commandTitle">Open a wallet, read the OST market, and move from fiat or crypto into confidential OST.</h3>
+            <h3 data-i18n="wallet.commandTitle">Open a wallet, read the OST market, and turn devnet SOL or USDC into devnet OST (test network, no cash value).</h3>
             <p data-i18n="wallet.commandSub">The wallet page now behaves like a command center for access, market watch, conversion, and portal routing.</p>
             <div class="wallet-market-strip">
               <div class="wallet-mini-stat">
@@ -1970,7 +1903,7 @@
                 <strong id="ostMarketVelocity">…</strong>
               </div>
               <div class="wallet-mini-stat">
-                <span>Payout pool (OSTC)</span>
+                <span>Payout pool (OST)</span>
                 <strong id="ostMarketLiquidity">…</strong>
               </div>
             </div>
@@ -2120,14 +2053,8 @@
                     <span id="wdPortfolioMid">—</span>
                     <span id="wdPortfolioEnd">Now</span>
                   </div>
-                  <!-- Transaction history feed -->
-                  <div id="ostTxHistoryPanel" style="margin-top:14px;background:rgba(15,20,30,0.7);border:1px solid rgba(109,159,255,0.12);border-radius:10px;padding:10px 12px;min-height:48px;">
-                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
-                      <span style="color:#94a3b8;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;">Transaction history</span>
-                      <span style="color:#64748b;font-size:10px;">OST in · out · positions</span>
-                    </div>
-                    <p style="color:#64748b;font-size:12px;text-align:center;padding:6px 0;">Loading&hellip;</p>
-                  </div>
+                  <!-- (TRF-4: the legacy transaction-history feed was retired; the wallet
+                       home's Activity reads the owner AND its token accounts on-chain.) -->
                 </div>
 
                 <div class="wd-route-matrix" id="wdRouteMatrix">
@@ -2142,9 +2069,9 @@
                     <p id="wdRouteSwapCopy">Live once a wallet is connected and routed into OST through the sponsored vault rail.</p>
                   </article>
                   <article class="wd-route-card">
-                    <span class="wd-route-status" id="wdRoutePortalStatus">Preview rails</span>
-                    <strong>Bridge + fiat portals</strong>
-                    <p id="wdRoutePortalCopy">Wormhole, Onramper, MoonPay, and Transak stay linked here as the mainnet entry and exit stack.</p>
+                    <span class="wd-route-status" id="wdRoutePortalStatus">External &middot; mainnet</span>
+                    <strong>External bridge + fiat tools</strong>
+                    <p id="wdRoutePortalCopy">External mainnet tools for SOL assets (Wormhole, Onramper, MoonPay, Transak). They never deliver OST.</p>
                   </article>
                   <article class="wd-route-card">
                     <span class="wd-route-status" id="wdRoutePredictStatus">Needs OST</span>
@@ -2221,7 +2148,7 @@
                     <span class="wd-bal-icon" style="color:#4da3ff">&#9673;</span>
                     <div class="wd-bal-info">
                       <div class="wd-bal-amount" id="wdOstBal" style="color:#4da3ff">0.00</div>
-                      <div class="wd-bal-label" style="color:#4da3ff">OSTC &middot; Card</div>
+                      <div class="wd-bal-label" style="color:#4da3ff">OST &middot; Card</div>
                     </div>
                     <div class="wd-bal-usd" id="wdOstUsd">$0.00</div>
                   </div>
@@ -2230,7 +2157,7 @@
                 <div class="wd-actions">
                   <a href="#wallet-panel-convert" class="wd-action-btn" data-wallet-tab-link="convert" data-buy-ost="sol"><span>&#128176;</span><span data-i18n="wallet.buyOst">Buy OST</span></a>
                   <button class="wd-action-btn" id="wdSendBtn" type="button"><span>&#128257;</span><span data-i18n="wallet.send">Send</span></button>
-                  <a href="#wallet-panel-portals" class="wd-action-btn" data-wallet-tab-link="portals"><span>&#127757;</span><span data-i18n="wallet.bridge">Bridge</span></a>
+                  <a href="#bridge" class="wd-action-btn" data-ost-bridge-open><span>&#127757;</span><span data-i18n="wallet.bridge">Bridge</span></a>
                   <button class="wd-action-btn" id="wdReceiveBtn"><span>&#128229;</span><span data-i18n="wallet.receive">Receive</span></button>
                   <a href="#wallet-panel-convert" class="wd-action-btn" data-wallet-tab-link="convert" data-buy-ost="sol"><span>&#9889;</span><span data-i18n="wallet.swap">Swap</span></a>
                 </div>
@@ -2385,7 +2312,7 @@
           </div>
         </div>
 
-        <div class="wallet-tab-panel" id="wallet-panel-convert" hidden>
+        <div class="wallet-tab-panel" id="wallet-panel-convert" data-ost-fx-off hidden>
           <div class="wallet-convert-grid">
             <div class="convert-terminal">
               <div class="ct-glow"></div>
@@ -2394,26 +2321,14 @@
                 <h3 data-i18n="transfer.widgettitle">Convert Now</h3>
                 <p class="ct-sub" data-i18n="wallet.convert.lead">Convert devnet SOL or USDC into devnet OST through the treasury test rail. Fiat and other chains show quotes only &mdash; those rails are R&amp;D until mainnet.</p>
               </div>
-              <div id="convertWalletBackupBar" class="convert-backup-bar" style="margin:0 0 16px;padding:12px 14px;border-radius:12px;background:rgba(245,196,104,0.08);border:1px solid rgba(245,196,104,0.25);font-size:.85rem;color:var(--text-light);display:flex;flex-direction:column;gap:10px;">
-                <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;">
-                  <span id="convertBackupBarMsg"><strong>⚠ Save your browser wallet.</strong> If you clear this browser's storage, your devnet wallet is lost. Download the backup file once and keep it offline.</span>
-                  <span style="display:flex;gap:8px;flex-wrap:wrap;">
-                    <button type="button" class="btn btn-outline btn-sm" id="convertBackupBtn">Download backup</button>
-                    <label for="convertRestoreInput" class="btn btn-outline btn-sm" style="cursor:pointer;margin:0;">Restore from file</label>
-                    <input type="file" id="convertRestoreInput" accept="application/json,.json" style="display:none;">
-                  </span>
-                </div>
-                <details style="margin:0;">
-                  <summary style="cursor:pointer;color:var(--text-muted);font-size:.82rem;">Paste an existing wallet secret key to access its funds</summary>
-                  <div style="display:flex;flex-direction:column;gap:8px;margin-top:10px;">
-                    <textarea id="convertPasteKeyInput" rows="3" placeholder='Paste secret key as JSON array like [12,34,...] (64 numbers) or a base58 string' style="width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.12);background:rgba(0,0,0,0.25);color:var(--text-light);font-family:monospace;font-size:.78rem;resize:vertical;"></textarea>
-                    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-                      <button type="button" class="btn btn-primary btn-sm" id="convertPasteKeyBtn">Import wallet</button>
-                      <span style="color:var(--text-muted);font-size:.75rem;">Stored locally in this browser only. Never paste a mainnet key on a site you don't trust.</span>
-                    </div>
-                  </div>
-                </details>
+              <div id="convertWalletBackupBar" class="convert-backup-bar" style="margin:0 0 16px;padding:12px 14px;border-radius:12px;background:rgba(245,196,104,0.08);border:1px solid rgba(245,196,104,0.25);font-size:.85rem;color:var(--text-light);display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;">
+                <span id="convertBackupBarMsg"><strong>Your browser wallet lives only in this browser.</strong> Back it up, or restore one from a backup, in the wallet home.</span>
+                <span style="display:flex;gap:8px;flex-wrap:wrap;">
+                  <button type="button" class="btn btn-outline btn-sm" data-ost-wallet-home="backup">Back up wallet</button>
+                  <button type="button" class="btn btn-outline btn-sm" data-ost-wallet-home="restore">Restore from a backup</button>
+                </span>
               </div>
+              <p class="ct-rate" id="convertRateLine" style="margin:0 0 14px;font-size:.82rem;color:var(--text-muted);">Conversion rate: <strong>1 OST = $0.0118</strong> (fixed, devnet &middot; no cash value). The hero price is a display index, not this rate.</p>
               <div class="ct-body">
                 <div class="ct-side ct-from">
                   <label class="ct-label" data-i18n="wallet.convert.from">From</label>
@@ -2480,40 +2395,33 @@
             </div>
 
             <div class="wallet-convert-side">
-              <div class="jupiter-widget glow-card" id="jupiterWidget">
-                <h3 data-i18n="getost.swap">Swap Any Crypto to OST</h3>
-                <p data-i18n="getost.swaptext">Jupiter Aggregator finds the best route across all Solana liquidity pools.</p>
-                <div class="jupiter-embed-area" id="jupiterEmbed">
-                  <div class="jupiter-placeholder">
-                    <span class="jupiter-bolt">&#9889;</span>
-                    <p><strong>Jupiter Terminal</strong></p>
-                    <p class="text-muted" data-i18n="getost.jupnote">Connect your wallet to load the live swap widget.</p>
-                    <button class="btn btn-primary" id="loadJupiterBtn" data-i18n="getost.jupbtn">Load Swap Widget</button>
-                  </div>
-                </div>
+              <div class="glow-card" id="externalToolsNote" style="padding:18px;">
+                <span class="ost-ext-badge">External &middot; mainnet</span>
+                <h3 style="margin:8px 0 6px;">External tools for SOL assets</h3>
+                <p class="text-muted" style="margin:0;">Jupiter, Raydium, Orca and the fiat ramps are third-party <strong>mainnet</strong> services. They trade SOL and other Solana assets &mdash; they never trade or deliver OST. OST &rArr; OSTG conversion lives here in Convert (devnet).</p>
               </div>
 
               <div class="sell-ost-section" id="sellOstSection">
-                <h3 data-i18n="sell.title">Sell or Trade OST</h3>
-                <p class="text-muted" style="margin-bottom:24px;" data-i18n="sell.sub">Cash out to any crypto or fiat. Same speed, same privacy.</p>
+                <h3>External exits (mainnet)</h3>
+                <p class="text-muted" style="margin-bottom:24px;">Third-party mainnet tools for SOL and stablecoins. Devnet OST has no cash value and cannot be sold through them.</p>
                 <div class="sell-grid">
                   <div class="sell-card">
                     <div class="sell-icon">&#128176;</div>
-                    <h4 data-i18n="wallet.sell.stable">Swap to stablecoins</h4>
-                    <p data-i18n="wallet.sell.stableDesc">Route OST into USDC, USDT, or DAI when the user needs a fast stable exit.</p>
-                    <button class="btn btn-outline btn-sm" onclick="window.openOstPopup&&openOstPopup('https://jup.ag/','Jupiter Aggregator')">Open Jupiter</button>
+                    <h4>Swap SOL assets</h4>
+                    <p>Jupiter swaps SOL, USDC and other mainnet Solana tokens. It does not trade OST.</p>
+                    <a class="btn btn-outline btn-sm" href="https://jup.ag/" target="_blank" rel="noopener">Open Jupiter &middot; mainnet &#8599;</a>
                   </div>
                   <div class="sell-card">
                     <div class="sell-icon">&#127968;</div>
-                    <h4 data-i18n="wallet.sell.cashout">Cash out to bank</h4>
-                    <p data-i18n="wallet.sell.cashoutDesc">Use Onramper or Transak sell rails after the OST to SOL or OST to USDC swap completes.</p>
-                    <button class="btn btn-outline btn-sm" onclick="window.openOstPopup&&openOstPopup('https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=sell','Onramper — Cash Out')">Cash Out</button>
+                    <h4>Sell mainnet SOL</h4>
+                    <p>Onramper sells real mainnet SOL or USDC to a bank account. Devnet OST cannot be cashed out.</p>
+                    <a class="btn btn-outline btn-sm" href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=sell" target="_blank" rel="noopener">Open Onramper &middot; mainnet &#8599;</a>
                   </div>
                   <div class="sell-card">
                     <div class="sell-icon">&#128257;</div>
-                    <h4 data-i18n="wallet.sell.p2p">P2P market</h4>
-                    <p data-i18n="wallet.sell.p2pDesc">Direct wallet-to-wallet trading stays on the roadmap for people who want a simpler off-ramp.</p>
-                    <button class="btn btn-outline btn-sm" onclick="window.showToast&&showToast('P2P marketplace coming soon!','&#128279;')">Coming Soon</button>
+                    <h4>P2P market</h4>
+                    <p>Wallet-to-wallet trading is R&amp;D &mdash; not live.</p>
+                    <button class="btn btn-outline btn-sm" type="button" disabled>R&amp;D &middot; not live</button>
                   </div>
                 </div>
               </div>
@@ -2522,63 +2430,74 @@
         </div>
 
         <div class="wallet-tab-panel" id="wallet-panel-portals" hidden>
+          <p class="wallet-portal-note" style="margin:0 0 14px;padding:12px 14px;border-radius:12px;background:rgba(109,159,255,.08);border:1px solid rgba(109,159,255,.25);font-size:.88rem;line-height:1.5;"><strong>External mainnet tools for SOL assets</strong> &mdash; they never deliver OST and open in a new tab. OST &rArr; OSTG conversion is in <a href="#bridge" data-ost-bridge-open>Convert</a> (devnet).</p>
           <div class="wallet-portal-grid">
             <a href="https://www.portalbridge.com/" target="_blank" rel="noopener" class="wallet-portal-card">
               <span class="wallet-portal-kicker" data-i18n="wallet.bridge">Bridge</span>
+              <span class="ost-ext-badge">External &middot; mainnet</span>
               <h4>Wormhole</h4>
-              <p data-i18n="wallet.portal.wormholeDesc">Move liquidity from major chains into Solana before the OST swap rail takes over.</p>
+              <p data-i18n="wallet.portal.wormholeDesc">External mainnet bridge: moves assets from other chains into Solana. It does not deliver OST.</p>
               <span class="wallet-portal-meta">ETH &bull; Base &bull; Arbitrum &bull; Solana</span>
             </a>
             <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=buy" target="_blank" rel="noopener" class="wallet-portal-card">
               <span class="wallet-portal-kicker" data-i18n="getost.fiat">Buy</span>
+              <span class="ost-ext-badge">External &middot; mainnet</span>
               <h4>Onramper</h4>
-              <p data-i18n="wallet.portal.onramperDesc">Aggregator entry rail with card, bank, Apple Pay, and local fiat routing.</p>
+              <p data-i18n="wallet.portal.onramperDesc">External mainnet on-ramp: buys real SOL with card, bank or Apple Pay. It does not deliver OST.</p>
               <span class="wallet-portal-meta">Card &bull; Bank &bull; Apple Pay</span>
             </a>
             <a href="https://www.moonpay.com/buy/sol" target="_blank" rel="noopener" class="wallet-portal-card">
               <span class="wallet-portal-kicker" data-i18n="getost.fiat">Buy</span>
+              <span class="ost-ext-badge">External &middot; mainnet</span>
               <h4>MoonPay</h4>
-              <p data-i18n="wallet.portal.moonpayDesc">Fast card-based SOL entry for users who want the cleanest first purchase flow.</p>
+              <p data-i18n="wallet.portal.moonpayDesc">External mainnet on-ramp: buys real SOL by card. It does not deliver OST.</p>
               <span class="wallet-portal-meta">Card &bull; Bank &bull; Google Pay</span>
             </a>
             <a href="https://global.transak.com/?defaultCryptoCurrency=SOL" target="_blank" rel="noopener" class="wallet-portal-card">
               <span class="wallet-portal-kicker" data-i18n="getost.fiat">Buy</span>
+              <span class="ost-ext-badge">External &middot; mainnet</span>
               <h4>Transak</h4>
-              <p data-i18n="wallet.portal.transakDesc">Regional payment coverage with PIX, UPI, SEPA, Faster Payments, and card rails.</p>
+              <p data-i18n="wallet.portal.transakDesc">External mainnet on-ramp with PIX, UPI, SEPA, Faster Payments and cards. It does not deliver OST.</p>
               <span class="wallet-portal-meta">UPI &bull; PIX &bull; SEPA &bull; Card</span>
             </a>
             <a href="https://buy.onramper.com/?defaultCrypto=sol_solana&onlyCryptoNetworks=solana&mode=sell" target="_blank" rel="noopener" class="wallet-portal-card">
-              <span class="wallet-portal-kicker" data-i18n="sell.title">Sell</span>
+              <span class="wallet-portal-kicker">Sell SOL</span>
+              <span class="ost-ext-badge">External &middot; mainnet</span>
               <h4>Onramper Sell</h4>
-              <p data-i18n="wallet.portal.onramperSellDesc">Cash out SOL or USDC into bank accounts and mobile money rails after conversion.</p>
+              <p data-i18n="wallet.portal.onramperSellDesc">External mainnet off-ramp: sells real SOL or USDC to bank and mobile-money rails. Devnet OST cannot be cashed out.</p>
               <span class="wallet-portal-meta">90+ currencies &bull; Bank &bull; Mobile Money</span>
             </a>
             <a href="https://global.transak.com/?defaultCryptoCurrency=SOL&productsAvailed=SELL" target="_blank" rel="noopener" class="wallet-portal-card">
-              <span class="wallet-portal-kicker" data-i18n="sell.title">Sell</span>
+              <span class="wallet-portal-kicker">Sell SOL</span>
+              <span class="ost-ext-badge">External &middot; mainnet</span>
               <h4>Transak Sell</h4>
-              <p data-i18n="wallet.portal.transakSellDesc">Regional fiat exits for users who want local banking rails instead of stablecoin custody.</p>
+              <p data-i18n="wallet.portal.transakSellDesc">External mainnet off-ramp to local banking rails. Devnet OST cannot be cashed out.</p>
               <span class="wallet-portal-meta">SEPA &bull; Faster Payments &bull; Wire</span>
             </a>
             <a href="https://jup.ag/" target="_blank" rel="noopener" class="wallet-portal-card">
               <span class="wallet-portal-kicker" data-i18n="wallet.swap">Swap</span>
+              <span class="ost-ext-badge">External &middot; mainnet</span>
               <h4>Jupiter</h4>
-              <p data-i18n="wallet.portal.jupiterDesc">Best-route aggregator for OST conversions, stable exits, and spot rotations.</p>
+              <p data-i18n="wallet.portal.jupiterDesc">External mainnet swap aggregator for SOL and other Solana tokens. It does not trade OST.</p>
               <span class="wallet-portal-meta">Spot &bull; Limit &bull; DCA &bull; Perps</span>
             </a>
             <a href="https://raydium.io/swap/" target="_blank" rel="noopener" class="wallet-portal-card">
               <span class="wallet-portal-kicker" data-i18n="wallet.swap">Swap</span>
+              <span class="ost-ext-badge">External &middot; mainnet</span>
               <h4>Raydium</h4>
               <p data-i18n="wallet.portal.raydiumDesc">Liquidity and swap venue for users who want direct pool access on Solana.</p>
               <span class="wallet-portal-meta">Swap &bull; Liquidity &bull; Farms</span>
             </a>
             <a href="https://www.orca.so/" target="_blank" rel="noopener" class="wallet-portal-card">
               <span class="wallet-portal-kicker" data-i18n="wallet.swap">Swap</span>
+              <span class="ost-ext-badge">External &middot; mainnet</span>
               <h4>Orca</h4>
               <p data-i18n="wallet.portal.orcaDesc">Cleaner swap route for concentrated liquidity users who want a simpler interface.</p>
               <span class="wallet-portal-meta">Swap &bull; Whirlpools &bull; SOL</span>
             </a>
             <a href="https://app.meteora.ag/" target="_blank" rel="noopener" class="wallet-portal-card">
               <span class="wallet-portal-kicker" data-i18n="wallet.swap">Swap</span>
+              <span class="ost-ext-badge">External &middot; mainnet</span>
               <h4>Meteora</h4>
               <p data-i18n="wallet.portal.meteoraDesc">Dynamic liquidity venue for newer assets and launchpad-native routing.</p>
               <span class="wallet-portal-meta">DLMM &bull; Dynamic Pools &bull; Auto-compound</span>
@@ -3951,12 +3870,12 @@
                 <span class="check-status status-done">Live</span>
               </div>
             </div>
-            <div class="checklist-item done">
-              <div class="check-icon">&#9989;</div>
+            <div class="checklist-item">
+              <div class="check-icon">&#9203;</div>
               <div class="check-body">
                 <h4>DePIN Faucet &amp; Community Rewards</h4>
-                <p>DePIN faucet live on devnet with 7 reward categories: Bandwidth (500), GPU (2.5K), CPU (1K), Storage (500), LoRa/5G (10), Satellite (50K), Data Center (100K OST/day). Rewards decrease as price appreciates. Zero fees forever.</p>
-                <span class="check-status status-done">On-chain</span>
+                <p>R&amp;D &mdash; not live, no rewards are paid. The draft plan has 7 reward categories (bandwidth, GPU, CPU, storage, LoRa/5G, satellite, data center); nothing is verified or paid today. Live today on devnet: the 100 OST welcome faucet and the daily 1 OST drop.</p>
+                <span class="check-status status-pending">R&amp;D</span>
               </div>
             </div>
             <div class="checklist-item done">
@@ -4113,7 +4032,7 @@
         </div>
 
         <div class="sx-quote">
-          <blockquote>&ldquo;OST is completely free to use &mdash; zero transaction fees, forever. Funded by donations and investors, not by taxing users. Designed to fund open DePIN satellites that extend uncensored internet to the places Starlink can&rsquo;t reach yet. Offline tap-to-pay, Grow Accounts for kids who will live on Mars. Open-source and nationless by design.&rdquo;</blockquote>
+          <blockquote>&ldquo;OST is free to try today on Solana devnet &mdash; OST pays the network fees, and nothing here costs real money. Designed to fund open DePIN satellites that extend uncensored internet to the places Starlink can&rsquo;t reach yet. Offline tap-to-pay, Grow Accounts for kids who will live on Mars. Open-source and nationless by design.&rdquo;</blockquote>
           <span class="sx-quote-attr">&mdash; OST Manifesto</span>
         </div>
       </div>
@@ -4222,7 +4141,7 @@
           <div class="decentral-stats">
             <div class="ds"><span class="ds-num">2.6B</span><span class="ds-label">People without internet</span></div>
             <div class="ds"><span class="ds-num">55+</span><span class="ds-label">Countries censored internet in 2024</span></div>
-            <div class="ds"><span class="ds-num">$0</span><span class="ds-label">Transaction fees &mdash; free forever</span></div>
+            <div class="ds"><span class="ds-num">$0</span><span class="ds-label">Network fees on devnet &mdash; paid by OST</span></div>
           </div>
           <p class="decentral-quote">&ldquo;The internet treats censorship as damage and routes around it.&rdquo; &mdash; John Gilmore</p>
         </div>
@@ -5903,21 +5822,8 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
 <!-- Background particles -->
   <div class="bg-particles" id="bgParticles"></div>
 
-  <!-- Wallet connection modal -->
-  <div class="wallet-modal" id="walletModal">
-    <div class="wallet-modal-overlay" id="walletModalOverlay"></div>
-    <div class="wallet-modal-content">
-      <h3 data-i18n="wallet.title">Connect Your Wallet</h3>
-      <p class="text-muted" data-i18n="wallet.sub">Choose a wallet to connect to OST.</p>
-      <div class="wallet-options">
-        <button class="wallet-option" data-wallet="phantom"><span class="wallet-fallback">&#128123;</span> Phantom</button>
-        <button class="wallet-option" data-wallet="solflare"><span class="wallet-fallback">&#9728;&#65039;</span> Solflare</button>
-        <button class="wallet-option" data-wallet="backpack"><span class="wallet-fallback">&#127890;</span> Backpack</button>
-        <button class="wallet-option" data-wallet="local"><span class="wallet-fallback">&#128273;</span> OST browser wallet</button>
-      </div>
-      <button class="wallet-close" id="walletClose">&times;</button>
-    </div>
-  </div>
+  <!-- (The legacy "Connect Your Wallet" modal was retired: every connect/create
+       button opens the wallet home via OST_WALLET.requireWallet - money plan C9.) -->
 
   <!-- Toast container -->
   <div id="toastContainer" class="toast-container"></div>
@@ -6243,8 +6149,11 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
   <script src="ost-balance-tree.js?v=1"></script>
   <script src="rpc-multiplexer.js?v=200"></script>
   <!-- Optimistic UX layer (toast + balance hint + tx simulation). Loads early so
-       faucet-hub, ost-onchain-bet, and wallet-extras can use window.OST_OPTIMISTIC. -->
+       faucet-hub and wallet-extras can use window.OST_OPTIMISTIC / OST_NOTIFY. -->
   <script src="ost-optimistic.js?v=7"></script>
+  <!-- base58 (Phantom-format keys, WAL-7) and money error copy (rails, C3) load before app.js. -->
+  <script src="ost-base58.js?v=1"></script>
+  <script src="ost-money-errors.js?v=1"></script>
   <script src="ost-celebrate.js?v=1"></script>
   <script src="ost-fx.js?v=4" defer></script>
   <script src="ost-currency-format.js?v=2" defer></script>
@@ -6329,8 +6238,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
   <script src="prediction-pro-dash.js?v=16"></script>
   <!-- OST API edge worker (Cloudflare). Set before ost-console / pro-dash use it. -->
   <script src="ost-console.js?v=3"></script>
-  <!-- On-chain betting (devnet program ost_betting) -->
-  <script src="ost-onchain-bet.js?v=200"></script>
+  <!-- PRD-5: ost-onchain-bet.js (on-chain betting, placeholder program id; nothing used it) removed. -->
   <script src="ux-extras.js?v=10"></script>
   <script src="faucet-hub.js?v=19"></script>
   <script src="topup.js?v=14"></script>

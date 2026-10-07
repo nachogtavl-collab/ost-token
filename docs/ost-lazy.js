@@ -160,12 +160,21 @@
   // and #academy (ost-apps-viewer.js). Keep in sync with HASH_ALIASES in mesh-link.js.
   var MESH_LINK_HASHES = ('arena mesh-arena fair-games fairgames casual-games mesh-games chess pool pool8 cuppong ' +
     'tictactoe ttt minigolf golf ghost stock shop giftcards gas fuel interchange code-academy coding-studio ' +
-    'codingstudio convert bridge').split(' ');
+    'codingstudio convert').split(' ');
   function meshLinkHash() {
-    if (groupPromises.mesh || groupOk.mesh) return;
     var raw = (location.hash || '').replace(/^#/, '').split('?')[0].split('/')[0].toLowerCase();
+    // BRG-5: #bridge is the real OST <-> OSTG bridge card (Wallet -> Convert), never
+    // Portals and never the Mesh pavilion. ost-bridge-ui.js (deferred) owns open().
+    if (raw === 'bridge') { openBridge(0); return; }
+    if (groupPromises.mesh || groupOk.mesh) return;
     if (raw && MESH_LINK_HASHES.indexOf(raw) !== -1) group('mesh');
   }
+  function openBridge(tries) {
+    if (window.OST_BRIDGE_UI && typeof window.OST_BRIDGE_UI.open === 'function') { try { window.OST_BRIDGE_UI.open(); } catch (_) {} return; }
+    if (tries > 40) { if (typeof window.OST_OPEN_BRIDGE === 'function') { try { window.OST_OPEN_BRIDGE(); } catch (_) {} } return; }
+    setTimeout(function () { openBridge(tries + 1); }, 150);
+  }
   window.addEventListener('hashchange', meshLinkHash);
-  meshLinkHash();
+  if (document.readyState === 'complete') meshLinkHash();
+  else window.addEventListener('load', meshLinkHash, { once: true });
 })();

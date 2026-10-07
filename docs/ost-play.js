@@ -89,7 +89,21 @@
     } catch (_) {}
   }
 
-  async function refresh() {
+  // NET-3: concurrent refreshes share ONE /play/balance request (several
+  // modules refresh on the same wallet / money event). refresh(true) — after a
+  // money action whose result must be read fresh — always asks the server.
+  var refreshInFlight = null, refreshInFlightAddr = '';
+  function refresh(force) {
+    var a = addr();
+    if (force !== true && refreshInFlight && refreshInFlightAddr === a) return refreshInFlight;
+    var p = refreshNow();
+    if (force !== true) {
+      refreshInFlight = p; refreshInFlightAddr = a;
+      p.then(function () { if (refreshInFlight === p) refreshInFlight = null; }, function () { if (refreshInFlight === p) refreshInFlight = null; });
+    }
+    return p;
+  }
+  async function refreshNow() {
     var a = addr();
     if (!a) {
       // Wallet not attached YET is not the same as no wallet. Keep whatever we
@@ -243,7 +257,27 @@
     });
   }
 
-  async function deposit(uiAmount) {
+  // Wallet OSTG straight from the chain (raw base units + ui), or null when the
+  // read failed (unknown is not zero). `exists` says whether the account exists.
+  async function readWalletOstg(owner) {
+    var conn = null;
+    try { conn = window.OST_WALLET && window.OST_WALLET.getConnection ? window.OST_WALLET.getConnection() : null; } catch (_) { conn = null; }
+    var ata = ataOf(OSTG_MINT, owner);
+    var call = function (fn) {
+      if (window.OST_WALLET && typeof window.OST_WALLET.rpcCall === 'function') return window.OST_WALLET.rpcCall(fn);
+      return conn ? fn(conn) : Promise.reject(new Error('rpc unavailable'));
+    };
+    try {
+      var info = await call(function (c) { return c.getAccountInfo(ata); });
+      if (!info) return { exists: false, raw: 0n, ui: 0 };
+      var bal = await call(function (c) { return c.getTokenAccountBalance(ata); });
+      var raw = BigInt(String((bal && bal.value && bal.value.amount) || '0'));
+      return { exists: true, raw: raw, ui: Number(raw) / Math.pow(10, DEC) };
+    } catch (_) { return null; }
+  }
+
+  async function deposit(uiAmount, opts) {
+    opts = opts || {};
     var w = wallet();
     if (!w) throw new Error('Connect your wallet first.');
     var rescue = window.OST_RESCUE;
@@ -254,20 +288,50 @@
     if (!(amt > 0)) throw new Error('Enter an amount greater than zero.');
     var rawAmount = BigInt(Math.round(amt * 10 ** DEC));
 
-    // Ensure the user's OSTG account exists (pool-paid), then move OSTG to the
-    // pool gas-free. The transfer references the pool's ATA (not the pool pubkey),
-    // so it passes assertPoolAbsent — the pool signs only as fee payer.
-    await rescue.ensureUserAtaForMint(w, OSTG_MINT);
+    // PRD-2 / SRV-5: check the WALLET OSTG before touching the pool rail. A
+    // deposit from an empty account used to be broadcast anyway and fail on
+    // chain (Custom:1) after ~9 s; a cold worker isolate also mis-reported the
+    // existing account as missing (IllegalOwner). Now: read the account first;
+    // only ask the pool to create it when it is really absent; refuse plainly
+    // when the OSTG is not there. A just-converted balance may take a moment to
+    // become visible, so a short wait is allowed (opts.waitMs).
+    var deadline = Date.now() + (Number(opts.waitMs) || 0);
+    var have = await readWalletOstg(w);
+    while (have && have.raw < rawAmount && Date.now() < deadline) {
+      await sleepMs(1500);
+      have = await readWalletOstg(w);
+    }
+    if (have && have.raw < rawAmount) {
+      var ie = new Error('Your wallet holds ' + have.ui.toFixed(2) + ' OSTG — not enough to move ' + amt.toFixed(2) + ' OSTG to your play balance. Convert OST → OSTG first (1:1, fees paid by OST).');
+      ie.code = 'insufficient_ostg'; ie.have = have.ui;
+      throw ie;
+    }
+    if (!have || !have.exists) {
+      // Ensure the user's OSTG account exists (pool-paid). A false failure on a
+      // cold worker is tolerated when the account turns out to exist.
+      try { await rescue.ensureUserAtaForMint(w, OSTG_MINT); }
+      catch (ataErr) {
+        var again = await readWalletOstg(w);
+        if (!(again && again.exists)) throw ataErr;
+      }
+    }
+    // Move OSTG to the pool gas-free. The transfer references the pool's ATA
+    // (not the pool pubkey), so it passes assertPoolAbsent — the pool signs
+    // only as fee payer.
     // Retry the TRANSFER on transient failures. The pool-cosign build reads
     // account/blockhash state from a throttled RPC, so it intermittently returns
     // IllegalOwner / blockhash_expired / 429 even though the accounts are valid
     // (it succeeds on a retry). Only transient errors retry; a real rejection throws.
     var sig, lastErr;
     for (var _t = 0; _t < 3; _t++) {
-      try { sig = await rescue.sendPoolFeeOnly([transferCheckedIx(ataOf(OSTG_MINT, w), PK(POOL_OSTG_ATA), w, rawAmount)]); break; }
+      try { var sent = await rescue.sendPoolFeeOnly([transferCheckedIx(ataOf(OSTG_MINT, w), PK(POOL_OSTG_ATA), w, rawAmount)]); sig = String((sent && sent.sig) || sent || ''); break; }
       catch (e) {
         lastErr = e; var msg = String((e && e.message) || e);
-        if (_t < 2 && /IllegalOwner|blockhash|expired|429|Too Many|timeout|network|took too long|fetch/i.test(msg)) { await sleepMs(2200); continue; }
+        // Retry ONLY when nothing can have been sent (C4): an error that carries
+        // a signature or says "pending" may have landed — never build a 2nd tx.
+        var mayHaveLanded = !!(e && (e.sig || e.pending || (e.body && e.body.sig)));
+        if (mayHaveLanded) { sig = String(e.sig || (e.body && e.body.sig) || ''); if (sig) break; throw e; }
+        if (_t < 2 && /IllegalOwner|blockhash|expired|429|Too Many|rate.?limit/i.test(msg + ' ' + String(e && e.code || ''))) { await sleepMs(2200); continue; }
         throw e;
       }
     }

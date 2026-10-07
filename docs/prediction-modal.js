@@ -397,11 +397,10 @@
   function shareBetGlobally(market, side, stake, rec, outcomeKey) {
     try {
       var base = (window.OST_API_BASE || '').replace(/\/$/, '');
-      var wallet = (rec && rec.wallet) ||
-        (window.OST_WALLET && window.OST_WALLET.session && window.OST_WALLET.session.publicKey && window.OST_WALLET.session.publicKey.toBase58 && window.OST_WALLET.session.publicKey.toBase58()) ||
-        window.OST_WALLET_PUBKEY ||
-        (window.solana && window.solana.publicKey && window.solana.publicKey.toString && window.solana.publicKey.toString()) ||
-        'anon';
+      // SRV-3: POST /positions is wallet-signed (ost-auth.js). Only the app's
+      // connected wallet can sign it, so never post for another key or 'anon'.
+      var signer = (window.OST_WALLET && window.OST_WALLET.session && window.OST_WALLET.session.publicKey && window.OST_WALLET.session.publicKey.toBase58 && window.OST_WALLET.session.publicKey.toBase58()) || '';
+      var wallet = signer;
       var contract = getModalTradeContract(market, side, outcomeKey || (rec && rec.outcomeKey) || '');
       var sideUp = String(side || (contract && contract.side) || 'YES').toUpperCase() === 'NO' ? 'NO' : 'YES';
       var price = Number(rec && rec.price);
@@ -433,7 +432,7 @@
         ts: rec && (rec.ts || rec.createdAt) || new Date().toISOString()
       });
       optimisticallyMergeFlowRecord(market, payload);
-      if (!base) return;
+      if (!base || !signer || (rec && rec.wallet && rec.wallet !== signer)) return;
       fetch(base + '/positions', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
@@ -1628,6 +1627,14 @@
   function writeOrders(list) {
     try { localStorage.setItem(ORDERS_KEY, JSON.stringify((list || []).slice(0, 300))); } catch (_) {}
   }
+  // PRD-1: tickets held by the server play ledger (OSTG play rail).
+  function isPlayRailTicket(o) {
+    if (!o) return false;
+    var ids = [o.id, o.ref, o.positionId, o.ticketId, o.signature, o.sig].map(function (x) { return String(x || ''); });
+    if (ids.some(function (x) { return /^p_/.test(x); })) return true;
+    var f = String(o.fundedBy || o.rail || '').toLowerCase();
+    return f === 'ostg-native' || f === 'play' || f === 'ostg-play';
+  }
   function ownWallet() {
     try {
       if (window.OST_WALLET && window.OST_WALLET.session && window.OST_WALLET.session.publicKey && window.OST_WALLET.session.publicKey.toBase58) {
@@ -1667,12 +1674,14 @@
   function postPositionUpdate(order, market) {
     try {
       var base = (window.OST_API_BASE || '').replace(/\/$/, '');
-      if (!base) return;
+      var signer = (window.OST_WALLET && window.OST_WALLET.session && window.OST_WALLET.session.publicKey && window.OST_WALLET.session.publicKey.toBase58 && window.OST_WALLET.session.publicKey.toBase58()) || '';
+      // SRV-3: signed by the connected wallet only; never 'anon' or another key.
+      if (!base || !signer || (order.wallet && order.wallet !== signer)) return;
       fetch(base + '/positions', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify(Object.assign({}, order, {
-          wallet: order.wallet || ownWallet() || 'anon',
+          wallet: signer,
           marketTitle: order.title || order.marketTitle || '',
           ts: order.createdAt || order.ts || Date.now(),
           baseYesPrice: market ? nativeBaseYesInput(market) : null
@@ -2217,13 +2226,19 @@
         var pnlColor = pnl >= 0 ? '#7ce6a8' : '#ff7c8a';
         var pnlStr = (pnl >= 0 ? '+' : '−') + Math.abs(pnl).toFixed(2);
         var sideLabel = o.outcomeLabel || (contract && contract.label) || side;
+        // PRD-1: a play-rail ticket (p_ id / fundedBy ostg-native) is held and
+        // sold by the OST server. This legacy modal must never "sell" it through
+        // a pool payout - send the user to the market's own Sell instead.
+        var sellCell = isPlayRailTicket(o)
+          ? '<span style="margin-left:auto;font-size:12px;opacity:.8;">Sell in Markets &rarr; your position</span>'
+          : '<button type="button" data-act="sell" data-sell-idx="' + i + '" style="margin-left:auto;padding:5px 12px;border-radius:6px;border:none;background:#22c55e;color:#031;cursor:pointer;font-weight:700;font-size:12px;">Sell ' + liveValue.toFixed(2) + ' OST</button>';
         return '<div class="ost-modal__sell-row" data-sell-key="' + escapeHtml(o.signature || o.sig || o.id || ('idx-' + i)) + '" style="display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid rgba(255,255,255,.06);">' +
           '<span style="font-weight:700;color:' + sideColor + ';min-width:34px;">' + escapeHtml(sideLabel) + '</span>' +
           '<span style="opacity:.85;font-size:12px;">' + stake.toFixed(2) + ' OST @ ' + (entryPx > 0 ? (entryPx * 100).toFixed(1) + '¢' : '—') + '</span>' +
           '<span style="opacity:.85;font-size:12px;">live ' + (livePx * 100).toFixed(1) + '¢</span>' +
           '<span style="opacity:.85;font-size:12px;">value <b>' + liveValue.toFixed(2) + '</b></span>' +
           '<span style="font-size:12px;color:' + pnlColor + ';font-weight:700;">' + pnlStr + ' OST</span>' +
-          '<button type="button" data-act="sell" data-sell-idx="' + i + '" style="margin-left:auto;padding:5px 12px;border-radius:6px;border:none;background:#22c55e;color:#031;cursor:pointer;font-weight:700;font-size:12px;">Sell ' + liveValue.toFixed(2) + ' OST</button>' +
+          sellCell +
         '</div>';
       }).join('');
       sellListEl.querySelectorAll('button[data-act="sell"]').forEach(function (btn) {
@@ -2232,6 +2247,7 @@
           var positions = ordersForMarket(market);
           var order = positions[idx];
           if (!order) return;
+          if (isPlayRailTicket(order)) { toast('Sell this position from Markets - the OST server settles it.', 'info'); return; }
           var side = String(order.side || 'yes').toLowerCase() === 'no' ? 'NO' : 'YES';
           var entryPx = Number(order.price || (side === 'NO' ? order.noPrice : order.yesPrice)) || 0;
           var shares = Number(order.shares) > 0 ? Number(order.shares) : (entryPx > 0 ? Number(order.stake || 0) / entryPx : 0);

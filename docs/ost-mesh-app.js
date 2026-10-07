@@ -242,13 +242,16 @@ if (!window.OST_MESH_APP) {
   }
 
   /* ---------- signed requests (OST-MESH|v1 canonical, verified by the hub) ---------- */
+  // C11: sign with the server-corrected clock (OST_AUTH learns the offset), so a
+  // phone whose clock is minutes off is not refused as mesh_auth_stale.
+  function meshNow() { try { if (window.OST_AUTH && typeof OST_AUTH.now === 'function') { const n = Number(OST_AUTH.now()); if (Number.isFinite(n) && n > 0) return n; } } catch (_) {} return Date.now(); }
   async function signHeaders(method, pathq, bodyHash) {
-    const ts = Date.now(), nonce = hex(crypto.getRandomValues(new Uint8Array(12)));
+    const ts = meshNow(), nonce = hex(crypto.getRandomValues(new Uint8Array(12)));
     const msg = `OST-MESH|v1|${S.address}|${method}|${pathq}|${bodyHash}|${ts}|${nonce}`;
     const sig = await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-384' }, S.identity.sig.privateKey, new TextEncoder().encode(msg));
     return { addr: S.address, ts, nonce, sig: b64(sig) };
   }
-  async function signed(method, pathq, body) {
+  async function signed(method, pathq, body, _retried) {
     if (hubBusy()) throw netErr('hub_busy');
     const isBin = body instanceof Uint8Array || body instanceof ArrayBuffer;
     const bodyText = body && !isBin ? JSON.stringify(body) : '';
@@ -258,9 +261,19 @@ if (!window.OST_MESH_APP) {
     if (bodyText) headers['Content-Type'] = 'application/json';
     if (isBin) headers['Content-Type'] = 'application/octet-stream';
     let r;
+    const sentAt = Date.now();
     try { r = await fetch(API + pathq, { method, headers, body: isBin ? body : (bodyText || undefined), cache: 'no-store' }); }
     catch (_) { hubDownNow(); paintStatus(); throw netErr('network'); }
     const j = await r.json().catch(() => null);
+    // C11: a skewed device clock — learn the server time once and re-sign.
+    if (!_retried && r.status === 401 && j && j.error === 'mesh_auth_stale' && window.OST_AUTH) {
+      // (The fetch layer may already have learned the offset from this response.)
+      const usedOffset = h.ts - sentAt;
+      const moved = () => { try { return Math.abs(Number(OST_AUTH.clockOffset()) - usedOffset) > 30000; } catch (_) { return false; } };
+      try { if (!moved() && typeof OST_AUTH.learnFrom === 'function') OST_AUTH.learnFrom(r, sentAt, Date.now()); } catch (_) {}
+      try { if (!moved() && typeof OST_AUTH.learnClock === 'function') await OST_AUTH.learnClock(); } catch (_) {}
+      if (moved()) return signed(method, pathq, body, true);
+    }
     if (!noteHub(r.status, r.headers, j) && r.status < 500) hubUp();   // the hub itself answered
     if (r.ok && j && j.ok !== false) return j;
     const code = (r.status === 429 && (!j || !j.error || j.error === 'rate_limited')) ? 'rate_limited' : ((j && j.error) || ('http_' + r.status));

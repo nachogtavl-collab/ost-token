@@ -52,6 +52,10 @@ export function isProtectedPath(path, method) {
   if (/^\/faucet\/v1\/(reserve|commit|cancel)$/.test(path)) return true;
   if (path === '/wallet/payout' || path === '/wallet/ata-rent' || /^\/wallet\/cosign/.test(path)) return true;
   if (path === '/wallet/events') return true;   // the shared activity log: only the wallet itself may append to it
+  // SRV-3: positions feed the client's auto-claim. Unsigned POSTs let anyone
+  // write a "won" record into ANOTHER wallet's list; now only the wallet itself
+  // may write its own positions (body.wallet must equal the signer).
+  if (path === '/positions') return true;
   return false;
 }
 
@@ -86,9 +90,12 @@ export async function issueSession(env, body) {
   if (!secret) return { ok: false, error: 'auth_not_configured' };
   const wallet = String((body && body.wallet) || '').slice(0, 64);
   const ts = Number(body && body.ts), nonce = String((body && body.nonce) || '').slice(0, 64), sig = String((body && body.sig) || '');
-  if (!wallet || !nonce || !Number.isFinite(ts)) return { ok: false, error: 'missing_fields' };
-  if (Math.abs(Date.now() - ts) > WINDOW_MS) return { ok: false, error: 'stale_timestamp' };
-  if (!(await verifyEd25519(wallet, sessionChallenge({ wallet, ts, nonce }), sig))) return { ok: false, error: 'bad_signature' };
+  if (!wallet || !nonce || !Number.isFinite(ts)) return { ok: false, error: 'missing_fields', code: 'wallet_auth_required', reason: 'missing', serverTime: Date.now(), message: 'Sign the wallet challenge to continue.' };
+  if (Math.abs(Date.now() - ts) > WINDOW_MS) {
+    const skewMs = ts - Date.now();
+    return { ok: false, error: 'stale_timestamp', code: 'wallet_auth_required', reason: 'stale_timestamp', serverTime: Date.now(), skewMs, message: clockMessage(skewMs) };
+  }
+  if (!(await verifyEd25519(wallet, sessionChallenge({ wallet, ts, nonce }), sig))) return { ok: false, error: 'bad_signature', code: 'wallet_auth_required', reason: 'bad_signature', serverTime: Date.now(), message: 'Your wallet signature could not be verified. Reconnect your wallet and try again.' };
   const exp = Date.now() + SESSION_MS;
   const payload = bytesToB64url(enc.encode(JSON.stringify({ w: wallet, exp, n: nonce.slice(0, 16) })));
   const mac = await hmacHex(secret, payload);
@@ -106,9 +113,17 @@ async function verifySession(env, token) {
   return obj.w;
 }
 
+function clockMessage(skewMs) {
+  const mins = Math.max(1, Math.round(Math.abs(Number(skewMs) || 0) / 60000));
+  return 'Your device clock is about ' + mins + ' minute' + (mins === 1 ? '' : 's') + ' off. Turn on automatic date & time, then try again.';
+}
+
 // Replay guard lives in the PlayLedger DO (one global instance, its own storage).
+// -> 'fresh' | 'replay' | 'unavailable'. AUTH-1: a guard that could not answer
+// (DO reset, bad response) is NOT a replay — the caller answers 503
+// auth_unavailable instead of telling the user their request was replayed.
 async function nonceFresh(env, wallet, nonce, ts) {
-  if (!env || !env.PLAY_LEDGER || !env.INTERNAL_MUTATION_KEY) return true;   // no guard available: allow (logged as via:*-noreplay)
+  if (!env || !env.PLAY_LEDGER || !env.INTERNAL_MUTATION_KEY) return 'fresh';   // no guard available: allow (logged as via:*-noreplay)
   try {
     const pl = env.PLAY_LEDGER.get(env.PLAY_LEDGER.idFromName('global'));
     const r = await pl.fetch('https://play-ledger/play/auth-nonce', {
@@ -116,8 +131,10 @@ async function nonceFresh(env, wallet, nonce, ts) {
       body: JSON.stringify({ wallet, nonce, ts })
     });
     const j = await r.json().catch(() => null);
-    return !!(j && j.ok);
-  } catch (_) { return false; }
+    if (j && j.ok) return 'fresh';
+    if (r.status === 409 || (j && j.error === 'replay')) return 'replay';
+    return 'unavailable';
+  } catch (_) { return 'unavailable'; }
 }
 
 // Body must name the same wallet the caller proved (no acting on someone else's wallet).
@@ -134,7 +151,10 @@ export async function verifyWalletAuth(request, env, bodyText, path, method) {
   const wallet = h('x-ost-wallet'), ts = Number(h('x-ost-ts')), nonce = h('x-ost-nonce'), sig = h('x-ost-sig'), session = h('x-ost-session');
   if (!wallet) return { ok: false, reason: 'missing' };
   if (!nonce || !Number.isFinite(ts)) return { ok: false, reason: 'missing_ts_nonce' };
-  if (Math.abs(Date.now() - ts) > WINDOW_MS) return { ok: false, reason: 'stale_timestamp' };
+  // ±5 min window (contract C11: the client learns its clock offset from
+  // serverTime / x-ost-server-time and retries once, so a wider window is not
+  // needed — and the nonce guard keeps nonces for 10 min, matching ±5 min).
+  if (Math.abs(Date.now() - ts) > WINDOW_MS) return { ok: false, reason: 'stale_timestamp', skewMs: ts - Date.now() };
   if (!bodyWalletMatches(bodyText, wallet)) return { ok: false, reason: 'wallet_mismatch' };
   let via = '';
   if (session) {
@@ -148,6 +168,8 @@ export async function verifyWalletAuth(request, env, bodyText, path, method) {
     if (!(await verifyEd25519(wallet, msg, sig))) return { ok: false, reason: 'bad_signature' };
     via = 'sig';
   }
-  if (!(await nonceFresh(env, wallet, nonce, ts))) return { ok: false, reason: 'replay' };
+  const fresh = await nonceFresh(env, wallet, nonce, ts);
+  if (fresh === 'replay') return { ok: false, reason: 'replay' };
+  if (fresh !== 'fresh') return { ok: false, reason: 'auth_unavailable' };
   return { ok: true, wallet, via };
 }

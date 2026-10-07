@@ -42,9 +42,13 @@
   function load() {
     if (kp) return kp;
     try { var raw = JSON.parse(localStorage.getItem(KEY) || 'null'); if (raw && raw.secret) { kp = w3().Keypair.fromSecretKey(Uint8Array.from(raw.secret)); meta = raw; } } catch (_) {}
+    // A key whose funding was interrupted (tab closed mid-sign): recover it so
+    // anything that did land can still be swept back with End.
+    if (!kp) { try { var pend = JSON.parse(localStorage.getItem(KEY + '.pending') || 'null'); if (pend && pend.secret) { kp = w3().Keypair.fromSecretKey(Uint8Array.from(pend.secret)); meta = pend; save(); localStorage.removeItem(KEY + '.pending'); } } catch (_) {} }
     return kp;
   }
-  function gen() { kp = w3().Keypair.generate(); meta = { secret: Array.from(kp.secretKey), cap: 0, at: Date.now() }; save(); return kp; }
+  // memoryOnly: a key for a fund() still in flight — saved once funding lands.
+  function gen(memoryOnly) { kp = w3().Keypair.generate(); meta = { secret: Array.from(kp.secretKey), cap: 0, at: Date.now() }; if (!memoryOnly) save(); return kp; }
   function save() { try { localStorage.setItem(KEY, JSON.stringify(meta)); } catch (_) {} }
   function keypair() { return load(); }
   function pubkey() { var k = load(); return k ? k.publicKey : null; }
@@ -78,12 +82,23 @@
   }
   // Refresh both balances. LAST-KNOWN semantics: a failed read keeps the old
   // value instead of showing 0/disconnected (the #2 "disconnections" fix).
+  // C6 / NET-3: the WALLET's own OSTG is read from OST_BALANCE (the app's one
+  // balance poller) — never an extra RPC loop from here. Only an existing
+  // session key's own account is read on chain, and only on demand.
+  function walletOstgFromBalance() {
+    try {
+      var g = window.OST_BALANCE && typeof window.OST_BALANCE.get === 'function' ? window.OST_BALANCE.get() : null;
+      if (g && g.ostg != null && isFinite(Number(g.ostg))) return Number(g.ostg);
+    } catch (_) {}
+    return null;
+  }
   async function refresh() {
     var k = load();
     var s = k ? await readOstg(k.publicKey) : 0; if (s != null) cachedBal = s; else if (cachedBal == null) cachedBal = undefined;
-    var u = userPk(); if (u) { var w = await readOstg(u); if (w != null) cachedWallet = w; }
+    var u = userPk(); if (u) { var w = walletOstgFromBalance(); if (w != null) cachedWallet = w; }
     emit(); return cachedBal;
   }
+  window.addEventListener('ost:balance', function () { var w = walletOstgFromBalance(); if (w != null && w !== cachedWallet) { cachedWallet = w; emit(); } });
   // The unified spendable = wallet OSTG + whatever is parked in the session key.
   function spendable() { if (cachedWallet == null && cachedBal == null) return undefined; return (cachedWallet || 0) + (cachedBal || 0); }
   function walletBalance() { return cachedWallet; }
@@ -113,7 +128,22 @@
     if (cap() + amountUi > MAX_FUND) throw new Error('This session already holds ' + cap() + ' OSTG; the cap is ' + MAX_FUND + '.');
     var have = await readOstg(u); if (have == null) have = cachedWallet;
     if (have != null && amountUi > Math.floor(have)) throw new Error('Your wallet has ' + Math.floor(have) + ' OSTG — fund at most that.');
-    var k = load() || gen();
+    // PRD-5: 1-tap needs a little SOL for the session float (+ account rent).
+    // A 0-SOL wallet used to sign a transaction that could only fail on chain,
+    // and leave a dead session key behind. Refuse up front, plainly.
+    try {
+      var solLam = await conn().getBalance(u);
+      if (Number.isFinite(solLam) && solLam < Math.round((FUND_SOL + 0.003) * 1e9)) {
+        var se = new Error('1-tap needs about ' + (FUND_SOL + 0.003).toFixed(3) + ' devnet SOL for the session’s fees. Your wallet has ' + (solLam / 1e9).toFixed(4) + ' SOL. Regular buys need no SOL.');
+        se.code = 'no_sol'; throw se;
+      }
+    } catch (e) { if (e && e.code === 'no_sol') throw e; }
+    var fresh = !load();
+    var k = load() || gen(true);
+    // The in-flight key is parked under a SEPARATE storage key (not read by
+    // exists()/load()), so a tab closed mid-sign can still recover the funds
+    // while the app never treats an unfunded key as an armed 1-tap session.
+    if (fresh) { try { localStorage.setItem(KEY + '.pending', JSON.stringify(meta)); } catch (_) {} }
     var uAta = ataOf(u), sAta = ataOf(k.publicKey);
     var tx = new W.Transaction();
     // Gas float only when the session key is short of it (re-funding an armed
@@ -127,8 +157,24 @@
     // address — so the one funding signature ALWAYS failed and 1-tap never armed.
     if (need && window.OST_WALLET.associatedAccountIx) { var ix = window.OST_WALLET.associatedAccountIx(u, sAta, k.publicKey, pk(MINT)); if (ix) tx.add(ix); }
     tx.add(transferCheckedIx(uAta, sAta, u, amountUi));
-    await window.OST_WALLET.sign(tx);                 // the single user signature
+    // PRD-5: a NEW session key is persisted only once its funding transaction
+    // has gone through. Before, the key was saved first; a failed fund left a
+    // dead "1-tap" key behind. It is kept in memory while signing (and saved
+    // the moment sign returns, so funds that did land are never orphaned).
+    try {
+      await window.OST_WALLET.sign(tx);               // the single user signature
+    } catch (signErr) {
+      if (fresh) {
+        // Only forget the new key when nothing reached it.
+        var reached = false;
+        try { reached = (await conn().getBalance(k.publicKey)) > 0; } catch (_) { reached = true; }
+        if (reached) save(); else { kp = null; meta = null; }
+        try { localStorage.removeItem(KEY + '.pending'); } catch (_) {}
+      }
+      throw signErr;
+    }
     meta.cap = (meta.cap || 0) + amountUi; meta.at = Date.now(); save();
+    try { localStorage.removeItem(KEY + '.pending'); } catch (_) {}
     try { localStorage.setItem(KEY + '.ended', ''); } catch (_) {}
     await refresh();
     try { window.dispatchEvent(new CustomEvent('ost:session:funded', { detail: { amount: amountUi, cap: meta.cap } })); } catch (_) {}
@@ -207,12 +253,16 @@
       return !!(m && m.exists);
     } catch (_) { return false; }
   }
-  var offered = false;
+  var offered = false, lastOfferCheckAt = 0;
   async function offer() {
     if (offered || !userPk() || !onchainReady()) return false;
+    // NET-3: whether this round has an on-chain market is asked at most once
+    // per 5-minute round (D4: the on-chain rail is offline until the crank runs).
+    if (Date.now() - lastOfferCheckAt < 300000) return false;
+    lastOfferCheckAt = Date.now();
     if (exists()) { await refresh(); if (cachedBal > 0) return false; }    // already armed
     if (!(await onchainMarketExists())) return false;
-    var u = userPk(); var w = await readOstg(u); if (w != null) cachedWallet = w;
+    var w = walletOstgFromBalance(); if (w != null) cachedWallet = w;
     if (!(cachedWallet >= MIN_FUND)) return false;
     offered = true;
     var suggest = Math.min(DEFAULT_FUND, MAX_FUND, Math.floor(cachedWallet));
@@ -228,7 +278,15 @@
   // Refresh (read-only) when the wallet core is ready / changes, and let the UI
   // know whether 1-tap can be offered. OST_WALLET.onReady replays immediately
   // if a wallet is already connected.
-  function onWallet() { if (document.hidden) return; setTimeout(function () { refresh().then(offer).catch(function () {}); }, 800); }
+  // A session key's own account is re-read only when one exists; otherwise
+  // this is a memory read (no RPC on every wallet / money event — NET-3).
+  function onWallet() {
+    if (document.hidden) return;
+    setTimeout(function () {
+      var p = exists() ? refresh() : Promise.resolve((function () { var w = walletOstgFromBalance(); if (w != null) cachedWallet = w; return cachedBal; })());
+      p.then(offer).catch(function () {});
+    }, 800);
+  }
   (function hookReady(n) {
     if (window.OST_WALLET && typeof window.OST_WALLET.onReady === 'function') { window.OST_WALLET.onReady(onWallet); return; }
     if (n > 40) return; setTimeout(function () { hookReady(n + 1); }, 150);   // OST_WALLET may define after us

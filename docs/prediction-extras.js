@@ -275,7 +275,7 @@
     var defaultStake = 5;
     openModal([
       '<h2>Bet ' + side.toUpperCase() + ' on “' + escapeHtml(market.title) + '”</h2>',
-      '<p class="ost-pred-sub">Side price: ' + Math.round(price * 100) + '% — payout ≈ ' + ((1 - 150 / 10000) / price).toFixed(2) + 'x after the 1.5% protocol fee. OST is transferred to the on-chain prediction vault.</p>',
+      '<p class="ost-pred-sub">Side price: ' + Math.round(price * 100) + '% — a win pays ≈ ' + (1 / price).toFixed(2) + '× (estimate; 1.5% spread and 2% of profit go to OST). Your OST moves on-chain from your wallet to the OST pool.</p>',
       '<label class="ost-pred-label">Stake (OST) <input type="number" id="ost-pred-stake" min="0.1" step="0.1" value="' + defaultStake + '"></label>',
       '<div class="ost-pred-modal__cta">',
         '<button type="button" class="ost-pred-btn" id="ost-pred-cancel">Cancel</button>',
@@ -290,80 +290,93 @@
       var statusEl = modal.querySelector('#ost-pred-status');
       var stake = parseFloat(stakeEl.value);
       if (!Number.isFinite(stake) || stake <= 0) { statusEl.textContent = 'Enter a positive stake.'; return; }
-      this.disabled = true; statusEl.textContent = 'Sending OST ticket on-chain…';
-      submitBet(market, side, stake, price).then(function (record) {
-        statusEl.innerHTML = '✅ Recorded. Signature: <code>' + escapeHtml(record.signature.slice(0, 16)) + '…</code>';
-        setTimeout(closeModal, 1800);
+      this.disabled = true; statusEl.textContent = 'Sending your OST ticket…';
+      submitBet(market, side, stake, price).then(function (res) {
+        var sig = String((res && res.signature) || '');
+        statusEl.innerHTML = sig && !/^(local|credits|sim)-/.test(sig)
+          ? '✅ Ticket placed. Signature: <code>' + escapeHtml(sig.slice(0, 16)) + '…</code>'
+          : '⏳ Ticket placed — confirming your stake on-chain. It shows in your Portfolio.';
+        setTimeout(closeModal, 2200);
       }).catch(function (err) {
-        statusEl.textContent = '❌ ' + (err && err.message ? err.message : 'Could not place bet.');
+        var msg = (err && err.message) ? err.message : 'Could not place the ticket.';
+        try { if (window.OST_MONEY_ERRORS && OST_MONEY_ERRORS.humanize) { var h = OST_MONEY_ERRORS.humanize(err, { stage: 'build', asset: 'OST' }); if (h && h.title) msg = h.title + (h.body ? ' — ' + h.body : ''); } } catch (_) {}
+        statusEl.textContent = '❌ ' + msg;
         modal.querySelector('#ost-pred-confirm').disabled = false;
       });
     };
   }
 
-  // Submit bet — uses OST_WALLET to do a real Token-2022 transfer to the swap pool with a memo
-  // Falls back to a simulated record if no wallet/web3 is available.
+  function walletAddress() {
+    try {
+      var W = window.OST_WALLET; if (!W) return '';
+      if (W.session && W.session.publicKey) return W.session.publicKey.toBase58();
+      var a = W.address; if (typeof a === 'function') a = a.call(W);
+      return a ? String(a) : '';
+    } catch (_) { return ''; }
+  }
+  // PRD-7: the real order path. This used to call OST_WALLET.transferChecked
+  // with the wrong argument shape (it builds an instruction, it does not send)
+  // and silently debited legacy credits instead, so the "Sending OST ticket
+  // on-chain…" modal produced fake 'local-' / 'credits-' receipts. Now every
+  // ticket goes through OST_PREDICTION_API.placeOrder (stake moves on-chain, or
+  // the server-ledger position for BTC 5-min). No wallet -> create/connect one.
   function submitBet(market, side, stake, price) {
-    var memo = JSON.stringify({ k: 'ost-bet', m: market.id, s: side, p: price, a: stake, t: Date.now() });
-    // True odds on the ticket; the house edge is taken on the PROFIT when the
-    // winner claims (see the claim handler + OST_HOUSE). Loss = full stake to
-    // the vault. No hidden entry fee.
-    var record = {
-      id: 'bet-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 6),
-      marketId: market.id,
-      title: market.title,
-      side: side,
-      stake: stake,
-      price: price,
-      payoutIfWin: stake / price,
-      placedAt: Date.now(),
-      status: 'open',
-      signature: '',
-      isOstNative: !!market.isOst
-    };
-    function commit(record) {
-      var bets = readBets(); bets.unshift(record); writeBets(bets);
-      return record;
+    var api = window.OST_PREDICTION_API;
+    if (!walletAddress()) {
+      try { if (window.OST_WALLET && typeof window.OST_WALLET.requireWallet === 'function') window.OST_WALLET.requireWallet({ reason: 'buy' }); } catch (_) {}
+      var nw = new Error('Create or connect a wallet first — every ticket is funded from your own wallet.');
+      nw.code = 'no_wallet';
+      return Promise.reject(nw);
     }
-
-    return new Promise(function (resolve, reject) {
-      try {
-        var W = window.OST_WALLET;
-        var pool = window.OST_SWAP_POOL_PUBKEY || (window.OST_SWAP_POOL && window.OST_SWAP_POOL.publicKey);
-        if (W && W.transferChecked && pool) {
-          W.transferChecked({ to: pool, amount: stake, memo: memo }).then(function (sig) {
-            record.signature = String(sig || ('local-' + record.id));
-            resolve(commit(record));
-          }).catch(reject);
-          return;
-        }
-      } catch (e) { /* fall through */ }
-      // No wallet: the stake must still be REAL money — debit the credits
-      // pool. A bet that moves nothing is not a bet (that was the old "sim"
-      // free-ride, which let testers ride positions without funding them).
-      if (window.OST_MONEY && window.OST_MONEY.spend && window.OST_MONEY.spend(stake, 'prediction-ticket')) {
-        record.signature = 'credits-' + record.id;
-        record.fundedBy = 'credits';
-        resolve(commit(record));
-        return;
-      }
-      reject(new Error('Connect your OST wallet or earn credits first — every bet must be funded.'));
+    if (!api || typeof api.placeOrder !== 'function') return Promise.reject(new Error('The market desk is still loading — try again in a moment.'));
+    var p = Number(price) > 0 && Number(price) < 1 ? Number(price) : (side === 'no' ? 1 - (Number(market.yesPrice) || 0.5) : (Number(market.yesPrice) || 0.5));
+    var yesP = side === 'no' ? 1 - p : p;
+    return Promise.resolve(api.placeOrder({
+      source: market.source || (market.isOst ? 'ost' : 'polymarket'),
+      marketId: String(market.id), title: market.title || String(market.id), topic: market.topic || '',
+      side: side === 'no' ? 'no' : 'yes', stake: Number(stake),
+      price: p, yesPrice: yesP, noPrice: 1 - yesP, shares: Number(stake) / p, potentialReturn: Number(stake) / p,
+      closeAtMs: Number(market.closeAtMs) || 0, quotedAt: Date.now(), quoteSource: 'card', quoteLocked: true,
+      reference: 'ost-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7)
+    })).then(function (res) {
+      var rec = (res && res.record) || res || {};
+      return { signature: String(rec.signature || rec.sig || ''), pending: !!(res && res.pending), record: rec };
     });
   }
+  // --- "My bets" panel ------------------------------------------------------
+  // PRD-7: legacy extras-store bets used to be "resolved" from a hash of the
+  // market id after 24 h — a made-up outcome that could then be claimed. A
+  // ticket only resolves from its real market now (resolution engine / server).
+  function resolveBetIfNeeded(bet) { return bet; }
 
-  // --- "My bets" panel (auto-resolves OST native bets at close time) ------
-  function resolveBetIfNeeded(bet) {
-    if (bet.status !== 'open' || !bet.isOstNative) return bet;
-    // Deterministic seeded outcome based on marketId — closes after 24h for unknowns
-    var closeAt = bet.placedAt + 24 * 3600 * 1000;
-    if (Date.now() < closeAt) return bet;
-    // Outcome: YES wins iff hash(marketId) % 2 === 0
-    var h = 0;
-    for (var i = 0; i < bet.marketId.length; i++) h = (h * 31 + bet.marketId.charCodeAt(i)) % 100003;
-    var yesWins = (h % 2 === 0);
-    bet.status = (bet.side === 'yes' && yesWins) || (bet.side === 'no' && !yesWins) ? 'won' : 'lost';
-    bet.resolvedAt = Date.now();
-    return bet;
+  // A ticket whose payout belongs to a server ledger (BTC 5-min play rail:
+  // fundedBy 'ostg-native', position ids p_…; legacy 'ostg') or the on-chain
+  // program. The server credits those wins itself, so this module must NEVER
+  // claim them from the OST pool (PRD-1: that paid the same win twice).
+  function isServerSettled(o) {
+    if (!o) return false;
+    var f = String(o.fundedBy || '');
+    if (f === 'ostg-native' || f === 'ostg' || o.rail === 'play' || o.serverSettled) return true;
+    if (o.serverPositionId || /^p_\d+_/.test(String(o.signature || o.sig || o.id || '').replace(/^desk-/, ''))) return true;
+    return false;
+  }
+  // The ONE claim rule (app.js OST_PREDICTION_API.actionFor): a desk ticket is a
+  // claimable win only when the cash-out would really pay it from the pool —
+  // a wallet ticket with a real on-chain stake (verified when it was imported),
+  // resolved won, not paid, not paying. The Portfolio, this panel, the HUD and
+  // auto-claim all ask this, so their counts agree (PRD-6) and nothing claims a
+  // p_ server position (PRD-1) or a 'local-' / '[object Object]' record (PRD-7).
+  function deskClaimable(o) {
+    if (!o) return false;
+    try {
+      var api = window.OST_PREDICTION_API;
+      if (api && typeof api.actionFor === 'function') {
+        var a = api.actionFor(o);
+        return !!(a && a.kind === 'prediction-settlement' && a.finalStatus === 'won' && a.canCash);
+      }
+    } catch (_) {}
+    // app.js not loaded yet: never offer a claim on a guess.
+    return false;
   }
 
   // Pull bets from BOTH stores (extras + the on-chain trade desk in app.js)
@@ -401,6 +414,14 @@
         // the custodial path — paying it twice and stranding the escrow.
         onChain: !!o.onChain,
         onChainOpenAt: Number(o.onChainOpenAt) || 0,
+        // PRD-1: carried so the claim path can see a server-ledger ticket.
+        serverPositionId: o.serverPositionId || '',
+        rail: o.rail || '',
+        unit: o.unit || (o.fundedBy === 'ostg-native' || o.fundedBy === 'ostg' || o.fundedBy === 'onchain' ? 'OSTG' : 'OST'),
+        serverSettled: isServerSettled(o),
+        cashoutPending: !!o.cashoutPending,
+        desk: true,
+        claimableWin: deskClaimable(o),
 
         isOstNative: /ost/i.test(String(o.source || '')),
         source: o.source || ''
@@ -480,7 +501,15 @@
       var statusCls = b.status === 'won' ? 'is-won' : b.status === 'lost' ? 'is-lost' : 'is-open';
       var sideCls   = b.side === 'yes' ? 'is-yes' : 'is-no';
       var inFlight  = !!claimingIds[b.id];
-      var canClaim  = b.status === 'won' && !b.claimed && !inFlight;
+      // PRD-1: a server-ledger win is already in the play balance — never a Claim.
+      // PRD-7 / D1: no Claim for a ticket that never moved real OST (credits,
+      // 'local-' / 'sim-' receipts) — there is nothing to pay it from.
+      var realStake = !!b.onChain || (/^[1-9A-HJ-NP-Za-km-z]{64,90}$/.test(String(b.signature || '')) && b.fundedBy !== 'credits');
+      // Desk tickets: the shared rule (deskClaimable). Legacy extras-store bets
+      // were "resolved" by a hash of the market id — never a payable win.
+      var canClaim  = b.desk ? (!!b.claimableWin && !b.claimed && !inFlight)
+        : (b.status === 'won' && !b.claimed && !inFlight && !b.serverSettled && !b.cashoutPending && realStake && !!b.onChain);
+      var unit      = b.unit || 'OST';
       var stake     = Number(b.stake) || 0;
       // EVERY row shows the REAL cash-out: net of the house fee — what a win
       // actually pays into the balance, not the pre-fee gross.
@@ -508,14 +537,15 @@
             '</div>',
           '</div>',
           '<div class="ost-bet-row__numbers">',
-            '<div><span>Stake</span><strong>' + fmt(stake) + ' OST</strong></div>',
-            '<div><span>Payout</span><strong>' + fmt(payout) + ' OST</strong></div>',
+            '<div><span>Stake</span><strong>' + fmt(stake) + ' ' + unit + '</strong></div>',
+            '<div><span>Payout</span><strong>' + fmt(payout) + ' ' + unit + '</strong></div>',
           '</div>',
           '<div class="ost-bet-row__actions">',
             '<button type="button" class="ost-pred-btn ost-pred-btn--ghost" data-ost-bet-open="' + escapeHtml(b.marketId) + '">Open market</button>',
-            (canClaim ? '<button type="button" class="ost-pred-btn ost-pred-btn--yes" data-ost-bet-claim="' + escapeHtml(b.id) + '">Claim ' + fmt(payout) + ' OST</button>' : ''),
-            (inFlight ? '<button type="button" class="ost-pred-btn ost-pred-btn--yes" disabled>Claiming…</button>' : ''),
-            (b.claimed ? '<span class="ost-bet-claimed">✓ ' + fmt(Number(b.paidOut) || payout) + ' OST claimed</span>' : ''),
+            (canClaim ? '<button type="button" class="ost-pred-btn ost-pred-btn--yes" data-ost-bet-claim="' + escapeHtml(b.id) + '">Claim ' + fmt(payout) + ' ' + unit + '</button>' : ''),
+            (inFlight || b.cashoutPending ? '<button type="button" class="ost-pred-btn ost-pred-btn--yes" disabled>Paying…</button>' : ''),
+            (b.claimed ? '<span class="ost-bet-claimed">✓ ' + fmt(Number(b.paidOut) || payout) + ' ' + unit + (b.serverSettled ? ' paid to play balance' : ' paid') + '</span>' : ''),
+            (b.serverSettled && b.status === 'won' && !b.claimed ? '<span class="ost-bet-claimed">Settled by the OST server — paid to play balance</span>' : ''),
             (b.signature && !/^(local|sim)-/.test(b.signature) ? '<a class="ost-bet-explorer" href="https://explorer.solana.com/tx/' + encodeURIComponent(b.signature) + '?cluster=devnet" target="_blank" rel="noopener">tx ' + escapeHtml(String(b.signature).slice(0, 6)) + '… ↗</a>' : ''),
           '</div>',
         '</article>'
@@ -582,7 +612,53 @@
     // Look up across BOTH stores — a main trade-desk win lives in the order
     // store, not the extras store (that mismatch made desk claims pay nothing).
     var bet = readAllBets().find(function (b) { return b && b.id === betId; });
-    if (!bet || bet.status !== 'won' || bet.claimed || bet.cashedOut) return;
+    if (!bet || bet.claimed || bet.cashedOut) return;
+    // A desk ticket is claimable only under the shared rule (deskClaimable):
+    // never a p_ server position, a fake receipt, an unverified import, credits.
+    if (bet.desk && !bet.claimableWin && !bet.onChain) {
+      if (btn) { btn.disabled = true; btn.textContent = 'Not cashable'; }
+      return;
+    }
+    if (!bet.desk && bet.status !== 'won') return;
+    // PRD-1: a server-ledger win (BTC 5-min play rail) was ALREADY credited to
+    // the play balance by the OST server. Claiming it here would pay it a second
+    // time from the OST pool. Refuse, always — whatever called us.
+    if (isServerSettled(bet) || bet.cashoutPending) return;
+    var sigStr = String(bet.signature || '');
+    var creditsTicket = bet.fundedBy === 'credits' || /^credits-/.test(sigStr);
+    // PRD-7: a ticket with no real on-chain stake signature (legacy 'local-' /
+    // 'sim-' receipts, or the "[object Object]" the old broken transferChecked
+    // call stored) never moved any OST — there is nothing to pay out.
+    var realStake = /^[1-9A-HJ-NP-Za-km-z]{64,90}$/.test(sigStr);
+    if (!bet.onChain && (creditsTicket || !realStake)) {
+      if (btn) { btn.disabled = true; btn.textContent = creditsTicket ? 'Legacy credits · not cashable' : 'No on-chain stake · not cashable'; }
+      return;
+    }
+    // A main-desk wallet ticket is paid by the ONE cash-out routine in app.js
+    // (OST_PREDICTION_API.cashOut): it marks "Paying…" before the request,
+    // reconciles a lost answer by payoutId / signature, books the fee only once
+    // the payout landed and shows every result (SRV-2, UX-1). Never a second,
+    // parallel payout path for the same ticket.
+    var deskApi = window.OST_PREDICTION_API;
+    if (!bet.onChain && String(bet.id || '').indexOf(DESK_PREFIX) === 0 && deskApi && typeof deskApi.cashOut === 'function') {
+      claimingIds[betId] = true;
+      if (btn) { btn.disabled = true; btn.textContent = 'Claiming…'; }
+      Promise.resolve(deskApi.cashOut(sigStr, { background: silent })).then(function (r) {
+        delete claimingIds[betId];
+        if (r && r.ok && !r.pending) {
+          if (btn && btn.parentNode) btn.outerHTML = '<span class="ost-bet-claimed">✓ ' + fmt(Number(r.payout) || 0) + ' ' + escapeHtml(r.unit || 'OST') + ' paid to your wallet</span>';
+        } else if (r && r.pending) {
+          if (btn) { btn.disabled = true; btn.textContent = 'Paying…'; }
+        } else if (btn) {
+          btn.disabled = false; btn.textContent = 'Claim'; btn.title = (r && r.label) || '';
+        }
+        try { window.dispatchEvent(new CustomEvent('ost:prediction:order-changed')); } catch (_) {}
+      }).catch(function (err) {
+        delete claimingIds[betId];
+        if (btn) { btn.disabled = false; btn.textContent = 'Claim'; btn.title = (err && err.message) || ''; }
+      });
+      return;
+    }
     claimingIds[betId] = true;                      // re-renders now show "Claiming…"
     if (btn) { btn.disabled = true; btn.textContent = 'Claiming…'; }
 
@@ -647,15 +723,8 @@
     // and if it rejected (no wallet connected, RPC down) the win was never paid
     // — the button just came back. That stranded real winnings.
     var creditsFunded = bet.fundedBy === 'credits' || /^credits-/.test(String(bet.signature || ''));
-    // OST_WALLET/OST_TRADE EXIST even with no wallet connected — gating on mere
-    // object presence sent every credits user down an on-chain payout that
-    // always rejected, and the win was stranded. Require a real session.
-    var hasWallet = !!(window.OST_WALLET && (window.OST_WALLET.session || window.OST_WALLET.address));
-    var onChainFn = (window.OST_TRADE && typeof window.OST_TRADE.predictionCashOut === 'function')
-      ? function () { return window.OST_TRADE.predictionCashOut(bet, payAmt).then(function (r) { return r && r.sig; }); }
-      : (window.OST_REAL_SWAP && typeof window.OST_REAL_SWAP.payout === 'function')
-        ? function () { return window.OST_REAL_SWAP.payout(payAmt).then(function () { return null; }); }
-        : null;
+    // Wallet (OST pool) payouts happen ONLY in app.js's cash-out routine (the
+    // desk branch above). This function never calls the pool directly.
 
     // RAIL 0 — the PROGRAM vault. A ticket escrowed on-chain (ost-onchain-route)
     // must be paid by claim_payout, out of the vault that holds its OST. Paying
@@ -723,20 +792,23 @@
       return;
     }
 
-    if (!creditsFunded && hasWallet && onChainFn) {
-      try {
-        onChainFn().then(function (sig) { doClaim(sig); }).catch(failClaim);
-        return;
-      } catch (e) { /* fall through to the credits rail */ }
-    }
-    // No usable on-chain payout path (or a credits-funded ticket): pay from the
-    // canonical credits pool. A WON BET MUST ALWAYS PAY — never strand it.
-    if (window.OST_MONEY && typeof window.OST_MONEY.add === 'function') {
-      window.OST_MONEY.add(Number(payAmt) || 0, 'prediction-win', { silent: silent });
-      doClaim('credits-' + Date.now().toString(36));
+    // D1 (FCT-2): legacy credits are retired — a credits-funded ticket is
+    // never paid (in credits or OST), and no other ticket ever falls back to the
+    // credits pool. A wallet ticket pays the wallet, or waits for it.
+    if (creditsFunded) {
+      failClaim(new Error('Legacy credits ticket — credits are retired and not cashable.'));
       return;
     }
-    failClaim(new Error('No payout rail available — try again in a moment.'));
+    // An on-chain (program vault) ticket is paid ONLY by the program; with the
+    // program offline (D4) it waits — paying it from the OST pool would pay it
+    // twice. A legacy extras-store bet's "win" came from a hash of the market
+    // id, never from a real result, so the pool never pays it (PRD-7). Wallet
+    // desk tickets were handled above by the ONE cash-out routine.
+    delete claimingIds[betId];
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = bet.onChain ? 'Pays from the on-chain program when it is back online' : 'Legacy ticket · not cashable';
+    }
   }
 
   // Mount a "My bets" tab in the prediction board
@@ -1198,7 +1270,13 @@
     // Fills arrive by PUSH (prediction.fill). This is only the catch-up for a dead socket:
     // every 3 min, and only while the prediction surface is on screen.
     setInterval(function () { var _p = document.getElementById('wallet-panel-predict'); if (document.hidden || !_p || _p.offsetParent === null || Date.now() - lastPredPush < 180000) return; refreshRecentActivityFeed().then(tick); }, 180000);
-    window.addEventListener('ost:prediction:order-changed', function () { refreshRecentActivityFeed().then(tick); });
+    // NET-3: a burst of ticket changes refetches the global feed at most once
+    // per 10 s (it used to GET /positions/recent on every event).
+    var feedT = null, feedAt = 0;
+    window.addEventListener('ost:prediction:order-changed', function () {
+      if (feedT) return;
+      feedT = setTimeout(function () { feedT = null; feedAt = Date.now(); refreshRecentActivityFeed().then(tick); }, Math.max(1000, 10000 - (Date.now() - feedAt)));
+    });
     window.addEventListener('storage', function (ev) {
       if (ev && (ev.key === TRADE_DESK_STORE_KEY || ev.key === STORE_KEY)) refreshRecentActivityFeed().then(tick);
     });

@@ -1,75 +1,89 @@
 /* ==========================================================================
  * OST · Balance — the ONE client-side answer, backed by /balance/truth
  * --------------------------------------------------------------------------
- * WHAT THIS REPLACES
- * Eight modules each decided for themselves what "the balance" was, reading
- * from five different sources. Three of them did this:
+ * Contract C6 (money plan §6):
  *
- *     parseFloat(document.getElementById('wdOstBal').textContent)
+ *   OST_BALANCE.get() -> { ost, ostg, play, sol }   each a Number or null
+ *       ost  = on-chain OSTC (the mint shown as "OST" everywhere)
+ *       ostg = on-chain OSTG (game token) in the wallet
+ *       play = server PlayLedger OSTG
+ *       sol  = native devnet SOL
+ *     null means UNKNOWN and must render as "—", never as 0.
  *
- * i.e. they read the number off the SCREEN. If that element had not rendered,
- * or showed a spinner, or was mid-update, the "balance" was 0 - and a funded
- * user was told they had nothing. Rendered text is a picture of a balance, not
- * a balance.
+ *   refresh(force) — runs on `ost:wallet-tx` / wallet change; otherwise this
+ *   module polls at most once per 60 s, and only while the tab is visible.
+ *   No other module runs its own balance loop: read get() / snapshot() and
+ *   listen for `ost:balance` (emitted by this module only).
  *
- * Every reader now asks this module, which asks the server's single authority
- * (/balance/truth) and caches the answer. One question, one answer, everywhere.
- *
- * THE RULES IT INHERITS AND ENFORCES
- *   · UNKNOWN IS NEVER ZERO. Before the first successful read, every getter
- *     returns undefined. Callers must render "—" or "loading", never "0".
- *     This is the single most important rule in the file: a fabricated zero is
- *     what makes money look like it disappeared.
+ * THE RULES IT ENFORCES
+ *   · UNKNOWN IS NEVER ZERO. Before the first successful read every getter
+ *     returns undefined (get() returns null).
  *   · FOUR SEPARATE PLACES, never blended: on-chain OSTC, on-chain OSTG, the
  *     play mirror, and loan-locked (a SUBSET of play, never added to it).
- *   · STALE IS LABELLED. If the server served a cached on-chain figure, that
- *     is reported, not hidden.
+ *   · STALE IS LABELLED.
+ *   · LOAD BUDGET (NET-3): a forced refresh is coalesced (≥ 4 s apart), an
+ *     unforced one is served from cache for 60 s, and a chain read reported by
+ *     the app updates the cached figure instead of triggering another fetch.
  * ========================================================================== */
 (function () {
   'use strict';
   if (window.OST_BALANCE) return;
 
   var API = window.OST_API_BASE || 'https://ost-api.nachogtavl.workers.dev';
-  var MIN_GAP_MS = 6000;        // never hammer: the server does real RPC work
+  var FORCED_GAP_MS = 4000;     // coalesce bursts of forced refreshes
+  var CACHE_MS = 60000;         // unforced reads are served from cache this long
+  var POLL_MS = 60000;          // visible-only heartbeat
 
-  var state = { truth: null, at: 0, inflight: null, lastWallet: '' };
+  var state = { truth: null, at: 0, inflight: null, lastWallet: '', sol: null, solAt: 0, queued: null };
 
   function wallet() {
-    // Identical resolution to ost-play.js. A module that resolves the address
-    // differently queries a different wallet - that was a real bug.
     try {
-      var s = window.OST_WALLET && window.OST_WALLET.session;
+      var W = window.OST_WALLET;
+      var s = W && W.session;
       if (s && s.publicKey && s.publicKey.toBase58) return s.publicKey.toBase58();
-      if (window.OST_WALLET && window.OST_WALLET.address) return window.OST_WALLET.address;
-      if (window.solana && window.solana.publicKey) return window.solana.publicKey.toString();
+      if (W && typeof W.address === 'function') { var a = W.address(); if (a) return String(a); }
+      if (W && typeof W.address === 'string' && W.address) return W.address;
     } catch (_) {}
     return '';
   }
 
   function refresh(force) {
     var w = wallet();
-    if (!w) { state.truth = null; state.lastWallet = ''; return Promise.resolve(null); }
-    if (w !== state.lastWallet) { state.truth = null; state.lastWallet = w; force = true; }
-    if (!force && state.truth && (Date.now() - state.at) < MIN_GAP_MS) return Promise.resolve(state.truth);
+    if (!w) { state.truth = null; state.sol = null; state.lastWallet = ''; return Promise.resolve(null); }
+    if (w !== state.lastWallet) { state.truth = null; state.sol = null; state.lastWallet = w; force = true; state.at = 0; }
     if (state.inflight) return state.inflight;
+    var age = Date.now() - state.at;
+    if (!force && state.truth && age < CACHE_MS) return Promise.resolve(state.truth);
+    if (force && state.truth && age < FORCED_GAP_MS) {
+      // Coalesce: one trailing refresh after the gap instead of a request per caller.
+      if (!state.queued) {
+        state.queued = new Promise(function (res) {
+          setTimeout(function () { state.queued = null; state.at = 0; res(refresh(true)); }, FORCED_GAP_MS - age);
+        });
+      }
+      return state.queued;
+    }
 
-    state.inflight = fetch(API + '/balance/truth?wallet=' + encodeURIComponent(w), { cache: 'no-store' })
+    var reqWallet = w;
+    var fresh = force && Number(state.freshUntil) > Date.now();
+    state.inflight = fetch(API + '/balance/truth?wallet=' + encodeURIComponent(w) + (fresh ? '&fresh=1' : ''), { cache: 'no-store' })
       .then(function (r) { return r.json(); })
       .then(function (d) {
-        // Only replace a good answer with another good answer. A failed read
-        // must not wipe what we already knew.
-        if (d && d.ok) { state.truth = d; state.at = Date.now(); }
-        state.inflight = null;
-        return backfillOnchain(w).then(function () { emit(); checkDrift(); return state.truth; });
+        if (reqWallet !== state.lastWallet) return state.truth;
+        // Only replace a good answer with another good answer.
+        if (d && d.ok) { state.truth = d; }
+        state.at = Date.now();
+        return Promise.all([backfillOnchain(w), readSol(w)]).then(function () { emit(); checkDrift(); return state.truth; });
       })
-      .catch(function () { state.inflight = null; return backfillOnchain(w).then(function () { emit(); return state.truth; }); });
+      .catch(function () {
+        state.at = Date.now();
+        return Promise.all([backfillOnchain(w), readSol(w)]).then(function () { emit(); return state.truth; });
+      })
+      .then(function (t) { state.inflight = null; return t; }, function (e) { state.inflight = null; throw e; });
     return state.inflight;
   }
 
-  // The Cloudflare worker's RPC can be 403'd/rate-limited (its /balance/truth
-  // degrades), but the BROWSER can reach public devnet directly with failover.
-  // When a place is missing/degraded/stale, read it client-side so on-chain funds
-  // are never shown as unknown/zero just because the server RPC is having a moment.
+  // When /balance/truth is degraded, read the missing place client-side.
   var OSTG_MINT = 'DfgxMbdN49AX2Za9LuvsyixF1jgVh45RbgWYSGonxQos';
   function readClientMint(w, mintStr) {
     try {
@@ -78,20 +92,30 @@
       var ata = W.associatedAddress(new w3.PublicKey(mintStr), new w3.PublicKey(w), false, W.constants.TOKEN_2022_PROGRAM_ID, W.constants.ASSOCIATED_TOKEN_PROGRAM_ID);
       return W.rpcCall(function (c) { return c.getTokenAccountBalance(ata); })
         .then(function (r) { return r && r.value ? (Number(r.value.uiAmount) || 0) : 0; })
-        .catch(function (e) { return /could not find account/i.test(String(e && e.message || e)) ? 0 : null; });
+        .catch(function (e) { return /could not find account|invalid param/i.test(String(e && e.message || e)) ? 0 : null; });
     } catch (_) { return Promise.resolve(null); }
   }
   function backfillOnchain(w) {
     if (!w) return Promise.resolve();
     var t = state.truth || (state.truth = { ok: true, places: {}, derived: {}, wallet: w, readAt: Date.now(), degraded: true });
     if (!t.places) t.places = {};
-    var ostcMint = (window.OST_CONFIG && OST_CONFIG.mint) || null;
+    var ostcMint = (window.OST_CONFIG && OST_CONFIG.mint) || (window.OST_SWAP_POOL && OST_SWAP_POOL.mint) || null;
     function needs(name) { var p = t.places[name]; return !p || !p.ok || p.value == null || p.stale; }
     var jobs = [];
     if (ostcMint && needs('onchainOstc')) jobs.push(readClientMint(w, ostcMint).then(function (v) { if (v != null) t.places.onchainOstc = { value: v, ok: true, source: 'client-rpc' }; }));
     if (needs('onchainOstg')) jobs.push(readClientMint(w, OSTG_MINT).then(function (v) { if (v != null) t.places.onchainOstg = { value: v, ok: true, source: 'client-rpc' }; }));
     if (!jobs.length) return Promise.resolve();
-    return Promise.all(jobs).then(function () { state.at = Date.now(); }).catch(function () {});
+    return Promise.all(jobs).catch(function () {});
+  }
+  // Native SOL: one cheap RPC read per refresh (the server does not report it).
+  function readSol(w) {
+    try {
+      var W = window.OST_WALLET, w3 = window.solanaWeb3;
+      if (!(W && W.rpcCall && w3)) return Promise.resolve();
+      return W.rpcCall(function (c) { return c.getBalance(new w3.PublicKey(w)); })
+        .then(function (lam) { if (w === state.lastWallet && Number.isFinite(Number(lam))) { state.sol = Number(lam) / 1e9; state.solAt = Date.now(); } })
+        .catch(function () {});
+    } catch (_) { return Promise.resolve(); }
   }
 
   function emit() {
@@ -105,6 +129,18 @@
     if (!p.ok || p.value == null) return undefined;             // unknown, NOT 0
     return Number(p.value);
   }
+  function orNull(v) { return (v === undefined || v === null || !Number.isFinite(Number(v))) ? null : Number(v); }
+
+  function get() {
+    return {
+      ost: orNull(place('onchainOstc')),
+      ostg: orNull(place('onchainOstg')),
+      play: orNull(place('play')),
+      sol: orNull(state.sol),
+      wallet: state.lastWallet || null,
+      readAt: state.at || null
+    };
+  }
 
   function snapshot() {
     var t = state.truth;
@@ -113,6 +149,7 @@
       onchainOstg: place('onchainOstg'),
       play:        place('play'),
       loanLocked:  place('loanLocked'),
+      sol:         state.sol == null ? undefined : state.sol,
       spendablePlay: (t && t.derived && t.derived.spendablePlay != null) ? Number(t.derived.spendablePlay) : undefined,
       owedUsd:       (t && t.derived) ? t.derived.owedUsd : undefined,
       degraded:      t ? !!t.degraded : undefined,
@@ -128,46 +165,29 @@
     return Number(v).toFixed(2) + (unit ? ' ' + unit : '');
   }
 
-  /* ---- drift detection ----------------------------------------------------
-   * OST_PLAY keeps a FAST local mirror of the play balance so a bet settles
-   * instantly; this module holds the server's authoritative figure. Both read
-   * the same Durable Object, so they should agree.
-   *
-   * They are deliberately NOT merged: forcing games onto the cached authority
-   * would add latency to every spin for no correctness gain. Instead we watch
-   * for disagreement and SAY SO. Silent drift between two views of the same
-   * money is precisely how "my balance changed by itself" starts.
-   */
+  /* ---- drift detection (fast play mirror vs. authority) ------------------- */
   var DRIFT_TOLERANCE = 0.01;
   function drift() {
     var authoritative = place('play');
-    if (authoritative === undefined) return undefined;      // nothing to compare
+    if (authoritative === undefined) return undefined;
     var fast;
     try { fast = window.OST_PLAY && window.OST_PLAY.balance(); } catch (_) { fast = undefined; }
     if (!Number.isFinite(Number(fast))) return undefined;
     var delta = Number(fast) - authoritative;
-    return {
-      authoritative: authoritative,
-      fast: Number(fast),
-      delta: Math.round(delta * 1e6) / 1e6,
-      agrees: Math.abs(delta) <= DRIFT_TOLERANCE
-    };
+    return { authoritative: authoritative, fast: Number(fast), delta: Math.round(delta * 1e6) / 1e6, agrees: Math.abs(delta) <= DRIFT_TOLERANCE };
   }
-
   function checkDrift() {
     var d = drift();
     if (!d || d.agrees) return d;
-    // Loud, not swallowed. A mismatch here means one of the two views is stale
-    // or wrong, and the user is looking at one of them.
     try {
-      console.warn('[OST_BALANCE] play-balance drift: authoritative=' + d.authoritative +
-                   ' fast=' + d.fast + ' delta=' + d.delta);
+      console.warn('[OST_BALANCE] play-balance drift: authoritative=' + d.authoritative + ' fast=' + d.fast + ' delta=' + d.delta);
       window.dispatchEvent(new CustomEvent('ost:balance-drift', { detail: d }));
     } catch (_) {}
     return d;
   }
 
   window.OST_BALANCE = {
+    get: get,
     drift: drift,
     checkDrift: checkDrift,
     refresh: refresh,
@@ -176,6 +196,7 @@
     onchainOstc: function () { return place('onchainOstc'); },
     onchainOstg: function () { return place('onchainOstg'); },
     play:        function () { return place('play'); },
+    sol:         function () { return state.sol == null ? undefined : state.sol; },
     loanLocked:  function () { return place('loanLocked'); },
     spendablePlay: function () { return snapshot().spendablePlay; },
     isDegraded:  function () { return snapshot().degraded; },
@@ -184,21 +205,47 @@
 
   function boot() {
     refresh(true);
-    ['ost:wallet-changed', 'ost:tree-changed'].forEach(function (ev) {
-      window.addEventListener(ev, function () { refresh(true); });
+    window.addEventListener('ost:wallet-changed', function () { refresh(true); });
+    // C5: every settled money move. Read now, and once more after the RPC
+    // catches up (a just-confirmed transfer can lag a read by a second or two).
+    var lagTimer = null;
+    window.addEventListener('ost:wallet-tx', function () {
+      // Right after a transaction the worker's short reuse window could hand
+      // back the pre-transaction numbers: ask for a fresh read (?fresh=1; an
+      // older worker ignores the flag).
+      state.freshUntil = Date.now() + 8000;
+      refresh(true);
+      clearTimeout(lagTimer);
+      lagTimer = setTimeout(function () { refresh(true); }, 5000);
     });
-    // PUSH-FIRST: a play-balance event carries the SERVER-returned balance, so
-    // update the play place from it instead of refetching /balance/truth on every
-    // bet (that was 2 worker + 2 RPC requests per bet). Refetch only if no number came.
+    // app.js reports every on-chain OST read here: take the number instead of
+    // fetching /balance/truth again (that was one extra request per read).
+    window.addEventListener('ost:tree-changed', function (e) {
+      try {
+        var ch = e && e.detail && e.detail.chain;
+        if (!ch || ch.stale || ch.source !== 'live' || !state.truth || !state.truth.places) return;
+        var cur = state.truth.places.onchainOstc;
+        var v = Number(ch.amount);
+        if (!Number.isFinite(v)) return;
+        if (cur && cur.ok && Math.abs(Number(cur.value) - v) < 1e-9) return;
+        state.truth.places.onchainOstc = { value: v, ok: true, source: 'app-read', at: Date.now() };
+        emit();
+      } catch (_) {}
+    });
+    // PUSH-FIRST: a play-balance event carries the server-returned balance.
     window.addEventListener('ost:play:balance', function (e) {
       var v = e && e.detail && Number(e.detail.balance);
       if (Number.isFinite(v) && state.truth && state.truth.places) {
         state.truth.places.play = { value: v, ok: true, source: 'event', at: Date.now() };
         try { var ll = state.truth.places.loanLocked; var d = state.truth.derived || (state.truth.derived = {}); if (ll && ll.ok && ll.value != null) d.spendablePlay = Math.max(0, v - Number(ll.value || 0)); } catch (_) {}
         emit();
-      } else refresh(true);
+      } else refresh(false);
     });
-    document.addEventListener('visibilitychange', function () { if (!document.hidden) refresh(); });
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) refresh(false); });
+    setInterval(function () {
+      if (document.hidden || !wallet()) return;
+      if (Date.now() - state.at >= POLL_MS - 1000) refresh(true);
+    }, POLL_MS);
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true });

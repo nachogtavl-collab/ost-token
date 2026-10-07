@@ -93,13 +93,27 @@
     var C = chain();
     return C ? C.roundOpenAt(Date.now()) : 0;
   }
+  // NET-3: only while a BTC 5-min market is actually on screen — an idle tab
+  // (or any other page) never polls the chain for the round's market.
+  function btcMarketOnScreen() {
+    try {
+      var cur = window.OST_PREDICT_MOBILE && typeof window.OST_PREDICT_MOBILE.current === 'function' ? window.OST_PREDICT_MOBILE.current() : null;
+      return !!(cur && /^ost-btc5m/.test(String(cur.id || cur.marketId || '')));
+    } catch (_) { return false; }
+  }
+  var announced = false;
   function warm() {
     var C = chain();
-    if (!C || !C.available()) return;
+    if (!C || !C.available() || !btcMarketOnScreen()) return;
     var now = currentRound();
-    if (!cachedMarket(now)) fetchMarket(now);
-    // Keep a blockhash warm too, so the bet tx is ready to sign instantly.
-    if (window.OST_WALLET && typeof window.OST_WALLET.warmBlockhash === 'function') {
+    if (!cachedMarket(now)) fetchMarket(now).then(function (m) {
+      // Say so only when a program market really exists (D4: usually not).
+      if (m && m.exists && !announced) { announced = true; log('on-chain market live for this round — OST-native BTC buys can route to the program'); }
+    });
+    // Keep a blockhash warm too, so the bet tx is ready to sign instantly —
+    // only when this round really has a program market to bet into.
+    var cm = cachedMarket(now);
+    if (cm && cm.exists && window.OST_WALLET && typeof window.OST_WALLET.warmBlockhash === 'function') {
       window.OST_WALLET.warmBlockhash();
     }
   }
@@ -117,8 +131,9 @@
       optimistic: !res.signature,
       signature: res.signature, sig: res.signature,
       ts: Date.now(), status: 'open',
-      wallet: (window.OST_WALLET && window.OST_WALLET.address) || 'wallet',
-      fundedBy: 'onchain',
+      // PRD-7: the real wallet (never a pseudo-wallet); the rail is in fundedBy.
+      wallet: String((window.OST_WALLET && typeof window.OST_WALLET.pubkey === 'function' && window.OST_WALLET.pubkey()) || ''),
+      fundedBy: 'onchain', rail: 'onchain', unit: 'OSTG',
       // The two flags the claim path keys off. `onChain` says the money is in
       // the program vault, so it must come back out of the program vault.
       onChain: true,
@@ -197,10 +212,17 @@
         : withTimeout(fetchMarket(openAtSec), 1200, 'on-chain market lookup')
             .catch(function () { return null; });
 
+      // ONE order per call. The fallback below used to catch the server path's
+      // OWN failure too and call it a second time — a lost answer (state_unknown,
+      // 503 gate_reset) became a second /play/predict/open and a second charge.
+      // Once the server path or the on-chain bet has started, its outcome is
+      // reported as is; only a failure BEFORE either started falls back.
+      var started = false;
+      var serverPath = function () { started = true; return inner(order); };
       return lookup.then(function (m) {
-        if (!m || !m.exists) { log('no on-chain market for this round yet — off-chain path'); return inner(order); }
-        if (m.resolved) { log('market already resolved — off-chain path'); return inner(order); }
-        if (Date.now() >= m.lockTs) { log('market locked — off-chain path'); return inner(order); }
+        if (!m || !m.exists) return serverPath();
+        if (m.resolved) { log('market already resolved — off-chain path'); return serverPath(); }
+        if (Date.now() >= m.lockTs) { log('market locked — off-chain path'); return serverPath(); }
 
         var quote = C.quoteNet(m, order.side, stake);
 
@@ -215,6 +237,7 @@
         var rec = recordOnChainTicket(order, openAtSec, { signature: '', market: m.market.toBase58() }, quote, ref);
         delete cache[openAtSec];   // pools are about to move — don't quote stale
 
+        started = true;
         C.placeBet(openAtSec, order.side, stake, m).then(function (res) {
           var api = window.OST_PREDICTION_API;
           if (api && typeof api.patchOrderByRef === 'function') {
@@ -230,16 +253,25 @@
           var api = window.OST_PREDICTION_API;
           if (api && typeof api.removeOrderByRef === 'function') api.removeOrderByRef(ref);
           try { window.dispatchEvent(new CustomEvent('ost:prediction:order-changed')); } catch (_) {}
-          try { if (window.OST_OPTIMISTIC) window.OST_OPTIMISTIC.toast('Bet could not be placed on-chain — cleared, nothing charged.', 'error'); } catch (_) {}
+          // UX-1: a visible, plain result (C2), with the reason when we have one.
+          var why = '';
+          try { if (window.OST_MONEY_ERRORS && OST_MONEY_ERRORS.humanize) { var h = OST_MONEY_ERRORS.humanize(err, { stage: 'build', asset: 'OSTG' }); why = h && h.title ? h.title + (h.body ? ' — ' + h.body : '') : ''; } } catch (_) {}
+          try {
+            if (typeof window.OST_NOTIFY === 'function') window.OST_NOTIFY({ id: 'stake-' + ref, kind: 'error', title: 'Ticket not placed', body: (why || 'The on-chain bet did not go through') + ' — nothing was charged.' });
+            else if (window.OST_OPTIMISTIC) window.OST_OPTIMISTIC.toast('Bet could not be placed on-chain — cleared, nothing charged.', 'error');
+          } catch (_) {}
           log('on-chain bet FAILED — optimistic ticket cleared: ' + (err && err.message));
         });
 
         return { signature: '', pending: true, optimistic: true, reference: ref, record: rec, onChain: true, fundedBy: 'onchain' };
       }).catch(function (err) {
-        // Never block a bet. Fall back to the rail that worked before, and say
-        // why in the console rather than silently pretending it was on-chain.
+        // The server path (or the on-chain bet) already ran: its failure is the
+        // answer — never a second order for the same tap.
+        if (started) throw err;
+        // Only a failure BEFORE anything was placed (the route itself broke)
+        // falls back to the rail that worked before, and says why.
         log('on-chain route failed (' + (err && err.message) + ') — falling back to the off-chain path');
-        return inner(order);
+        return serverPath();
       });
     };
     api.__onchainRouted = true;
@@ -257,7 +289,8 @@
   var tries = 0;
   (function attach() {
     if (wrapPlaceOrder()) {
-      log('desk routed: OST-native BTC rounds default to the on-chain program');
+      // No log here: BTC buys go to the OST server unless a program market
+      // exists for the round (D4) — warm() says so when one does.
       startWarming();
       return;
     }

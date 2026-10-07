@@ -23,91 +23,153 @@ import {
 } from '@solana/web3.js';
 import {
   createTransferCheckedInstruction,
-  createAssociatedTokenAccountInstruction,
+  createAssociatedTokenAccountIdempotentInstruction,
   getAssociatedTokenAddressSync,
   TOKEN_2022_PROGRAM_ID,
   ASSOCIATED_TOKEN_PROGRAM_ID
 } from '@solana/spl-token';
+import bs58 from 'bs58';
 
 export const OST_TOKEN_DECIMALS = 9;
 const MEMO_PROGRAM_ID = new PublicKey('MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr');
+const SYSTEM_PROGRAM_STR = '11111111111111111111111111111111';
+const TOKEN_PROGRAM_STRS = new Set([TOKEN_2022_PROGRAM_ID.toBase58(), 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA']);
 
-// Fallbacks only — every one of these turned out unusable for real RPC calls
-// from Cloudflare's egress when tested directly against the deployed worker:
-// api.devnet.solana.com 403s Cloudflare's shared IPs outright ("Your IP or
-// provider is blocked from this endpoint"); Helius' "?api-key=public" only
-// permits trivial health-checks (401s on real methods); Alchemy's demo key
-// is rate-limited into uselessness (429). None of this showed up in local
-// `wrangler dev` testing because that runs from a normal residential IP.
-// env.SOLANA_DEVNET_RPC (a real Helius/QuickNode/etc. key, set via
-// `wrangler secret put`) is prepended at request time by ensureRpcConfigured
-// and is the only endpoint actually expected to work in production — these
-// three are last-resort fallbacks if that secret is ever missing.
-const RPC_ENDPOINTS = [
-  'https://devnet.helius-rpc.com/?api-key=public',
-  'https://solana-devnet.g.alchemy.com/v2/demo',
-  'https://api.devnet.solana.com'
-];
+// Solana's rent-exempt minimum for a plain (0-data) system account. A wallet
+// that ends a transaction holding 1..890,879 lamports makes the WHOLE tx fail
+// with InsufficientFundsForRent (RNT-1). Exactly 0 is allowed (the account closes).
+export const RENT_EXEMPT_MIN_LAMPORTS = 890880;
+// Rent the pool pays when it creates a Token-2022 associated token account
+// (170 bytes with the ImmutableOwner extension): (170 + 128) * 6960 lamports.
+// Used only to budget pool-sponsored account creation (SRV-8).
+export const SPONSORED_ATA_LAMPORTS = 2074080;
+
+// ── RPC endpoints (SRV-4) ─────────────────────────────────────────────────
+// The server send/confirm list is ONLY the dedicated keys from env
+// (SOLANA_DEVNET_RPC, _2, _3, _4 — Wrangler secrets). The hard-coded fallbacks
+// this list used to carry were all dead from Cloudflare's egress (measured
+// against the deployed worker in the 2026-10-06 money audit):
+//   devnet.helius-rpc.com/?api-key=public  401 on every real method
+//   solana-devnet.g.alchemy.com/v2/demo    429 on every call — and web3.js' default
+//                                          429 retry (500+1000+2000+4000 ms) turned
+//                                          it into a ~7.5 s stall inside EVERY
+//                                          pool transaction's confirm loop
+//   api.devnet.solana.com                  403 for Cloudflare's shared egress IPs
+// LAST_RESORT_RPC is used ONLY when no key is configured at all (local
+// `wrangler dev` from a residential IP, where api.devnet does answer).
+const LAST_RESORT_RPC = ['https://api.devnet.solana.com'];
+const RPC_ENDPOINTS = [];
+const RPC_URL_RE = /^(https:\/\/|http:\/\/(127\.0\.0\.1|localhost)(:\d+)?\/)/i;
 
 let rpcConfigured = false;
-// Cheap and idempotent — safe to call at the top of every exported function
-// that receives env. env bindings don't vary per-request, so this only does
-// real work once per warm isolate.
+// Cheap and idempotent — called at the top of every Durable Object fetch and
+// every exported entry point that receives env. env bindings don't vary per
+// request, so this only does real work once per warm isolate.
 export function ensureRpcConfigured(env) {
   if (rpcConfigured) return;
-  rpcConfigured = true;
-  // Dedicated Helius keys FIRST, in order (primary -> Piperchisel -> Mothforest),
-  // then the weak public fallbacks. Server-side reads/writes fail over across all
-  // three real keys before ever touching the rate-limited public endpoints.
-  // Dedicated keys FIRST, in order: Helius primary -> Piperchisel -> Mothforest,
-  // then QuickNode (a SEPARATE provider with an independent quota — the true
-  // backstop when the whole Helius account is throttled), then weak public.
   const keys = [
     env && env.SOLANA_DEVNET_RPC, env && env.SOLANA_DEVNET_RPC_2,
     env && env.SOLANA_DEVNET_RPC_3, env && env.SOLANA_DEVNET_RPC_4
-  ].filter(Boolean);
+  ].map(u => (typeof u === 'string' ? u.trim() : '')).filter(u => RPC_URL_RE.test(u));
   const merged = [];
-  keys.concat(RPC_ENDPOINTS).forEach(function (u) { if (u && !merged.includes(u)) merged.push(u); });
+  (keys.length ? keys : LAST_RESORT_RPC).forEach(u => { if (!merged.includes(u)) merged.push(u); });
   RPC_ENDPOINTS.length = 0;
   Array.prototype.push.apply(RPC_ENDPOINTS, merged);
+  rpcConfigured = true;
+}
+// The configured server list (index.js topup verification reuses it so there
+// is one list, not two that drift).
+export function rpcEndpointList() { return RPC_ENDPOINTS.slice(); }
+// Unit tests only: forget the isolate-level RPC state.
+export function __resetRpcForTests() {
+  rpcConfigured = false; RPC_ENDPOINTS.length = 0; rpcIndex = 0;
+  for (const k of Object.keys(rpcConnections)) delete rpcConnections[k];
+  for (const k of Object.keys(cooldownUntil)) delete cooldownUntil[k];
+  cachedPool = null;
 }
 
 let rpcIndex = 0;
 const rpcConnections = {};
-// Per-endpoint cooldown: an RPC that returns a rate-limit/quota error is parked
-// for COOLDOWN_MS and SKIPPED during selection — so we never keep hammering an
-// exhausted key. This is what makes rotation seamless: healthy endpoints absorb
-// the traffic while an exhausted one silently recovers.
+// Per-endpoint cooldown: an RPC that returns a rate-limit/quota error (or times
+// out) is parked and SKIPPED during selection — so we never keep hammering an
+// exhausted key. Healthy endpoints absorb the traffic while it recovers.
 const cooldownUntil = {};
 const COOLDOWN_MS = 20000;
+const TIMEOUT_COOLDOWN_MS = 8000;
+// Hard per-request timeout. A hung RPC must cost seconds, not the whole budget.
+// (A healthy devnet RPC answers in well under 1 s.)
+const RPC_TIMEOUT_MS = 6000;
+// buildSignSend runs inside Durable Object locks (blockConcurrencyWhile, which
+// itself RESETS the object after 30 s). No new RPC attempt starts past these
+// budgets, so even with every endpoint hanging the locked section ends in
+// about blockhash 9+6 s, send 18+6 s — well inside the platform limit.
+const BLOCKHASH_BUDGET_MS = 9000;
+const SEND_BUDGET_MS = 18000;
+// How long a pool tx confirm waits before answering "sent, still confirming"
+// (202 pending). Devnet confirms in ~0.5-1.5 s; the client's own abort is 20 s.
+export const CONFIRM_BUDGET_MS = 12000;
+
 function isRateLimit(e) {
   const m = String((e && (e.message || e)) || '');
   return /\b429\b|\b401\b|\b403\b|too many requests|rate.?limit|unauthorized|forbidden|invalid api key|quota|exceeded/i.test(m);
 }
+function isTimeoutish(e) {
+  const m = String((e && (e.name + ' ' + (e.message || e))) || '');
+  return /abort|timed? ?out|timeout|network|fetch failed|connection|ECONN|socket|reset/i.test(m);
+}
+function timeoutFetch(input, init) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => { try { ctrl.abort(); } catch (_) {} }, RPC_TIMEOUT_MS);
+  return fetch(input, Object.assign({}, init || {}, { signal: ctrl.signal }))
+    .finally(() => clearTimeout(timer));
+}
 function makeConn(url) {
   if (!rpcConnections[url]) {
-    try { rpcConnections[url] = new Connection(url, 'confirmed'); }
-    catch (_) { return null; }
+    try {
+      // disableRetryOnRateLimit: web3.js otherwise sleeps 0.5+1+2+4 s on a 429
+      // before giving up — the SRV-4 stall. We rotate endpoints ourselves.
+      rpcConnections[url] = new Connection(url, { commitment: 'confirmed', disableRetryOnRateLimit: true, fetch: timeoutFetch });
+    } catch (_) { return null; }
   }
   return rpcConnections[url];
 }
-export function getConnection() {
-  return makeConn(RPC_ENDPOINTS[rpcIndex % RPC_ENDPOINTS.length]);
+function notConfiguredError() {
+  const e = new Error('rpc_not_configured: ensureRpcConfigured(env) must run before any Solana call');
+  e.code = 'rpc_not_configured';
+  return e;
 }
-export async function withRpc(label, fn) {
+// Healthy endpoints first (starting at the last-good index so load spreads),
+// then any in cooldown ordered by soonest recovery as a last resort.
+function candidateOrder() {
   const n = RPC_ENDPOINTS.length;
-  // Candidate order: healthy endpoints first (starting at the last-good index so
-  // load spreads), then any in cooldown ordered by soonest recovery as a last
-  // resort. An exhausted endpoint is tried only if every other one is also down.
   const order = [];
   for (let k = 0; k < n; k++) order.push((rpcIndex + k) % n);
   const now = Date.now();
   const healthy = order.filter(i => !(cooldownUntil[RPC_ENDPOINTS[i]] > now));
   const cooling = order.filter(i => cooldownUntil[RPC_ENDPOINTS[i]] > now)
     .sort((a, b) => (cooldownUntil[RPC_ENDPOINTS[a]] || 0) - (cooldownUntil[RPC_ENDPOINTS[b]] || 0));
-  const seq = healthy.concat(cooling);
+  return healthy.concat(cooling);
+}
+function noteFailure(url, e) {
+  if (isRateLimit(e)) cooldownUntil[url] = Date.now() + COOLDOWN_MS;
+  else if (isTimeoutish(e)) cooldownUntil[url] = Date.now() + TIMEOUT_COOLDOWN_MS;
+}
+// SRV-5: throws when the RPC list was never configured, instead of silently
+// handing back a connection to a dead public endpoint (which made existing
+// token accounts look missing on a cold isolate -> IllegalOwner creates).
+export function getConnection() {
+  if (!rpcConfigured || !RPC_ENDPOINTS.length) throw notConfiguredError();
+  const order = candidateOrder();
+  return makeConn(RPC_ENDPOINTS[order.length ? order[0] : 0]);
+}
+// opts.deadline (epoch ms): no NEW endpoint attempt starts after it.
+export async function withRpc(label, fn, opts) {
+  if (!rpcConfigured || !RPC_ENDPOINTS.length) throw notConfiguredError();
+  const seq = candidateOrder();
+  const deadline = Number(opts && opts.deadline) || 0;
   let lastErr = null;
   for (let attempt = 0; attempt < seq.length; attempt++) {
+    if (attempt > 0 && deadline && Date.now() >= deadline) break;
     const i = seq[attempt];
     const url = RPC_ENDPOINTS[i];
     const conn = makeConn(url);
@@ -119,11 +181,20 @@ export async function withRpc(label, fn) {
       return res;
     } catch (e) {
       lastErr = e;
-      if (isRateLimit(e)) cooldownUntil[url] = Date.now() + COOLDOWN_MS;
-      if (attempt < seq.length - 1) await new Promise(r => setTimeout(r, 120));
+      noteFailure(url, e);
+      if (attempt < seq.length - 1) await new Promise(r => setTimeout(r, 60));
     }
   }
   throw lastErr || new Error(label + ' failed on every RPC');
+}
+// Raw JSON-RPC through the rotating list. A JSON-RPC *error object* is returned
+// to the caller (it is an answer, not an endpoint failure); transport failures
+// (429/timeout) rotate to the next endpoint.
+export async function rpcCall(label, method, params) {
+  return withRpc(label, async (conn) => {
+    const res = await conn._rpcRequest(method, params);
+    return res || {};
+  });
 }
 
 let cachedPool = null;
@@ -227,8 +298,11 @@ export function ixTransferChecked(source, mint, destination, ownerPk, amountBase
   return createTransferCheckedInstruction(source, mint, destination, ownerPk, amountBaseUnits, decimals, [], TOKEN_2022_PROGRAM_ID);
 }
 
+// SRV-5: the IDEMPOTENT create (ATA program instruction 1). If the account
+// already exists it is a no-op that succeeds, so a false "missing" answer from a
+// lagging RPC can no longer fail the whole transaction with IllegalOwner.
 export function ixCreateAta(payerPk, ataPk, ownerPk, mintPk) {
-  return createAssociatedTokenAccountInstruction(payerPk, ataPk, ownerPk, mintPk, TOKEN_2022_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID);
+  return createAssociatedTokenAccountIdempotentInstruction(payerPk, ataPk, ownerPk, mintPk, TOKEN_2022_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID);
 }
 
 export function ixMemo(text, signerPk) {
@@ -276,6 +350,60 @@ export function assertPoolAbsent(instructions, poolPubkey) {
   }
 }
 
+// ComputeBudget instructions name no accounts (so assertPoolAbsent cannot see
+// them) but they set the PRIORITY FEE the fee payer pays. For a pool-paid
+// fee-only cosign the client may set at most a modest unit limit and price.
+//   0 RequestUnits (deprecated)  refused
+//   1 RequestHeapFrame           allowed (costs nothing extra)
+//   2 SetComputeUnitLimit u32    <= maxUnitLimit
+//   3 SetComputeUnitPrice u64    <= maxUnitPrice micro-lamports
+//   4 SetLoadedAccountsDataSize  allowed
+export const COMPUTE_BUDGET_PROGRAM_ID = 'ComputeBudget111111111111111111111111111111';
+export function checkComputeBudget(instructions, limits = {}) {
+  const maxLimit = Number(limits.maxUnitLimit) || 400000;
+  const maxPrice = Number(limits.maxUnitPrice) || 10000;
+  const seen = {};
+  for (const ix of instructions) {
+    if (ix.programId.toBase58() !== COMPUTE_BUDGET_PROGRAM_ID) continue;
+    const d = Buffer.from(ix.data || []);
+    const tag = d.length ? d[0] : -1;
+    if (seen[tag]) return { ok: false, reason: 'compute_budget_duplicate', message: 'Repeated compute-budget instruction.' };
+    seen[tag] = true;
+    if (tag === 1 || tag === 4) continue;
+    if (tag === 2) {
+      if (d.length < 5) return { ok: false, reason: 'compute_budget_invalid', message: 'Malformed compute-unit limit.' };
+      const units = d.readUInt32LE(1);
+      if (units > maxLimit) return { ok: false, reason: 'compute_limit_too_high', message: 'Compute-unit limit ' + units + ' is above the ' + maxLimit + ' the OST fee payer allows.' };
+      continue;
+    }
+    if (tag === 3) {
+      if (d.length < 9) return { ok: false, reason: 'compute_budget_invalid', message: 'Malformed compute-unit price.' };
+      const price = d.readBigUInt64LE(1);
+      if (price > BigInt(maxPrice)) return { ok: false, reason: 'priority_fee_too_high', message: 'A priority fee of ' + price.toString() + ' micro-lamports per unit is above the ' + maxPrice + ' the OST fee payer allows.' };
+      continue;
+    }
+    return { ok: false, reason: 'compute_budget_unsupported', message: 'That compute-budget instruction is not allowed when OST pays the fee.' };
+  }
+  return { ok: true };
+}
+
+// The fee a (partially) signed legacy Transaction will cost its fee payer:
+// 5000 lamports per required signature + compute-unit price x limit.
+export function estimateFeeLamports(tx) {
+  let signers = 1;
+  try { signers = tx.compileMessage().header.numRequiredSignatures; } catch (_) { signers = (tx.signatures || []).length || 1; }
+  let price = 0n, limit = null, nonCb = 0;
+  for (const ix of tx.instructions || []) {
+    if (ix.programId.toBase58() !== COMPUTE_BUDGET_PROGRAM_ID) { nonCb++; continue; }
+    const d = Buffer.from(ix.data || []);
+    if (d[0] === 2 && d.length >= 5) limit = d.readUInt32LE(1);
+    if (d[0] === 3 && d.length >= 9) price = d.readBigUInt64LE(1);
+  }
+  const units = BigInt(limit != null ? limit : Math.min(1400000, 200000 * Math.max(1, nonCb)));
+  const priority = (price * units + 999999n) / 1000000n;
+  return { signers, lamports: Number(BigInt(5000 * signers) + priority) };
+}
+
 // -----------------------------------------------------------------------
 // Balances
 // -----------------------------------------------------------------------
@@ -306,43 +434,350 @@ export async function getPoolSolBalance(env) {
   });
 }
 
-export async function ataExists(conn, ata) {
-  const info = await conn.getAccountInfo(ata).catch(() => null);
-  return !!info;
+// SRV-5: goes through the rotating RPC list (the `conn` argument is kept only
+// for call-site compatibility and ignored). Returns false ONLY on a definite
+// "no account" answer; if every endpoint fails it THROWS — callers must not
+// read an unknown as "missing". (With the idempotent create, a caller that
+// does treat unknown as missing is still safe: the create is a no-op.)
+export async function ataExists(_conn, ata) {
+  const addr = (ata && ata.toBase58) ? ata.toBase58() : String(ata);
+  const res = await rpcCall('ata-exists', 'getAccountInfo', [addr, { encoding: 'base64', dataSlice: { offset: 0, length: 0 }, commitment: 'confirmed' }]);
+  if (res.error) throw new Error('getAccountInfo failed: ' + String(res.error.message || '').slice(0, 160));
+  return !!(res.result && res.result.value);
+}
+
+// Owner program / existence of an arbitrary address (one cheap RPC).
+// -> { exists, owner, executable, lamports }. Throws if every endpoint fails.
+export async function accountMeta(pubkey) {
+  const addr = (pubkey && pubkey.toBase58) ? pubkey.toBase58() : String(pubkey);
+  const res = await rpcCall('account-meta', 'getAccountInfo', [addr, { encoding: 'base64', dataSlice: { offset: 0, length: 0 }, commitment: 'confirmed' }]);
+  if (res.error) throw new Error('getAccountInfo failed: ' + String(res.error.message || '').slice(0, 160));
+  const v = res.result && res.result.value;
+  return v ? { exists: true, owner: String(v.owner || ''), executable: !!v.executable, lamports: Number(v.lamports || 0) }
+           : { exists: false, owner: '', executable: false, lamports: 0 };
+}
+
+// A token account's raw balance. -> { exists:false } for a definite "no account",
+// { exists:true, raw:BigInt, mint, owner } otherwise. Throws if unknown.
+export async function readTokenAccount(ata) {
+  const addr = (ata && ata.toBase58) ? ata.toBase58() : String(ata);
+  const res = await rpcCall('token-account', 'getAccountInfo', [addr, { encoding: 'jsonParsed', commitment: 'confirmed' }]);
+  if (res.error) throw new Error('getAccountInfo failed: ' + String(res.error.message || '').slice(0, 160));
+  const v = res.result && res.result.value;
+  if (!v) return { exists: false, raw: 0n };
+  const info = v.data && v.data.parsed && v.data.parsed.info;
+  const amount = info && info.tokenAmount && info.tokenAmount.amount;
+  return { exists: true, raw: BigInt(amount || '0'), mint: info ? String(info.mint || '') : '', owner: info ? String(info.owner || '') : '', program: String(v.owner || '') };
+}
+
+export async function getLamports(pubkey) {
+  const pk = pubkey instanceof PublicKey ? pubkey : new PublicKey(String(pubkey));
+  return withRpc('lamports', conn => conn.getBalance(pk, 'confirmed'));
 }
 
 // -----------------------------------------------------------------------
-// Send + confirm — ported from docs/devnet-rescue.js sendPoolOnlyTx /
-// confirmSentTransaction. Workers have no websocket confirmTransaction, so
-// this polls getSignatureStatuses across every RPC endpoint.
+// Errors that a money handler must tell apart (contract C4):
+//   preBroadcast === true   nothing was sent; safe to refuse with a 4xx
+//   OnChainFailureError     the tx landed but failed: nothing moved
+//   ConfirmTimeoutError     sent, not yet confirmed: answer 202 {pending, sig}
 // -----------------------------------------------------------------------
-async function unpackSendError(err) {
-  if (!err) return new Error('Transaction failed');
-  let logs = [];
-  if (typeof err.getLogs === 'function') { try { logs = await err.getLogs(); } catch (_) {} }
-  else if (Array.isArray(err.logs)) { logs = err.logs; }
-  const base = err.message || 'Send failed';
-  if (logs && logs.length) return new Error(base + '\n\nProgram logs:\n' + logs.join('\n'));
-  return err;
+export class BlockhashExpiredError extends Error {
+  constructor(message) { super(message); this.name = 'BlockhashExpiredError'; this.code = 'blockhash_expired'; this.preBroadcast = true; }
 }
-
-async function sendRawSafe(conn, serialized) {
-  try {
-    return await conn.sendRawTransaction(serialized, { skipPreflight: false, preflightCommitment: 'confirmed' });
-  } catch (e) {
-    const msg = (e && e.message) || '';
-    if (msg.includes('no record of a prior credit') || /simulation failed/i.test(msg)) {
-      return conn.sendRawTransaction(serialized, { skipPreflight: true });
-    }
-    throw await unpackSendError(e);
+export class SimulationFailedError extends Error {
+  constructor(decoded) {
+    super((decoded && decoded.message) || 'The network rejected this transaction before it was sent.');
+    this.name = 'SimulationFailedError';
+    this.code = 'simulation_failed';
+    this.reason = (decoded && decoded.code) || 'simulation_failed';
+    this.txErr = decoded ? decoded.err : null;
+    this.logs = decoded ? decoded.logs : [];
+    this.asset = decoded ? decoded.asset : undefined;
+    this.preBroadcast = true;
+  }
+}
+export class OnChainFailureError extends Error {
+  constructor(sig, txErr, decoded) {
+    super('On-chain failure: ' + JSON.stringify(txErr));
+    this.name = 'OnChainFailureError';
+    this.code = 'tx_failed';
+    this.reason = (decoded && decoded.code) || 'tx_failed';
+    this.humanMessage = decoded && decoded.message;
+    this.sig = sig;
+    this.txErr = txErr;
+  }
+}
+export class ConfirmTimeoutError extends Error {
+  constructor(sig, label, lastStatus) {
+    super((label || 'Transaction') + ' was sent but is not confirmed yet (' + (lastStatus ? 'last status=' + (lastStatus.confirmationStatus || 'unknown') : 'no status yet') + ')');
+    this.name = 'ConfirmTimeoutError';
+    this.code = 'confirm_timeout';
+    this.sig = sig;
+    this.lastStatus = lastStatus || null;
   }
 }
 
-export class BlockhashExpiredError extends Error {
-  constructor(message) { super(message); this.name = 'BlockhashExpiredError'; this.code = 'blockhash_expired'; }
+function programFromLogs(logs) {
+  const list = Array.isArray(logs) ? logs : [];
+  for (let i = list.length - 1; i >= 0; i--) {
+    const m = String(list[i]).match(/^Program (\w{32,44}) failed/);
+    if (m) return m[1];
+  }
+  return '';
 }
 
-export async function confirmSignature(sig, blockhashInfo, label) {
+// Turn a Solana TransactionError (+ logs) into a plain-English, contract-C3 code.
+// programIds[i] is the program of instruction i when the caller knows it.
+export function decodeTxError(err, logs, programIds, asset) {
+  const tokenName = asset || 'OST';
+  const L = (Array.isArray(logs) ? logs : []).join('\n');
+  const base = { err: err || null, logs: (Array.isArray(logs) ? logs : []).slice(-8), asset: tokenName };
+  if (!err) return Object.assign(base, { code: 'simulation_failed', message: 'The network rejected this transaction.' });
+  if (err === 'BlockhashNotFound') return Object.assign(base, { code: 'blockhash_expired', message: 'This quote expired before it was sent. Please try again.' });
+  if (err === 'AlreadyProcessed') return Object.assign(base, { code: 'already_processed', message: 'This transaction was already processed.' });
+  // AccountNotFound at the transaction level = the fee payer (the OST pool) has
+  // no SOL account at all: the same outage as InsufficientFundsForFee.
+  if (err === 'InsufficientFundsForFee' || err === 'AccountNotFound') return Object.assign(base, { code: 'insufficient_pool_sol', message: 'The OST fee payer is out of devnet SOL right now. Nothing was sent — try again later.' });
+  if (typeof err === 'object' && err.InsufficientFundsForRent) {
+    return Object.assign(base, { code: 'below_rent_minimum', message: 'Solana requires at least 0.00089 SOL to stay in a wallet. Send or keep a bit more, or empty the wallet completely.' });
+  }
+  if (typeof err === 'object' && Array.isArray(err.InstructionError)) {
+    const idx = Number(err.InstructionError[0]);
+    const ie = err.InstructionError[1];
+    const prog = (Array.isArray(programIds) && programIds[idx]) || programFromLogs(logs);
+    const custom = (ie && typeof ie === 'object' && 'Custom' in ie) ? Number(ie.Custom) : null;
+    const isToken = TOKEN_PROGRAM_STRS.has(prog) || /Program log: Error: insufficient funds/i.test(L);
+    const isSystem = prog === SYSTEM_PROGRAM_STR;
+    if (isSystem && custom === 1) return Object.assign(base, { code: 'insufficient_balance', asset: 'SOL', message: 'Not enough SOL in this wallet for that amount.' });
+    if (/Transfer: insufficient lamports/i.test(L)) return Object.assign(base, { code: 'insufficient_balance', asset: 'SOL', message: 'Not enough SOL in this wallet for that amount.' });
+    if (isToken && custom === 1) return Object.assign(base, { code: 'insufficient_balance', message: 'Not enough ' + tokenName + ' in this wallet for that amount.' });
+    if (isToken && (custom === 9 || ie === 'IncorrectProgramId' || ie === 'UninitializedAccount' || ie === 'InvalidAccountData')) {
+      return Object.assign(base, { code: 'no_token_account', message: 'This wallet has no ' + tokenName + ' yet.' });
+    }
+    if (isToken && custom === 4) return Object.assign(base, { code: 'owner_mismatch', message: 'That token account does not belong to this wallet.' });
+    if (isToken && custom === 3) return Object.assign(base, { code: 'mint_mismatch', message: 'That token account holds a different token.' });
+    return Object.assign(base, { code: 'simulation_failed', message: 'The network rejected this transaction (instruction ' + idx + ': ' + JSON.stringify(ie) + ').' });
+  }
+  return Object.assign(base, { code: 'simulation_failed', message: 'The network rejected this transaction (' + JSON.stringify(err).slice(0, 120) + ').' });
+}
+
+// Simulate a (possibly partially-signed) transaction without verifying
+// signatures. -> { ok:true } | { ok:false, code, message, err, logs } |
+// { ok:null } when no RPC could answer (the caller must not block on that).
+export async function simulateTx(tx, ctx = {}) {
+  const b64 = Buffer.from(tx.serialize({ requireAllSignatures: false, verifySignatures: false })).toString('base64');
+  const programIds = tx.instructions.map(ix => ix.programId.toBase58());
+  let res;
+  try {
+    res = await rpcCall('simulate', 'simulateTransaction', [b64, { encoding: 'base64', sigVerify: false, replaceRecentBlockhash: false, commitment: 'confirmed' }]);
+  } catch (_) { return { ok: null }; }
+  if (res.error) return { ok: null, rpcError: String(res.error.message || '').slice(0, 160) };
+  const v = res.result && res.result.value;
+  if (!v) return { ok: null };
+  if (!v.err) return { ok: true, unitsConsumed: v.unitsConsumed };
+  // A lagging RPC that has not seen the blockhash yet is not a verdict on the tx.
+  if (v.err === 'BlockhashNotFound') return { ok: null };
+  return Object.assign({ ok: false }, decodeTxError(v.err, v.logs, programIds, ctx.asset));
+}
+
+export function signatureOf(tx) {
+  const s = tx && tx.signatures && tx.signatures[0] && tx.signatures[0].signature;
+  if (!s) return '';
+  return bs58.encode(Uint8Array.from(s));
+}
+
+// -----------------------------------------------------------------------
+// Broadcast an ALREADY-SIGNED transaction (never builds or signs anything).
+//   returns { sig, uncertain:false }    an RPC node accepted it
+//   returns { sig, uncertain:true }     some attempt timed out / lost the
+//                                       connection: it MAY have been forwarded,
+//                                       so the caller must confirm by sig
+//   throws  error.preBroadcast === true preflight/RPC refused it: nothing sent
+// Re-sending identical signed bytes to a second endpoint is safe: the network
+// dedupes by signature. Once any attempt was uncertain, a later preflight
+// failure is NOT treated as definitive (the first copy may already have landed
+// and changed the balances the second simulation saw).
+// -----------------------------------------------------------------------
+export async function sendSerialized(serialized, sig, ctx = {}) {
+  if (!rpcConfigured || !RPC_ENDPOINTS.length) throw notConfiguredError();
+  const b64 = Buffer.from(serialized).toString('base64');
+  const order = candidateOrder().slice(0, 3);
+  const deadline = Number(ctx.deadline) || 0;
+  let uncertain = false;
+  let lastErr = null;
+  for (let n = 0; n < order.length; n++) {
+    if (n > 0 && deadline && Date.now() >= deadline) break;
+    const i = order[n];
+    const url = RPC_ENDPOINTS[i];
+    const conn = makeConn(url);
+    if (!conn) continue;
+    let skipPreflight = !!ctx.skipPreflight;
+    for (let pass = 0; pass < 2; pass++) {
+      let res;
+      try {
+        res = await conn._rpcRequest('sendTransaction', [b64, { encoding: 'base64', skipPreflight, preflightCommitment: 'confirmed', maxRetries: 5 }]);
+      } catch (e) {
+        lastErr = e;
+        noteFailure(url, e);
+        if (!isRateLimit(e)) uncertain = true;   // timeout / reset: may have gone out
+        break;                                    // next endpoint
+      }
+      if (res && res.error) {
+        const msg = String(res.error.message || '');
+        const data = res.error.data || {};
+        if (data.err === 'AlreadyProcessed' || /already been processed/i.test(msg)) {
+          rpcIndex = i; return { sig, uncertain: false, endpoint: url, alreadyProcessed: true };
+        }
+        // "No record of a prior credit" from a LAGGING node is retried without
+        // preflight — but if the fee payer really holds no SOL the tx can never
+        // land, so check first and refuse instead of broadcasting a doomed tx.
+        if (!skipPreflight && !uncertain && ctx.feePayer && /no record of a prior credit/i.test(msg)) {
+          let lamports = null;
+          try { lamports = await withRpc('fee-payer-balance', c => c.getBalance(ctx.feePayer, 'confirmed')); } catch (_) {}
+          if (lamports === 0) throw new SimulationFailedError(decodeTxError('InsufficientFundsForFee', data.logs, ctx.programIds, ctx.asset));
+        }
+        // A lagging RPC has not seen the blockhash / fee payer yet: let the
+        // leader decide (the ONLY skipPreflight fallback left — SRV-6).
+        if (!skipPreflight && (data.err === 'BlockhashNotFound' || /blockhash not found|no record of a prior credit/i.test(msg))) { skipPreflight = true; continue; }
+        if (uncertain) return { sig, uncertain: true };
+        if (/block height exceeded|blockhash not found/i.test(msg)) throw new BlockhashExpiredError((ctx.label || 'Transaction') + ': blockhash expired before send, please retry');
+        if (data.err || /simulation failed/i.test(msg)) {
+          throw new SimulationFailedError(decodeTxError(data.err || null, data.logs, ctx.programIds, ctx.asset));
+        }
+        const e = new Error('The RPC refused this transaction: ' + msg.slice(0, 200));
+        e.code = 'rpc_refused'; e.preBroadcast = true;
+        throw e;
+      }
+      rpcIndex = i;
+      delete cooldownUntil[url];
+      return { sig: (res && res.result) || sig, uncertain: false, endpoint: url };
+    }
+  }
+  if (uncertain) return { sig, uncertain: true };
+  const e = new Error('Every Solana RPC refused the transaction (' + String((lastErr && lastErr.message) || 'unavailable').slice(0, 160) + ') — nothing was sent.');
+  e.code = 'rpc_unavailable'; e.preBroadcast = true;
+  throw e;
+}
+
+// One status read, raced across up to two healthy endpoints (Promise.any): the
+// first endpoint that ANSWERS wins, a slow or throttled one is not waited for.
+async function statusRace(sig, searchHistory) {
+  const urls = candidateOrder().slice(0, 2).map(i => RPC_ENDPOINTS[i]);
+  if (!urls.length) throw notConfiguredError();
+  const attempts = urls.map(url => {
+    const conn = makeConn(url);
+    if (!conn) return Promise.reject(new Error('no connection'));
+    return conn.getSignatureStatuses([sig], { searchTransactionHistory: !!searchHistory })
+      .then(r => { delete cooldownUntil[url]; return { entry: (r && r.value && r.value[0]) || null }; })
+      .catch(e => { noteFailure(url, e); throw e; });
+  });
+  return (await Promise.any(attempts)).entry;
+}
+
+async function blockHeightNow() {
+  return withRpc('block-height', conn => conn.getBlockHeight('confirmed'));
+}
+
+function stateFromEntry(entry) {
+  if (entry.err) return { state: 'failed', seen: true, err: entry.err, confirmationStatus: entry.confirmationStatus || null };
+  if (entry.confirmationStatus === 'confirmed' || entry.confirmationStatus === 'finalized') return { state: 'confirmed', seen: true, confirmationStatus: entry.confirmationStatus };
+  return { state: 'pending', seen: true, confirmationStatus: entry.confirmationStatus || 'processed' };
+}
+
+// Where is this signature? Never throws.
+//   { state: 'confirmed' | 'failed' | 'pending' | 'expired' | 'unknown', err? }
+// 'expired' = not found AND the blockhash it was built on can no longer land:
+// definitive proof the tx never executed, which AUTHORISES A NEW TRANSACTION
+// (a fresh payout, a refund). So it is only ever answered after proveExpired.
+export async function checkSignature(sig, blockhashInfo) {
+  if (!sig) return { state: 'unknown' };
+  let entry;
+  try { entry = await statusRace(sig, true); }
+  catch (_) { return { state: 'unknown' }; }
+  if (entry) return stateFromEntry(entry);
+  // Not seen by the fastest node.
+  const lvbh = Number(blockhashInfo && blockhashInfo.lastValidBlockHeight);
+  if (!(lvbh > 0)) return { state: 'pending', seen: false };
+  let height;
+  try { height = await blockHeightNow(); } catch (_) { return { state: 'unknown', seen: false }; }
+  if (!(height > lvbh)) return { state: 'pending', seen: false, blocksLeft: lvbh - height };
+  return proveExpired(sig, lvbh);
+}
+
+// "Expired" must be proven, not raced (review: Promise.any took the first
+// endpoint's null — a lagging or history-less node — as proof, and a landed
+// payout was paid a second time). EVERY configured endpoint must answer, each
+// must report a block height past lastValidBlockHeight, and each must say it has
+// no status for the signature with searchTransactionHistory. Any endpoint that
+// knows the tx wins; any endpoint that cannot answer makes it 'unknown'. A
+// getTransaction lookup on every endpoint is a last extra check.
+async function proveExpired(sig, lvbh) {
+  const urls = RPC_ENDPOINTS.slice();
+  if (!urls.length) return { state: 'unknown', seen: false };
+  const per = await Promise.allSettled(urls.map(async (url) => {
+    const conn = makeConn(url);
+    if (!conn) throw new Error('no connection');
+    try {
+      const [st, h] = await Promise.all([
+        conn._rpcRequest('getSignatureStatuses', [[sig], { searchTransactionHistory: true }]),
+        conn._rpcRequest('getBlockHeight', [{ commitment: 'confirmed' }])
+      ]);
+      if (!st || st.error || !st.result || !Array.isArray(st.result.value)) throw new Error('status unavailable: ' + String((st && st.error && st.error.message) || '').slice(0, 80));
+      const height = Number(h && h.result);
+      if (!h || h.error || !(height > 0)) throw new Error('block height unavailable');
+      return { url, entry: st.result.value[0] || null, height };
+    } catch (e) { noteFailure(url, e); throw e; }
+  }));
+  for (const p of per) {
+    if (p.status === 'fulfilled' && p.value.entry) return stateFromEntry(p.value.entry);
+  }
+  const txs = await Promise.allSettled(urls.map(async (url) => {
+    const conn = makeConn(url);
+    if (!conn) return null;
+    const r = await conn._rpcRequest('getTransaction', [sig, { encoding: 'json', commitment: 'confirmed', maxSupportedTransactionVersion: 0 }]);
+    return (r && !r.error && r.result) ? r.result : null;
+  }));
+  for (const t of txs) {
+    if (t.status === 'fulfilled' && t.value) {
+      const err = t.value.meta && t.value.meta.err;
+      return err ? { state: 'failed', seen: true, err } : { state: 'confirmed', seen: true, confirmationStatus: 'confirmed' };
+    }
+  }
+  const answered = per.filter(p => p.status === 'fulfilled').map(p => p.value);
+  if (answered.length === urls.length && answered.every(a => a.height > lvbh)) return { state: 'expired', seen: false };
+  // Some endpoint is behind (it could still land there) or did not answer.
+  return { state: answered.length === urls.length ? 'pending' : 'unknown', seen: false };
+}
+
+// Legacy reconcile: records written by the OLD code as 'building' were broadcast
+// before the signature was saved, so the only trace is the on-chain memo
+// ("payoutId:<id> ..."). Scan the pool's history back to `fromMs` for it.
+//   { found:true, sig, err }       the memo is on chain
+//   { found:false, complete:true } scanned past fromMs: it never landed
+//   { found:false, complete:false, cursor } ran out of pages: still unknown;
+//                                  pass `cursor` back as startBefore to resume
+export async function findPoolTxByMemo(env, needle, fromMs, maxPages = 4, startBefore) {
+  const pool = getPoolKeypair(env);
+  let before = startBefore || undefined;
+  for (let page = 0; page < maxPages; page++) {
+    const opts = { limit: 1000 };
+    if (before) opts.before = before;
+    const list = await withRpc('pool-sigs', conn => conn.getSignaturesForAddress(pool.publicKey, opts, 'confirmed'));
+    if (!list || !list.length) return { found: false, complete: true };
+    for (const s of list) {
+      if (s && s.memo && String(s.memo).indexOf(needle) >= 0) return { found: true, sig: s.signature, err: s.err || null, blockTime: s.blockTime || null };
+    }
+    const oldest = list[list.length - 1];
+    if (oldest.blockTime && oldest.blockTime * 1000 < fromMs) return { found: false, complete: true };
+    if (list.length < 1000) return { found: false, complete: true };
+    if (oldest.signature === before) return { found: false, complete: false, cursor: before };   // node ignored `before`
+    before = oldest.signature;
+  }
+  return { found: false, complete: false, cursor: before || null };
+}
+
+// `labelOrOpts` is the legacy label string, or { label, timeoutMs }.
+export async function confirmSignature(sig, blockhashInfo, labelOrOpts) {
   // Deliberately skips @solana/web3.js's Connection.confirmTransaction() —
   // without a WebSocket subscription (which this runtime doesn't give it),
   // it falls back to slow internal long-polling that was observed to hang
@@ -350,31 +785,34 @@ export async function confirmSignature(sig, blockhashInfo, label) {
   // itself responds in well under a second. Goes straight to the manual
   // getSignatureStatuses polling loop below, which was built for exactly
   // this reason and is what actually gets used regardless.
+  //
+  // SRV-4: each poll RACES the two healthiest endpoints (Promise.any) instead
+  // of walking every endpoint in sequence (which used to include the 429-ing
+  // Alchemy demo key and its 7.5 s of built-in retries). Cooled-down endpoints
+  // are skipped. Resolves with sig on 'confirmed'; throws OnChainFailureError
+  // if the tx landed with an error; throws ConfirmTimeoutError (carrying the
+  // sig) after the budget — the caller answers 202 pending, never "failed".
+  const opts = (labelOrOpts && typeof labelOrOpts === 'object') ? labelOrOpts : null;
+  const timeoutMs = Number(opts && opts.timeoutMs) || CONFIRM_BUDGET_MS;
+  const name = opts ? (opts.label || 'Transaction') : (labelOrOpts || 'Transaction');
+  const deadline = Date.now() + timeoutMs;
   let lastStatus = null;
-  for (let attempt = 0; attempt < 8; attempt++) {
-    for (let i = 0; i < RPC_ENDPOINTS.length; i++) {
-      const conn = makeConn(RPC_ENDPOINTS[i]);
-      if (!conn) continue;
-      try {
-        const sres = await conn.getSignatureStatuses([sig], { searchTransactionHistory: true });
-        const entry = sres && sres.value && sres.value[0];
-        if (entry) {
-          lastStatus = entry;
-          if (entry.err) throw new Error('On-chain failure: ' + JSON.stringify(entry.err));
-          if (entry.confirmationStatus === 'confirmed' || entry.confirmationStatus === 'finalized') return sig;
-        }
-      } catch (statusErr) {
-        if (statusErr && /On-chain failure/i.test(statusErr.message || '')) throw statusErr;
-      }
+  for (let attempt = 0; ; attempt++) {
+    let entry = null;
+    try { entry = await statusRace(sig, attempt >= 6); } catch (_) { entry = null; }
+    if (entry) {
+      lastStatus = entry;
+      if (entry.err) throw new OnChainFailureError(sig, entry.err, decodeTxError(entry.err, null, null));
+      if (entry.confirmationStatus === 'confirmed' || entry.confirmationStatus === 'finalized') return sig;
     }
+    if (Date.now() >= deadline) break;
     // A pool tx usually reaches 'confirmed' in well under a second — poll TIGHT
-    // for the first few attempts so payouts/sells/sends return the instant the
-    // chain confirms, then back off. (Still requires a real confirmation; this
-    // only shortens detection latency, it never returns before the tx lands.)
-    await new Promise(r => setTimeout(r, attempt < 3 ? 250 : 600 + attempt * 200));
+    // first, then back off. (Still requires a real confirmation; this only
+    // shortens detection latency, it never returns before the tx lands.)
+    const wait = attempt < 4 ? 250 : Math.min(1200, 300 + attempt * 100);
+    await new Promise(r => setTimeout(r, Math.max(0, Math.min(wait, deadline - Date.now()))));
   }
-  const summary = lastStatus ? 'last status=' + (lastStatus.confirmationStatus || 'unknown') : 'no status from any RPC';
-  throw new Error((label || 'Transaction') + ' could not be confirmed on-chain (' + summary + ')');
+  throw new ConfirmTimeoutError(sig, name, lastStatus);
 }
 
 // Builds a fresh Transaction with the given instructions, pool as fee payer,
@@ -385,33 +823,49 @@ export async function confirmSignature(sig, blockhashInfo, label) {
 // known signature instead of building and sending a second transaction.
 // Throws BlockhashExpiredError if the blockhash goes stale before send —
 // callers should surface that as "quote expired, please retry".
-export async function buildSignSend(env, instructions, extraSigners, label) {
+//
+// SRV-2: the signature is KNOWN before broadcast (the pool is the fee payer, so
+// tx.signatures[0] is the pool's own signature = the txid). opts.onSigned(sig,
+// blockhashInfo) is awaited BEFORE anything is sent, so a caller can durably
+// record "sending <sig>"; if that write throws, nothing was broadcast.
+// Errors with .preBroadcast === true mean nothing left this worker. A broadcast
+// whose outcome is unknown (timeout mid-send) does NOT throw: it returns
+// { uncertain: true } and the caller confirms by sig.
+export async function buildSignSend(env, instructions, extraSigners, label, opts = {}) {
   const pool = getPoolKeypair(env);
-  const conn = getConnection();
   const tx = new Transaction();
   instructions.forEach(ix => { if (ix) tx.add(ix); });
   tx.feePayer = pool.publicKey;
-  const bh = await conn.getLatestBlockhash('confirmed');
+  const t0 = Date.now();
+  let bh;
+  try { bh = await withRpc('blockhash', conn => conn.getLatestBlockhash('confirmed'), { deadline: t0 + BLOCKHASH_BUDGET_MS }); }
+  catch (e) {
+    const err = new Error('Could not reach Solana to build the transaction (' + String((e && e.message) || e).slice(0, 120) + ') — nothing was sent.');
+    err.code = 'rpc_unavailable'; err.preBroadcast = true;
+    throw err;
+  }
   tx.recentBlockhash = bh.blockhash;
   tx.lastValidBlockHeight = bh.lastValidBlockHeight;
   tx.sign(pool, ...(extraSigners || []));
-
-  let sig;
-  try {
-    sig = await sendRawSafe(conn, tx.serialize());
-  } catch (e) {
-    const msg = (e && e.message) || '';
-    if (/block height exceeded|blockhash not found|expired/i.test(msg)) {
-      throw new BlockhashExpiredError(label + ': blockhash expired before send, please retry');
-    }
-    throw await unpackSendError(e);
+  const sig = signatureOf(tx);
+  const blockhashInfo = { blockhash: bh.blockhash, lastValidBlockHeight: bh.lastValidBlockHeight };
+  const serialized = tx.serialize();
+  if (typeof opts.onSigned === 'function') {
+    // Third arg: the exact signed bytes (base64). Re-broadcasting identical
+    // bytes is always safe (same signature) — a resume can use it.
+    try { await opts.onSigned(sig, blockhashInfo, Buffer.from(serialized).toString('base64')); }
+    catch (e) { if (e && typeof e === 'object') e.preBroadcast = true; throw e; }
   }
-  return { sig, blockhashInfo: bh };
+  const sent = await sendSerialized(serialized, sig, {
+    label, asset: opts.asset, deadline: t0 + SEND_BUDGET_MS, feePayer: pool.publicKey,
+    programIds: tx.instructions.map(ix => ix.programId.toBase58())
+  });
+  return { sig, blockhashInfo, uncertain: !!sent.uncertain };
 }
 
-export async function buildSignSendConfirm(env, instructions, extraSigners, label) {
-  const { sig, blockhashInfo } = await buildSignSend(env, instructions, extraSigners, label);
-  await confirmSignature(sig, blockhashInfo, label);
+export async function buildSignSendConfirm(env, instructions, extraSigners, label, opts = {}) {
+  const { sig, blockhashInfo } = await buildSignSend(env, instructions, extraSigners, label, opts);
+  await confirmSignature(sig, blockhashInfo, { label, timeoutMs: opts.timeoutMs });
   return sig;
 }
 
@@ -426,15 +880,16 @@ export async function buildSignSendConfirm(env, instructions, extraSigners, labe
 // that for free.
 export async function buildAndPartialSignByPool(env, instructions) {
   const pool = getPoolKeypair(env);
-  const conn = getConnection();
   const tx = new Transaction();
   instructions.forEach(ix => { if (ix) tx.add(ix); });
   tx.feePayer = pool.publicKey;
-  const bh = await conn.getLatestBlockhash('confirmed');
+  const bh = await withRpc('blockhash', conn => conn.getLatestBlockhash('confirmed'));
   tx.recentBlockhash = bh.blockhash;
   tx.lastValidBlockHeight = bh.lastValidBlockHeight;
   tx.partialSign(pool);
-  return { tx, blockhashInfo: bh };
+  // The pool is the fee payer, so its signature is signatures[0] = the txid the
+  // user's fully-signed copy will land under. Known now, before the user signs.
+  return { tx, blockhashInfo: { blockhash: bh.blockhash, lastValidBlockHeight: bh.lastValidBlockHeight }, sig: signatureOf(tx) };
 }
 
 export function txToBase64(tx) {
@@ -449,18 +904,9 @@ export function txFromBase64(base64) {
 // (pool's, added earlier via partialSignAsPool, plus the user's, added
 // client-side). Does not rebuild or re-derive anything from it.
 export async function sendSignedAndConfirm(tx, blockhashInfo, label) {
-  const conn = getConnection();
-  let sig;
-  try {
-    sig = await sendRawSafe(conn, tx.serialize());
-  } catch (e) {
-    const msg = (e && e.message) || '';
-    if (/block height exceeded|blockhash not found|expired/i.test(msg)) {
-      throw new BlockhashExpiredError(label + ': blockhash expired before submit, please re-quote');
-    }
-    throw await unpackSendError(e);
-  }
-  await confirmSignature(sig, blockhashInfo, label);
+  const sig = signatureOf(tx);
+  await sendSerialized(tx.serialize(), sig, { label, programIds: tx.instructions.map(ix => ix.programId.toBase58()) });
+  await confirmSignature(sig, blockhashInfo, { label });
   return sig;
 }
 

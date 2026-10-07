@@ -118,6 +118,16 @@ async function readMint(wallet, mintStr, label) {
   }
 }
 
+// NET-3: an idle wallet tab polled this 8-9x/min, and several widgets on one
+// page often ask within a second or two. Identical reads inside BURST_MS reuse
+// the last RESOLVED answer (marked shared + ageMs) instead of repeating 2 RPC +
+// 2 Durable Object reads. Only settled values are shared — never an in-flight
+// promise, which Workers must not await across request contexts. The window
+// is deliberately tiny so a balance right after a transaction is never
+// meaningfully stale; ?fresh=1 bypasses it entirely.
+const BURST_MS = 2500;
+const burst = new Map();   // wallet -> { at, body }
+
 export async function handleBalanceTruth(request, env, { path, url }) {
   if (path !== '/balance/truth') return null;
 
@@ -131,6 +141,22 @@ export async function handleBalanceTruth(request, env, { path, url }) {
   if (!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(wallet)) {
     return json({ ok: false, error: 'invalid_wallet' }, 400);
   }
+
+  const fresh = /^(1|true)$/i.test(String(url.searchParams.get('fresh') || ''));
+  const hit = burst.get(wallet);
+  if (!fresh && hit && Date.now() - hit.at < BURST_MS) {
+    return json(Object.assign({}, hit.body, { shared: true, ageMs: Date.now() - hit.body.readAt }));
+  }
+  const body = await readTruth(env, wallet);
+  const now = Date.now();
+  // A degraded read is not worth reusing — the next caller should retry.
+  if (!body.degraded) burst.set(wallet, { at: now, body });
+  else burst.delete(wallet);
+  if (burst.size > 2000) { for (const [k, v] of burst) { if (now - v.at > BURST_MS) burst.delete(k); } }
+  return json(body);
+}
+
+async function readTruth(env, wallet) {
 
   // Every source read in ONE pass, so the answer is internally consistent
   // rather than assembled from reads taken seconds apart.
@@ -189,7 +215,7 @@ export async function handleBalanceTruth(request, env, { path, url }) {
 
   const degraded = !play.ok || !ostc.ok || !ostg.ok || !loans.ok;
 
-  return json({
+  return ({
     ok: true,
     wallet,
     // Four real places. Never summed into one headline number.

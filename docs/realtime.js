@@ -10,6 +10,7 @@
   var fallbackTimer = null;
   var attempts = 0;
   var lastEventTs = 0;
+  var lastPredictionSyncAt = 0;   // NET-3: own-wallet prediction syncs, ≤ 1 per 30 s
   var seen = [];
   var currentChannels = [];
   var lastWallet = '';
@@ -36,8 +37,8 @@
   function activeWallet() {
     try {
       if (window.OST_WALLET && window.OST_WALLET.session && window.OST_WALLET.session.publicKey) return window.OST_WALLET.session.publicKey.toBase58();
-      if (window.OST_WALLET && window.OST_WALLET.address) return String(window.OST_WALLET.address);
-      if (window.OST_CONNECTED_WALLET) return String(window.OST_CONNECTED_WALLET);
+      // C1: OST_WALLET.pubkey() is the base58 address (or null).
+      if (window.OST_WALLET && typeof window.OST_WALLET.pubkey === 'function') { var pk = window.OST_WALLET.pubkey(); if (pk) return String(pk); }
       if (window.OST_WALLET_PUBKEY) return String(window.OST_WALLET_PUBKEY);
     } catch (_) {}
     return '';
@@ -279,8 +280,18 @@
     }
     if (type.indexOf('prediction.') === 0) {
       dispatch('ost:prediction-update', event);
-      dispatch('ost:prediction:order-changed', event);
-      try { if (typeof window.syncOstPredictionOrdersFromRemote === 'function') window.syncOstPredictionOrdersFromRemote(); } catch (_) {}
+      // 'order-changed' means "MY tickets changed": another wallet's public
+      // fill never re-renders every ticket surface and refetches every feed
+      // (NET-3). A round resolution can settle my tickets, so it still does.
+      if (isOwnWallet(event.wallet) || type === 'prediction.resolved') dispatch('ost:prediction:order-changed', event);
+      // NET-3: every public prediction.* event used to make EVERY open tab GET
+      // /positions and re-POST its orders (each POST published another public
+      // event — an amplifier). Only THIS wallet's own events trigger a sync, and
+      // at most once per 30 s (app.js also throttles to 1/60 s unless forced).
+      if (isOwnWallet(event.wallet) && Date.now() - lastPredictionSyncAt >= 30000) {
+        lastPredictionSyncAt = Date.now();
+        try { if (typeof window.syncOstPredictionOrdersFromRemote === 'function') window.syncOstPredictionOrdersFromRemote(); } catch (_) {}
+      }
     }
     if (type === 'faucet.claim') {
       dispatch('ost:faucet-claim', event);

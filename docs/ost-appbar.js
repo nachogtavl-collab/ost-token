@@ -331,19 +331,40 @@
       tabs[i].classList.toggle('is-active', tabs[i].getAttribute('data-tab') === key);
     }
   }
+  // The highlighted tab follows where the user actually is — a wallet gate, the
+  // header wallet button or the palette also switch sections, not only this bar
+  // (it kept "Home" lit while the wallet home was open).
+  function syncActiveFromSection() {
+    if (sheetOpen) return;
+    var id = '';
+    try { id = (window.OST_COMPARTMENTS && window.OST_COMPARTMENTS.active) || ''; } catch (_) {}
+    var key = '';
+    if (id === 'wallet') {
+      var p = ''; try { p = typeof window.getWalletPanel === 'function' ? window.getWalletPanel() : ''; } catch (_) {}
+      key = p === 'predict' ? 'markets' : 'wallet';
+    } else if (id === 'games') key = 'games';
+    else if (id === 'home' || !id) key = 'home';
+    if (activeKey === 'mesh' && document.documentElement.classList.contains('omx-lock')) return;   // Mesh sheet open
+    if (key !== activeKey) setActive(key);
+  }
+  document.addEventListener('ost:compartment', function () { setTimeout(syncActiveFromSection, 0); });
+  document.addEventListener('ost:wallet-panel', function () { setTimeout(syncActiveFromSection, 0); });
 
   // ── Rotating, colour-coded balances ──────────────────────────────────────
   // The chip used to show ONE undifferentiated "OST" number. Now it cycles
   // through the three real balances, each in its own colour, so a user can tell
-  // OSTC (the main token) from OSTG (the game token) from OSTG they've borrowed.
-  // OSTC blue, OSTG purple, loaned OSTG amber — matching the wallet/bridge.
+  // OST (the main token) from OSTG (the game token) from OSTG they've borrowed.
+  // OST blue, OSTG purple, loaned OSTG amber — matching the wallet/bridge.
+  // TRF-5 / C6: the main token is shown as "OST" everywhere (the wallet home and
+  // every money sheet say OST; the appbar used to say "OSTC" for the same coin).
   var BAL_FACES = [
-    { key: 'ostc', label: 'OSTC', color: '#4da3ff', get: function () { return window.OST_BALANCE ? OST_BALANCE.onchainOstc() : walletOst(); } },
+    { key: 'ostc', label: 'OST', color: '#4da3ff', get: function () { return window.OST_BALANCE ? OST_BALANCE.onchainOstc() : walletOst(); } },
     { key: 'ostg', label: 'OSTG', color: '#a97bff', get: function () {
         if (!window.OST_BALANCE) return undefined;
         var a = OST_BALANCE.onchainOstg(), p = OST_BALANCE.play();
-        if (a == null && p == null) return undefined;
-        return (Number(a) || 0) + (Number(p) || 0);   // wallet OSTG + custodial play OSTG
+        // C6: unknown on-chain OSTG = "—", never "OSTG 0" because Play read 0.
+        if (a == null || !isFinite(a)) return undefined;
+        return Number(a) + (p != null && isFinite(p) ? Number(p) : 0);   // wallet OSTG + custodial play OSTG
       } },
     { key: 'loan', label: 'Loaned OSTG', color: '#f5a623', hideIfZero: true, get: function () { return window.OST_BALANCE ? OST_BALANCE.loanLocked() : undefined; } }
   ];
@@ -528,11 +549,12 @@
     // Poll a bit faster so an on-chain deposit shows within a few seconds even
     // if its change event was missed (devnet RPC lag).
     setInterval(function () { refreshBalance(); refreshBadge(); }, 5000);
-    // Cycle the chip through OSTC → OSTG → Loaned every 3s (purely local; reads
+    // Cycle the chip through OST → OSTG → Loaned every 3s (purely local; reads
     // the cached canonical balances, no network). The tools sheet shows all at once.
     setInterval(rotateBalanceFace, 3000);
 
     setActive('home');
+    syncActiveFromSection();
   }
 
   window.OST_APPBAR = {

@@ -1,10 +1,11 @@
 /* ============================================================
  * OST Converter Hub - flexible value-based OST refill
  * ============================================================
- * Renders one command center for:
- *   - Buy OST by exact USD value (card or crypto)
- *   - Convert SOL <-> OST quotes
- *   - Prepare transfers for SOL, USDC, and OST
+ * Devnet test rail. Renders one hub for:
+ *   - Get devnet OST by exact USD value (devnet SOL / USDC; card only in
+ *     Stripe TEST mode) — no real money is accepted for devnet OST
+ *   - Convert SOL <-> OST (both directions are real cosigned swaps)
+ *   - Open the Send sheet for OST, OSTG or SOL
  *
  * The payment modal still talks to the ost-api worker:
  *   GET  /topup/config
@@ -25,7 +26,9 @@
   const API_BASE = () => (window.OST_TOPUP_API || window.OST_API_BASE || '').replace(/\/+$/, '');
 
   let configCache = null;
-  let pollTimer = null;
+  // One poll per order: starting a poll for a new order never cancels the
+  // poll that is verifying an earlier, already-sent payment.
+  const pollTimers = {};          // intentId -> { timer, crypto }
   const deliveringIntents = {};   // intentId -> true while its client payout is in flight
   let activeCryptoIntent = null;
 
@@ -54,6 +57,13 @@
 
   function solUsd() {
     return numberFrom(configCache?.pricing?.solUsd || configCache?.solUsd, DEFAULT_SOL_USD);
+  }
+
+  // The SOL price the worker actually quotes with, or null while unknown.
+  function solUsdLive() {
+    if (!configCache || configCache.__fallback) return null;
+    const v = Number(configCache?.pricing?.solUsd || configCache?.solUsd);
+    return Number.isFinite(v) && v > 0 ? v : null;
   }
 
   function minUsd() {
@@ -109,15 +119,34 @@
   }
 
   function getConnectedWallet() {
-    if (window.OST_CONNECTED_WALLET) return window.OST_CONNECTED_WALLET;
     try {
-      const btn = document.getElementById('walletBtn') || document.getElementById('walletButton');
-      const txt = btn && btn.textContent ? btn.textContent.trim() : '';
-      const m = txt.match(/[1-9A-HJ-NP-Za-km-z]{32,44}/);
-      if (m) return m[0];
+      const W = window.OST_WALLET;
+      if (!W) return '';
+      if (W.session && W.session.publicKey && W.session.publicKey.toBase58) return W.session.publicKey.toBase58();
+      if (typeof W.address === 'function') return String(W.address() || '');
+      if (typeof W.address === 'string') return W.address;
     } catch (_) {}
     return '';
   }
+  function hasWallet() { return !!getConnectedWallet(); }
+  function requireWallet(reason, resume) {
+    try {
+      const W = window.OST_WALLET;
+      if (W && typeof W.requireWallet === 'function') return W.requireWallet({ reason, resume });
+      if (window.OST_WALLET_HOME && typeof window.OST_WALLET_HOME.open === 'function') return window.OST_WALLET_HOME.open('start');
+    } catch (_) {}
+    return null;
+  }
+  function humanText(e) {
+    try { if (window.OST_MONEY_ERRORS) return window.OST_MONEY_ERRORS.text(e, { stage: 'submit' }); } catch (_) {}
+    return 'That didn’t go through — try again in a moment.';
+  }
+  function humanOf(e) {
+    try { if (window.OST_MONEY_ERRORS) return window.OST_MONEY_ERRORS.humanize(e, { stage: 'submit' }); } catch (_) {}
+    return { state: 'failed', title: 'That didn’t go through', body: 'Try again in a moment.' };
+  }
+  function escHtml(t) { return String(t == null ? '' : t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+  const GET_SOL_BTN = '<button type="button" class="converter-btn secondary" data-ost-get-sol="10" style="margin-top:8px;">Get SOL: cash out 10 OST → SOL</button>';
 
   function shortWallet(wallet) {
     return wallet ? wallet.slice(0, 5) + '...' + wallet.slice(-5) : 'Connect wallet';
@@ -149,7 +178,7 @@
     }
     const base = API_BASE();
     if (!base) {
-      configCache = { stripeEnabled: false, receivers: {}, pricing: { usdPerOst: DEFAULT_USD_PER_OST, solUsd: DEFAULT_SOL_USD }, __loadedAt: Date.now() };
+      configCache = { stripeEnabled: false, receivers: {}, pricing: { usdPerOst: DEFAULT_USD_PER_OST, solUsd: DEFAULT_SOL_USD }, __loadedAt: Date.now(), __fallback: true };
       return configCache;
     }
     try {
@@ -163,7 +192,7 @@
       try { window.dispatchEvent(new CustomEvent('ost:topup-config', { detail: data })); } catch (_) {}
     } catch (_) {
       if (!configCache) {
-        configCache = { stripeEnabled: false, receivers: {}, pricing: { usdPerOst: DEFAULT_USD_PER_OST, solUsd: DEFAULT_SOL_USD }, __loadedAt: Date.now() };
+        configCache = { stripeEnabled: false, receivers: {}, pricing: { usdPerOst: DEFAULT_USD_PER_OST, solUsd: DEFAULT_SOL_USD }, __loadedAt: Date.now(), __fallback: true };
       }
     }
     return configCache;
@@ -176,9 +205,9 @@
       <div class="converter-shell">
         <div class="converter-head">
           <div>
-            <p class="converter-kicker">Central command center</p>
+            <p class="converter-kicker">Devnet test rail</p>
             <h3>OST Converter Hub</h3>
-            <p class="topup-sub">Buy, convert, transfer, and fill OST by exact value from one clean wallet rail.</p>
+            <p class="topup-sub">Devnet SOL/USDC in, devnet OST out — no real money. Convert SOL ⇄ OST, or send OST, OSTG and SOL.</p>
           </div>
           <div class="converter-wallet-card" aria-label="Wallet area and balance graph">
             <div class="converter-wallet-top">
@@ -194,7 +223,7 @@
         </div>
 
         <div class="converter-tabs" role="tablist" aria-label="OST converter actions">
-          <button type="button" class="converter-tab active" data-converter-tab="buy" id="converterTabBuy">Buy with Fiat</button>
+          <button type="button" class="converter-tab active" data-converter-tab="buy" id="converterTabBuy">Get by value</button>
           <button type="button" class="converter-tab" data-converter-tab="convert" id="converterTabConvert">Convert SOL</button>
           <button type="button" class="converter-tab" data-converter-tab="transfer" id="converterTabTransfer">Transfer</button>
         </div>
@@ -211,7 +240,7 @@
             </div>
           </div>
           <div class="converter-rate-row">
-            <span>Rate: <strong id="ost-rate">1 OST = ${fmtUsd(currentQuote.usdPerOst)}</strong></span>
+            <span>Conversion rate: <strong id="ost-rate">1 OST = $${currentQuote.usdPerOst} (fixed, devnet)</strong></span>
             <span id="converterLiveStatus">Live pricing loading...</span>
           </div>
           <div class="converter-suggested" id="converterSuggested"></div>
@@ -223,7 +252,7 @@
             <button type="button" class="converter-btn primary" id="converterCardBtn">Pay with Card</button>
             <button type="button" class="converter-btn secondary" id="converterCryptoBtn">Pay with Crypto</button>
           </div>
-          <p class="topup-mission">100% of proceeds go directly to the <strong>OST Treasury</strong> (developer main holding) to build uncensored internet, satellite coverage, and zero-fee infrastructure. <strong>Thank you for supporting the mission!</strong></p>
+          <p class="topup-mission">Devnet test rail — devnet SOL or USDC goes to the devnet treasury and devnet OST comes back to your wallet. No real money is accepted; devnet OST has no cash value.</p>
           <div class="topup-status" id="converterBuyStatus"></div>
         </div>
 
@@ -235,17 +264,18 @@
           <div class="converter-swap-card">
             <label for="sol-amount">
               <span id="converterSendLabel">You Send</span>
-              <input type="number" id="sol-amount" value="0.5" min="0" step="0.01" inputmode="decimal" autocomplete="off">
+              <input type="number" id="sol-amount" value="0.01" min="0" step="any" inputmode="decimal" autocomplete="off">
               <em id="converterSendSymbol">SOL</em>
             </label>
             <div class="converter-arrow" aria-hidden="true">&rarr;</div>
             <div class="converter-output">
               <span>You Receive</span>
-              <strong id="converted-ost">${fmtOst((0.5 * solUsd()) / currentQuote.usdPerOst)}</strong>
+              <strong id="converted-ost">—</strong>
               <em id="converterReceiveSymbol">OST</em>
             </div>
           </div>
-          <button type="button" class="converter-btn primary wide" id="converterSwapBtn">Prepare Conversion</button>
+          <div class="converter-rate-row" id="converterSwapQuote" style="min-height:18px;"></div>
+          <button type="button" class="converter-btn primary wide" id="converterSwapBtn">Convert now</button>
           <div class="topup-status" id="converterSwapStatus"></div>
         </div>
 
@@ -255,8 +285,8 @@
               <span>Currency</span>
               <select id="converterTransferCurrency">
                 <option value="OST">OST</option>
+                <option value="OSTG">OSTG</option>
                 <option value="SOL">SOL</option>
-                <option value="USDC">USDC</option>
               </select>
             </label>
             <label for="converterTransferAmount">
@@ -310,13 +340,16 @@
       btn.addEventListener('click', () => switchConverterTab(btn.dataset.converterTab));
     });
 
-    document.querySelectorAll('[data-direction]').forEach((btn) => {
+    const hub = $('converterPanelConvert');
+    const pills = hub ? hub.querySelectorAll('.converter-pill[data-direction]') : [];
+    pills.forEach((btn) => {
       btn.addEventListener('click', () => {
-        conversionDirection = btn.dataset.direction || 'solToOst';
-        document.querySelectorAll('[data-direction]').forEach((el) => el.classList.toggle('active', el === btn));
+        conversionDirection = btn.dataset.direction === 'ostToSol' ? 'ostToSol' : 'solToOst';
+        pills.forEach((el) => el.classList.toggle('active', el === btn));
         calculateConversion();
       });
     });
+    window.addEventListener('ost:balance', () => { try { updateConversion(); } catch (_) {} });
 
     const walletInput = $('converterWalletInput');
     if (walletInput) walletInput.addEventListener('input', () => { walletInput.dataset.userEdited = '1'; });
@@ -326,7 +359,7 @@
     const cryptoBtn = $('converterCryptoBtn');
     if (cryptoBtn) cryptoBtn.addEventListener('click', buyWithCrypto);
     const swapBtn = $('converterSwapBtn');
-    if (swapBtn) swapBtn.addEventListener('click', convertSOLtoOST);
+    if (swapBtn) swapBtn.addEventListener('click', convertNow);
     const transferBtn = $('converterTransferBtn');
     if (transferBtn) transferBtn.addEventListener('click', prepareTransfer);
   }
@@ -335,13 +368,13 @@
     const el = $('converterLiveStatus');
     if (!el) return;
     const pricing = configCache?.pricing || {};
-    el.textContent = pricing.solUsd ? 'Live pricing from OST API' : 'Fallback price active';
+    el.textContent = solUsdLive() ? ('1 SOL = $' + Number(pricing.solUsd).toFixed(2) + ' (worker price)') : 'Loading the devnet SOL price…';
   }
 
   function syncWalletUi() {
     const wallet = getConnectedWallet();
     const walletText = $('converterWalletText');
-    if (walletText) walletText.textContent = shortWallet(wallet);
+    if (walletText) walletText.textContent = wallet ? shortWallet(wallet) : 'No wallet connected';
     const input = $('converterWalletInput');
     if (input && wallet && !input.dataset.userEdited) input.value = wallet;
     const modalWallet = $('topupWalletInput');
@@ -358,7 +391,7 @@
     const rate = $('ost-rate');
     const walletQuote = $('converterWalletQuote');
     if (receive) receive.textContent = fmtOst(currentQuote.ostAmount);
-    if (rate) rate.textContent = `1 OST = ${fmtUsd(currentQuote.usdPerOst)}`;
+    if (rate) rate.textContent = `1 OST = $${currentQuote.usdPerOst} (fixed, devnet)`;
     if (walletQuote) walletQuote.textContent = fmtOst(currentQuote.ostAmount);
     // Graph removed per product direction; keep stub call to preserve any external listeners.
     // drawGraph(currentQuote.ostAmount);
@@ -532,26 +565,42 @@
   function updateConversion() {
     const input = $('sol-amount');
     const amount = numberFrom(input && input.value, 0);
-    const rate = usdPerOst();
-    const solPrice = solUsd();
     const sendSymbol = $('converterSendSymbol');
     const receiveSymbol = $('converterReceiveSymbol');
     const out = $('converted-ost');
+    const qline = $('converterSwapQuote');
+    const btn = $('converterSwapBtn');
     if (!out) return;
+    const sPrice = solUsdLive();
+    const B = (window.OST_BALANCE && OST_BALANCE.get) ? OST_BALANCE.get() : {};
     if (conversionDirection === 'ostToSol') {
-      const solOut = solPrice > 0 ? (amount * rate) / solPrice : 0;
       if (sendSymbol) sendSymbol.textContent = 'OST';
       if (receiveSymbol) receiveSymbol.textContent = 'SOL';
-      out.textContent = fmtSol(solOut);
+      if (btn) btn.textContent = 'Cash out to SOL';
+      const rs = window.OST_REAL_SWAP;
+      const q = (rs && typeof rs.quoteOstToSol === 'function' && amount > 0) ? rs.quoteOstToSol(amount) : null;
+      out.textContent = q && Number.isFinite(q.sol) ? fmtSol(q.sol) : '—';
+      if (qline) {
+        const lam = B.sol != null ? Math.round(B.sol * 1e9) : null;
+        const min = (rs && typeof rs.minOstFor === 'function' && lam != null) ? rs.minOstFor(lam) : 0;
+        qline.textContent = q && Number.isFinite(q.sol)
+          ? ('You sign ' + amount + ' OST · pool fee 0.5% · 1 OST = $' + usdPerOst() + ' (fixed, devnet)' + (min && amount < min ? ' · first cash-out to this wallet: at least ' + min + ' OST' : ''))
+          : (amount > 0 ? 'Loading the devnet SOL price…' : '');
+      }
     } else {
-      const liveQuote = window.OST_REAL_SWAP && typeof window.OST_REAL_SWAP.quote === 'function'
-        ? window.OST_REAL_SWAP.quote(amount)
-        : null;
-      const ostOut = liveQuote && Number.isFinite(liveQuote.ost) ? liveQuote.ost : (rate > 0 ? (amount * solPrice) / rate : 0);
       if (sendSymbol) sendSymbol.textContent = 'SOL';
       if (receiveSymbol) receiveSymbol.textContent = 'OST';
-      out.textContent = fmtOst(ostOut);
+      if (btn) btn.textContent = 'Convert now';
+      const rs = window.OST_REAL_SWAP;
+      const q = (rs && typeof rs.quote === 'function' && amount > 0) ? rs.quote(amount) : null;
+      out.textContent = q && Number.isFinite(q.ost) ? fmtOst(q.ost) : '—';
+      if (qline) {
+        qline.textContent = q && Number.isFinite(q.ost)
+          ? ('You sign ' + amount + ' SOL · pool fee 0.5% · 1 SOL = $' + Number(q.solUsd).toFixed(2) + ' · fee paid by OST')
+          : (amount > 0 ? 'Loading the devnet SOL price…' : '');
+      }
     }
+    if (!sPrice && !configCache) loadConfig().then(updateConversion).catch(() => {});
   }
 
   function switchConverterTab(tabName) {
@@ -589,59 +638,55 @@
     openModal('crypto');
   }
 
-  async function convertSOLtoOST() {
+  let convertBusy = false;
+  async function convertNow() {
+    if (convertBusy) return;
     const amount = numberFrom($('sol-amount')?.value, 0);
     const btn = $('converterSwapBtn');
-    if (amount <= 0) {
-      setStatus('converterSwapStatus', 'error', 'Enter an amount to convert first.');
+    if (amount <= 0) { setStatus('converterSwapStatus', 'error', 'Enter an amount to convert first.'); return; }
+    if (!hasWallet()) {
+      setStatus('converterSwapStatus', 'warn', 'Create a free devnet wallet or connect one first. <button type="button" class="converter-btn secondary" id="converterSwapWalletBtn" style="margin-top:8px;">Create free wallet / Connect</button>');
+      const wb = $('converterSwapWalletBtn'); if (wb) wb.onclick = () => requireWallet('Convert SOL ⇄ OST', () => { syncWalletUi(); updateConversion(); });
       return;
     }
-    if (conversionDirection !== 'solToOst') {
-      setStatus('converterSwapStatus', 'warn', 'OST to SOL cash-out is not available in the devnet converter yet. Use the transfer rail or sell routes for exits.');
-      return;
-    }
-    if (!window.OST_WALLET || !window.OST_WALLET.session || !window.OST_WALLET.session.publicKey) {
-      setStatus('converterSwapStatus', 'error', 'Create or connect a wallet before converting devnet SOL to OST.');
-      return;
-    }
+    const rs = window.OST_REAL_SWAP;
+    convertBusy = true;
     const originalText = btn ? btn.textContent : '';
-    if (btn) { btn.disabled = true; btn.textContent = 'Converting...'; }
+    if (btn) { btn.disabled = true; btn.textContent = 'Converting…'; }
     try {
-      // Force a fresh /topup/config fetch so the on-chain swap uses the
-      // exact SOL/USD price the user sees in the UI quote (and so the
-      // memo records the snapshot rate). Without this, a long-open page
-      // could swap against a 30-min stale SOL price and credit far less
-      // OST than the visible quote promised.
       try { await loadConfig({ force: true }); updateConversion(); } catch (_) {}
-      const swapRail = await waitForSwapRail();
-      if (!swapRail || typeof swapRail.swapAny !== 'function') throw new Error('OST devnet swap rail is still loading. Refresh and try again.');
-      if (!window.OST_RESCUE || typeof window.OST_RESCUE.ensureUserAta !== 'function') throw new Error('OST fee vault is still loading. Please wait a moment and try again.');
-      const snapSolUsd = solUsd();
-      const snapOstUsd = usdPerOst();
-      const expectedOst = snapOstUsd > 0 ? (amount * snapSolUsd) / snapOstUsd : 0;
-      const quote = typeof swapRail.quote === 'function' ? swapRail.quote(amount) : null;
-      setStatus('converterSwapStatus', 'info', 'Converting ' + fmtSol(amount) + ' (~$' + (amount * snapSolUsd).toFixed(2) + ' @ $' + snapSolUsd.toFixed(2) + '/SOL) into ~' + fmtOst(expectedOst) + ' on devnet...');
-      const memo = JSON.stringify({
-        k: 'converter-sol-to-ost',
-        sol: amount,
-        solUsd: Number(snapSolUsd.toFixed(4)),
-        ostUsd: Number(snapOstUsd.toFixed(6)),
-        expectedOst: Number(expectedOst.toFixed(4)),
-        t: Date.now()
-      });
-      const result = await swapRail.swapAny('SOL', amount, { memo, snapSolUsd: snapSolUsd, snapOstUsd: snapOstUsd, expectedOst: expectedOst });
-      const sig = result && result.sig ? String(result.sig) : '';
-      setStatus('converterSwapStatus', 'ok', 'Converted ' + fmtSol(amount) + ' into ' + fmtOst(result && result.ost) + '. ' +
-        (sig ? '<a href="https://solscan.io/tx/' + encodeURIComponent(sig) + '?cluster=devnet" target="_blank" rel="noopener">View tx</a>' : ''));
-      try { window.dispatchEvent(new CustomEvent('ost:wallet-changed')); } catch (_) {}
+      let result;
+      if (conversionDirection === 'ostToSol') {
+        if (!rs || typeof rs.swapOstToSol !== 'function') throw Object.assign(new Error('rail'), { code: 'bad_response' });
+        setStatus('converterSwapStatus', 'info', 'Cashing out ' + fmtOst(amount) + ' → SOL…');
+        result = await rs.swapOstToSol(amount);
+        if (result.pending) setStatus('converterSwapStatus', 'info', 'Still confirming — check your balance before retrying.');
+        else setStatus('converterSwapStatus', 'ok', 'Cashed out ' + fmtOst(result.ost) + ' → ' + fmtSol(result.sol) + '. ' + txLink(result.sig));
+      } else {
+        if (!rs || typeof rs.swap !== 'function') throw Object.assign(new Error('rail'), { code: 'bad_response' });
+        setStatus('converterSwapStatus', 'info', 'Converting ' + fmtSol(amount) + ' → OST…');
+        const memo = JSON.stringify({ k: 'converter-sol-to-ost', sol: amount, t: Date.now() });
+        result = await rs.swap(amount, { memo });
+        if (result.pending) setStatus('converterSwapStatus', 'info', 'Still confirming — check your balance before retrying.');
+        else setStatus('converterSwapStatus', 'ok', 'Converted ' + fmtSol(amount) + ' into ' + fmtOst(result.ost) + '. ' + txLink(result.sig));
+      }
       try { window.dispatchEvent(new CustomEvent('ost:converter-swap-complete', { detail: result || {} })); } catch (_) {}
-      if (typeof window.syncOstWalletEventsFromRemote === 'function') window.syncOstWalletEventsFromRemote();
       updateConversion();
     } catch (error) {
-      setStatus('converterSwapStatus', 'error', String(error && error.message || error || 'SOL to OST conversion failed.'));
+      const h = humanOf(error);
+      let msg = escHtml(h.title + (h.body ? ' — ' + h.body : ''));
+      if (error && (error.code === 'insufficient_sol' || error.getSol)) msg += '<br>' + GET_SOL_BTN;
+      if (error && error.code === 'below_rent_minimum' && error.message) msg = escHtml('Amount too small for a new Solana account — ' + error.message);
+      setStatus('converterSwapStatus', h.state === 'pending' ? 'info' : 'error', msg);
     } finally {
-      if (btn) { btn.disabled = false; btn.textContent = originalText || 'Prepare Conversion'; }
+      convertBusy = false;
+      if (btn) { btn.disabled = false; btn.textContent = originalText || 'Convert now'; }
     }
+  }
+  // Back-compat name.
+  const convertSOLtoOST = convertNow;
+  function txLink(sig) {
+    return sig ? '<a href="https://solscan.io/tx/' + encodeURIComponent(String(sig)) + '?cluster=devnet" target="_blank" rel="noopener">View tx</a>' : '';
   }
 
   // "Transfer" used to only announce an event and report "prepared" with no
@@ -651,21 +696,10 @@
     const currency = ($('converterTransferCurrency')?.value || 'OST').toUpperCase();
     const amount = numberFrom($('converterTransferAmount')?.value, 0);
     const recipient = ($('converterTransferRecipient')?.value || '').trim();
-    if (!(amount > 0)) { setStatus('converterTransferStatus', 'error', 'Enter an amount to send first.'); return; }
-    if (!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(recipient)) { setStatus('converterTransferStatus', 'error', 'Paste a valid Solana recipient address.'); return; }
-    if (currency !== 'OST' && currency !== 'SOL') { setStatus('converterTransferStatus', 'error', currency + ' transfers are not available on the devnet rail — send OST or SOL.'); return; }
-    if (!window.OST_WALLET || !window.OST_WALLET.session || !window.OST_WALLET.session.publicKey) { setStatus('converterTransferStatus', 'error', 'Connect a wallet first.'); return; }
-    const sendBtn = $('wdSendBtn');
-    if (!sendBtn) { setStatus('converterTransferStatus', 'error', 'Send sheet not loaded — refresh the page.'); return; }
-    window._ostSendAsset = currency;
-    sendBtn.click();
-    setTimeout(() => {
-      const to = $('ostSendTo'); const amt = $('ostSendAmount');
-      if (to) to.value = recipient;
-      if (amt) { amt.value = String(amount); amt.dispatchEvent(new Event('input', { bubbles: true })); }
-    }, 60);
-    window.dispatchEvent(new CustomEvent('ost:converter-transfer-prepared', { detail: { currency, amount, recipient } }));
-    setStatus('converterTransferStatus', 'ok', `Review and sign the ${currency} transfer to ${shortWallet(recipient)} in the Send sheet.`);
+    if (!hasWallet()) { requireWallet('Send', () => prepareTransfer()); return; }
+    if (!window.OST_SEND || typeof window.OST_SEND.open !== 'function') { setStatus('converterTransferStatus', 'error', 'The Send sheet is still loading — try again in a moment.'); return; }
+    window.OST_SEND.open({ asset: currency, to: recipient || undefined, amount: amount > 0 ? amount : undefined });
+    clearStatus('converterTransferStatus');
   }
 
 
@@ -689,6 +723,7 @@
   window.OST_TOPUP = Object.assign(window.OST_TOPUP || {}, {
     usdPerOst: usdPerOst,
     solUsd: solUsd,
+    solUsdLive: solUsdLive,
     minUsd: minUsd,
     maxUsd: maxUsd,
     config: function () { return configCache; },
@@ -717,7 +752,12 @@
       <div class="topup-modal" role="dialog" aria-modal="true" aria-labelledby="topupModalTitle">
         <button class="topup-modal-close" id="topupModalClose" aria-label="Close">&times;</button>
         <h4 id="topupModalTitle">OST Converter Hub</h4>
-        <p class="topup-modal-sub" id="topupModalSub">Exact-value refill. Real funds go to the OST Treasury; devnet OST is delivered to your wallet.</p>
+        <p class="topup-modal-sub" id="topupModalSub">Devnet test rail — devnet SOL/USDC in, devnet OST out; no real money.</p>
+        <div class="topup-field">
+          <label for="topupAmountInput">Amount (USD value)</label>
+          <input type="number" id="topupAmountInput" min="1" step="0.01" inputmode="decimal" autocomplete="off">
+          <div class="topup-hint" id="topupWalletLine">No wallet connected.</div>
+        </div>
         <div class="topup-summary" id="topupSummary"></div>
         <div class="topup-tabs">
           <button class="topup-tab active" data-pane="card" id="topupTabCard">Card</button>
@@ -737,7 +777,9 @@
             <label for="topupWalletInputCrypto">Devnet wallet to receive OST</label>
             <input type="text" id="topupWalletInputCrypto" placeholder="Paste your Solana address..." spellcheck="false" autocomplete="off">
           </div>
-          <button class="topup-action secondary" id="topupCryptoStartBtn">Show Treasury Address &amp; Memo</button>
+          <button class="topup-action" id="topupPayFromWalletBtn">Pay from this wallet (devnet SOL)</button>
+          <div class="topup-hint" id="topupPayFromWalletHint"></div>
+          <button class="topup-action secondary" id="topupCryptoStartBtn">Or show the treasury address &amp; memo</button>
           <div id="topupCryptoCards" style="display:none; margin-top:14px;">
             <div class="topup-crypto-card">
               <div class="topup-crypto-row">
@@ -791,6 +833,13 @@
       });
     });
     $('topupCardBtn').addEventListener('click', startStripeCheckout);
+    $('topupPayFromWalletBtn').addEventListener('click', payFromWallet);
+    const amtIn = $('topupAmountInput');
+    if (amtIn) amtIn.addEventListener('input', () => {
+      const fiat = $('fiat-amount');
+      if (fiat) fiat.value = amtIn.value;
+      updateQuote();
+    });
     $('topupCryptoStartBtn').addEventListener('click', startCryptoIntent);
     $('topupVerifyPaymentBtn').addEventListener('click', verifyCryptoPayment);
   }
@@ -818,6 +867,7 @@
     clearStatus('topupCardStatus');
     clearStatus('topupCryptoStatus');
     updateModalSummary();
+    syncPayLock();                     // a sent-but-unverified payment keeps Pay locked
 
     const cfg = await loadConfig();
     const cardBtn = $('topupCardBtn');
@@ -838,9 +888,17 @@
     const summary = $('topupSummary');
     if (!summary) return;
     const q = updateQuoteSilently();
+    const amtIn = $('topupAmountInput');
+    if (amtIn && document.activeElement !== amtIn) amtIn.value = String(q.usd);
+    const wl = $('topupWalletLine');
+    const wallet = getConnectedWallet();
+    if (wl) wl.textContent = wallet ? ('Delivers to your connected wallet ' + shortWallet(wallet) + '.') : 'No wallet connected — create or connect one to pay from it.';
+    const hint = $('topupPayFromWalletHint');
+    const sPrice = solUsdLive();
+    if (hint) hint.textContent = sPrice ? ('You will sign ' + (q.usd / sPrice).toFixed(6) + ' devnet SOL (1 SOL = $' + sPrice.toFixed(2) + '). OST pays the network fee.') : 'Loading the devnet SOL price…';
     summary.innerHTML = `
       <div class="topup-summary-row"><span>You pay</span><span>${fmtUsd(q.usd)}</span></div>
-      <div class="topup-summary-row"><span>Rate</span><span>1 OST = ${fmtUsd(q.usdPerOst)}</span></div>
+      <div class="topup-summary-row"><span>Conversion rate</span><span>1 OST = $${q.usdPerOst} (fixed, devnet)</span></div>
       <div class="topup-summary-row total"><span>You receive</span><span>${fmtOst(q.ostAmount)}</span></div>`;
     const note = $('topupCryptoNote');
     if (note) note.textContent = `Send ${fmtUsd(q.usd)} in USDC, or the live SOL equivalent, and include the memo. Devnet OST dispatch starts after verification.`;
@@ -856,7 +914,9 @@
     const o = $('topupModalOverlay');
     if (o) o.classList.remove('open');
     activeCryptoIntent = null;
-    if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+    // Card polls end with the modal; a crypto payment that was SENT keeps
+    // being verified (nothing else would ever verify it).
+    Object.keys(pollTimers).forEach((id) => { if (!pollTimers[id].crypto) stopPoll(id); });
   }
   window.closeTopUpModal = closeModal;
 
@@ -870,8 +930,8 @@
       body: JSON.stringify({ usd: q.usd, ostAmount: q.ostAmount, wallet, method })
     });
     if (!r.ok) {
-      const txt = await r.text().catch(() => '');
-      throw new Error('intent_failed: ' + (txt || r.status));
+      const j = await r.json().catch(() => ({}));
+      throw Object.assign(new Error(j.message || 'intent_failed'), { code: j.error || 'bad_response', status: r.status, body: j });
     }
     return r.json();
   }
@@ -894,15 +954,15 @@
         body: JSON.stringify({ intentId: intent.id })
       });
       if (!r.ok) {
-        const txt = await r.text().catch(() => '');
-        throw new Error('checkout_failed: ' + (txt || r.status));
+        const j = await r.json().catch(() => ({}));
+        throw Object.assign(new Error(j.message || 'checkout_failed'), { code: j.error || 'bad_response', status: r.status, body: j });
       }
       const { url } = await r.json();
       if (!url) throw new Error('no_checkout_url');
       try { sessionStorage.setItem('ostTopupIntent', intent.id); } catch (_) {}
       window.location.href = url;
     } catch (e) {
-      setStatus('topupCardStatus', 'error', String(e && e.message || e));
+      setStatus('topupCardStatus', 'error', escHtml(humanText(e)));
       btn.disabled = false;
     }
   }
@@ -937,9 +997,119 @@
       setStatus('topupCryptoStatus', 'info', `Payment lane open for ${fmtUsd(intent.usd || currentQuote.usd)}. Send SOL or USDC with the memo; OST dispatch starts after verification.`);
       pollIntent(intent.id, 'topupCryptoStatus', { crypto: true });
     } catch (e) {
-      setStatus('topupCryptoStatus', 'error', String(e && e.message || e));
+      setStatus('topupCryptoStatus', 'error', escHtml(humanText(e)));
     } finally {
       btn.disabled = false;
+    }
+  }
+
+  // A SENT payment that is not verified yet locks "Pay from this wallet":
+  // paying again would send the same SOL twice (review: second-pay).
+  const REFRESH_BTN = '<button type="button" class="converter-btn secondary" data-ost-topup-refresh="1" style="margin-top:8px;">Refresh status</button>';
+  function pendingPaymentRec() {
+    try {
+      const T = window.OST_TOPUP;
+      if (!T || typeof T.hasUnverifiedPayment !== 'function' || !T.hasUnverifiedPayment()) return null;
+      return T.getPending();
+    } catch (_) { return null; }
+  }
+  function shortTx(sig) { sig = String(sig || ''); return sig.length > 12 ? sig.slice(0, 6) + '…' + sig.slice(-4) : sig; }
+  function syncPayLock() {
+    const btn = $('topupPayFromWalletBtn');
+    const rec = pendingPaymentRec();
+    if (btn && !payBusy) btn.disabled = !!rec;
+    if (rec && $('topupCryptoStatus') && !/data-ost-topup-refresh/.test($('topupCryptoStatus').innerHTML)) {
+      setStatus('topupCryptoStatus', 'info', escHtml('Payment sent — verifying (tx ' + shortTx(rec.paymentRef) + '). OST arrives automatically. Don’t pay again.') + '<br>' + REFRESH_BTN);
+      if (rec.id && !pollTimers[rec.id]) pollIntent(rec.id, 'topupCryptoStatus', { crypto: true });
+    }
+    return !!rec;
+  }
+  let refreshBusy = false;
+  async function refreshPendingPayment(btnEl) {
+    if (refreshBusy) return;
+    const T = window.OST_TOPUP;
+    if (!T || typeof T.refreshPending !== 'function') return;
+    refreshBusy = true;
+    if (btnEl) btnEl.disabled = true;
+    setStatus('topupCryptoStatus', 'info', 'Checking your payment on devnet…');
+    try {
+      const res = await T.refreshPending();
+      if (res && res.delivered) setStatus('topupCryptoStatus', 'ok', 'Delivered ' + fmtOst((res.intent && res.intent.ostAmount) || 0) + '. ' + txLink(res.payout && res.payout.sig));
+      else if (res && res.released) setStatus('topupCryptoStatus', 'warn', escHtml(res.verifyNote || 'That payment never went through — nothing moved. You can pay again.'));
+      else if (res && res.pendingVerification) {
+        setStatus('topupCryptoStatus', 'info', escHtml('Still verifying (tx ' + shortTx(res.payment && res.payment.signature) + '). OST arrives automatically — don’t pay again.') + '<br>' + REFRESH_BTN);
+        if (res.intent && res.intent.id) pollIntent(res.intent.id, 'topupCryptoStatus', { crypto: true });
+      } else if (res && res.intent && res.intent.status === 'sent') setStatus('topupCryptoStatus', 'ok', 'Already delivered. ' + txLink(res.intent.signature));
+      else clearStatus('topupCryptoStatus');
+    } catch (e) {
+      const h = humanOf(e);
+      setStatus('topupCryptoStatus', h.state === 'pending' ? 'info' : 'error', escHtml(h.title + (h.body ? ' — ' + h.body : '')) + '<br>' + REFRESH_BTN);
+    } finally {
+      refreshBusy = false;
+      syncPayLock();
+    }
+  }
+  document.addEventListener('click', (e) => {
+    const b = e.target && e.target.closest && e.target.closest('[data-ost-topup-refresh]');
+    if (!b) return;
+    e.preventDefault();
+    refreshPendingPayment(b);
+  });
+
+  // SOL-7: pay the order straight from the connected wallet (devnet SOL).
+  // The SOL balance is checked BEFORE an order is created (SOL-1).
+  let payBusy = false;
+  async function payFromWallet() {
+    if (payBusy) return;
+    const btn = $('topupPayFromWalletBtn');
+    const wallet = getConnectedWallet();
+    if (!wallet) { requireWallet('Pay from your wallet', () => { syncWalletUi(); updateModalSummary(); }); return; }
+    if (!ensureMinUsd()) return;
+    if (syncPayLock()) return;            // an earlier payment is still being verified
+    const q = updateQuoteSilently();
+    payBusy = true;
+    if (btn) btn.disabled = true;
+    try {
+      const cfg = await loadConfig({ force: true });
+      const sPrice = solUsdLive();
+      if (!sPrice) throw Object.assign(new Error('price'), { code: 'price_unavailable' });
+      const needSol = q.usd / sPrice;
+      let haveSol = null;
+      try {
+        const B = window.OST_BALANCE && OST_BALANCE.get ? OST_BALANCE.get() : {};
+        haveSol = B.sol;
+        if (haveSol == null && window.OST_WALLET && OST_WALLET.rpcCall) {
+          haveSol = Number(await OST_WALLET.rpcCall((c) => c.getBalance(new solanaWeb3.PublicKey(wallet)))) / 1e9;
+        }
+      } catch (_) {}
+      if (haveSol != null && haveSol + 1e-12 < needSol) {
+        setStatus('topupCryptoStatus', 'warn', escHtml('Need ' + needSol.toFixed(6) + ' devnet SOL — you have ' + Number(haveSol).toFixed(6) + '.') + '<br>' + GET_SOL_BTN);
+        return;
+      }
+      if (!window.OST_TOPUP || typeof window.OST_TOPUP.createIntent !== 'function' || typeof window.OST_TOPUP.settleIntent !== 'function') throw Object.assign(new Error('rail'), { code: 'bad_response' });
+      setStatus('topupCryptoStatus', 'info', 'Creating a ' + fmtUsd(q.usd) + ' order…');
+      const intent = await window.OST_TOPUP.createIntent({ usd: q.usd, wallet, method: 'crypto', solAmount: Math.round(needSol * 1e9) / 1e9 });
+      setStatus('topupCryptoStatus', 'info', 'Paying ' + needSol.toFixed(6) + ' devnet SOL from your wallet…');
+      const res = await window.OST_TOPUP.settleIntent(intent.id, 'SOL');
+      if (res && res.delivered) setStatus('topupCryptoStatus', 'ok', 'Delivered ' + fmtOst(intent.ostAmount || q.ostAmount) + '. ' + txLink(res.payout && res.payout.sig));
+      else if (res && res.pendingVerification) {
+        const sigNow = res.payment && res.payment.signature;
+        setStatus('topupCryptoStatus', 'info', escHtml('Payment sent — verifying' + (sigNow ? ' (tx ' + shortTx(sigNow) + ')' : '') + '. OST arrives automatically. Don’t pay again.') + '<br>' + REFRESH_BTN);
+        pollIntent(intent.id, 'topupCryptoStatus', { crypto: true });
+      } else if (res && res.intent && res.intent.status === 'sent') {
+        setStatus('topupCryptoStatus', 'ok', 'Delivered ' + fmtOst(intent.ostAmount || q.ostAmount) + '. ' + txLink(res.intent.signature));
+      } else { setStatus('topupCryptoStatus', 'info', 'Checking your payment…<br>' + REFRESH_BTN); pollIntent(intent.id, 'topupCryptoStatus', { crypto: true }); }
+      void cfg;
+    } catch (e) {
+      const h = humanOf(e);
+      let msg = escHtml(h.title + (h.body ? ' — ' + h.body : ''));
+      if (e && (e.code === 'insufficient_sol' || e.getSol)) msg += '<br>' + GET_SOL_BTN;
+      if (e && e.code === 'payment_pending') msg += '<br>' + REFRESH_BTN;
+      setStatus('topupCryptoStatus', h.state === 'pending' || (e && e.code === 'payment_pending') ? 'info' : 'error', msg);
+    } finally {
+      payBusy = false;
+      // Stays locked while the payment it just sent is being verified.
+      if (btn) btn.disabled = !!pendingPaymentRec();
     }
   }
 
@@ -980,7 +1150,7 @@
           btn.disabled = false;
           return;
         }
-        throw new Error(j.error || ('verify_http_' + r.status));
+        throw Object.assign(new Error(j.message || 'verify_failed'), { code: j.error || 'bad_response', status: r.status, body: j });
       }
       setStatus('topupCryptoStatus', 'ok', 'Payment verified! Releasing your OST now…');
       // Release the OST immediately (client-side payout), don't wait for the
@@ -991,20 +1161,27 @@
       }
       pollIntent(intentId, 'topupCryptoStatus', { crypto: true });
     } catch (e) {
-      setStatus('topupCryptoStatus', 'error', String(e && e.message || e));
+      const code = e && e.code;
+      const known = { memo_not_found: 'That payment doesn’t carry this order’s memo.', amount_too_low: 'That payment is below the order amount.', transaction_failed: 'That payment failed on chain — nothing was taken.', missing_signature: 'Paste the payment signature first.', intent_not_found: 'This order expired — start a new one.' };
+      setStatus('topupCryptoStatus', 'error', escHtml(known[code] || humanText(e)));
       btn.disabled = false;
     }
   }
 
+  function stopPoll(id) {
+    const p = pollTimers[id];
+    if (p) { clearInterval(p.timer); delete pollTimers[id]; }
+  }
   function pollIntent(id, statusElId, opts) {
     opts = opts || {};
     const base = API_BASE();
-    if (!base) return;
-    if (pollTimer) clearInterval(pollTimer);
+    if (!base || !id) return;
+    stopPoll(id);                       // restart THIS order's poll only
     let tries = 0;
-    pollTimer = setInterval(async () => {
+    const timer = setInterval(async () => {
       tries++;
-      if (tries > 360) { clearInterval(pollTimer); pollTimer = null; return; }
+      if (tries > 360) { stopPoll(id); return; }
+      if (document.hidden && tries % 6 !== 0) return;   // background tab: every 30 s
       try {
         if (opts.crypto && tries % 3 === 1) {
           await fetch(`${base}/topup/crypto/check/${encodeURIComponent(id)}`).catch(() => null);
@@ -1013,8 +1190,9 @@
         if (!r.ok) return;
         const j = await r.json();
         if (j.status === 'sent') {
-          clearInterval(pollTimer);
-          pollTimer = null;
+          stopPoll(id);
+          try { if (window.OST_TOPUP && typeof window.OST_TOPUP.clearPending === 'function') window.OST_TOPUP.clearPending(id); } catch (_) {}
+          syncPayLock();
           setStatus(statusElId, 'ok', `Delivered ${fmtOst(j.ostAmount || currentQuote.ostAmount)}! ` +
             (j.signature ? `<a href="https://solscan.io/tx/${j.signature}?cluster=devnet" target="_blank" rel="noopener">View tx</a>` : ''));
           window.dispatchEvent(new CustomEvent('ost:topup-delivered', { detail: j }));
@@ -1032,7 +1210,7 @@
               .then(function () { /* next poll will read 'sent' */ })
               .catch(function (e) {
                 deliveringIntents[id] = false;   // let the next poll retry
-                setStatus(statusElId, 'info', 'Releasing OST… retrying (' + (e && e.message ? String(e.message).slice(0, 60) : 'network') + ')');
+                setStatus(statusElId, 'info', 'Payment received — releasing your OST (retrying automatically).');
               });
           } else {
             setStatus(statusElId, 'info', 'Payment received! Releasing devnet OST…');
@@ -1040,6 +1218,7 @@
         }
       } catch (_) {}
     }, 5000);
+    pollTimers[id] = { timer, crypto: !!opts.crypto };
   }
 
   function handleSuccessRedirect() {

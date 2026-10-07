@@ -10,11 +10,16 @@
  *             /btc/round + the ost:btc-spot stream). Every other market gets a
  *             standard detail (probability + stats) — no fabricated crypto graph.
  *
- * SAFE MONEY REUSE (no new money code):
- *   · BUY  -> OST_PREDICTION_API.placeBet({marketId, side, stake}) — the proven
- *             path; it drives the (hidden-but-live) board/desk for any market.
- *   · SELL/SETTLE -> triggers the existing ledger cash-out button for the user's
- *             position (app.js owns payout/fee/bucket rules).
+ * MONEY RAILS (money plan PRD-1..7 — every sheet names the real rail + unit):
+ *   · BTC 5-min -> the OST server ledger (play balance, OSTG). A wallet with
+ *             only OST converts 1:1 to OSTG and deposits first (ensurePlayFunds),
+ *             then OST_PREDICTION_API.placeBet opens it. The SERVER settles from
+ *             the BTC close price and credits the play balance — never a client
+ *             claim from the OST pool.
+ *   · every other market -> OST_PREDICTION_API.placeOrder: wallet OST moved
+ *             on-chain to the OST pool, filled at the exact quote shown.
+ *   · SELL / CLAIM -> OST_PREDICTION_API.cashOut (app.js), the one payout
+ *             routine (C4 outcomes: paid / "Paying…" / refused). No credits.
  *
  * Old chrome stays in the DOM (hidden by CSS) so all those money paths work
  * underneath; this surface just drives them.
@@ -138,6 +143,65 @@
 
   /* ---- balance / wallet ---- */
   function walletAddr() { try { return (window.OST_PREDICTION_API && OST_PREDICTION_API.walletAddress && OST_PREDICTION_API.walletAddress()) || ''; } catch (_) { return ''; } }
+  // WAL-8: the ONE wallet gate (contract C1). With no wallet, Buy opens the
+  // wallet home start view and resumes the action once a wallet exists.
+  function requireWallet(reason, resume) {
+    try {
+      var W = window.OST_WALLET;
+      if (W && typeof W.requireWallet === 'function') { W.requireWallet({ reason: reason || 'buy', resume: resume }); return; }
+      if (window.OST_WALLET_HOME && typeof window.OST_WALLET_HOME.open === 'function') { window.OST_WALLET_HOME.open('start'); return; }
+    } catch (_) {}
+    notify('info', 'Create a free wallet to trade', 'Open the Wallet tab to create or connect one.');
+  }
+  // UX-1: every buy / sell / claim result is visible (contract C2). Falls back
+  // to the back-compatible window.toast, then OST_OPTIMISTIC.
+  function notify(kind, title, body, opts) {
+    var o = Object.assign({ kind: kind, title: title, body: body || '' }, opts || {});
+    try { if (typeof window.OST_NOTIFY === 'function') { window.OST_NOTIFY(o); return; } } catch (_) {}
+    var msg = title + (body ? ' — ' + body : '');
+    try { if (typeof window.toast === 'function') { window.toast(kind === 'error' ? '⚠️' : kind === 'ok' ? '✅' : 'ℹ️', msg); return; } } catch (_) {}
+    try { if (window.OST_OPTIMISTIC && OST_OPTIMISTIC.toast) { OST_OPTIMISTIC.toast(msg, kind === 'ok' ? 'success' : kind); return; } } catch (_) {}
+    try { console.log('[predict]', msg); } catch (_) {}
+  }
+  // Plain-English error copy (contract C3) when the module is present.
+  function human(err, stage, asset) {
+    try { if (window.OST_MONEY_ERRORS && typeof OST_MONEY_ERRORS.humanize === 'function') { var h = OST_MONEY_ERRORS.humanize(err, { stage: stage || 'build', asset: asset || 'OST' }); if (h && h.title) return h; } } catch (_) {}
+    var m = String((err && err.message) || err || '');
+    if (!m || /^[a-z_]+$/.test(m) || /[{}\[\]]/.test(m)) m = 'That did not go through. Nothing was taken — try again in a moment.';
+    return { state: 'failed', title: m, body: '' };
+  }
+  // Our own messages are already plain English; use them as-is.
+  function errText(err, stage, asset) {
+    var own = String((err && err.message) || '');
+    if (err && /^(no_wallet|insufficient_ostg|insufficient_funds_for_ticket|balance_unknown|price_moved|state_unknown|stake_confirming|play_loading|rail_loading|convert_failed|deposit_failed|open_failed|open_failed_after_deposit|timeout|network_error|cashout_failed|round_closed|price_unavailable|predictions_not_live|round_open_price_unknown|insufficient_bucket|insufficient_play_balance|wallet_cannot_sign)$/.test(String(err.code || '')) && own && !/[{}\[\]]/.test(own)) return own;
+    var h = human(err, stage, asset); return h.title + (h.body ? ' — ' + h.body : '');
+  }
+  // Contract C6 balances: { ost, ostg, play, sess } — each a number or undefined
+  // (unknown renders "—", never 0). ost = wallet OST (OSTC), ostg = wallet OSTG,
+  // play = the server play balance (OSTG), sess = 1-tap session OSTG.
+  function balances() {
+    var b = { ost: undefined, ostg: undefined, play: undefined, sess: undefined };
+    try {
+      var B = window.OST_BALANCE;
+      if (B && typeof B.get === 'function') { var g = B.get() || {}; if (g.ost != null) b.ost = Number(g.ost); if (g.ostg != null) b.ostg = Number(g.ostg); if (g.play != null) b.play = Number(g.play); }
+      if (B) {
+        if (b.ost === undefined && B.onchainOstc) { var c = B.onchainOstc(); if (c != null) b.ost = Number(c); }
+        if (b.ostg === undefined && B.onchainOstg) { var gg = B.onchainOstg(); if (gg != null) b.ostg = Number(gg); }
+        if (b.play === undefined && B.play) { var pl = B.play(); if (pl != null) b.play = Number(pl); }
+      }
+    } catch (_) {}
+    try { if (b.ostg === undefined && window.OST_SESSION && OST_SESSION.walletBalance) { var w = OST_SESSION.walletBalance(); if (w != null) b.ostg = Number(w); } } catch (_) {}
+    try { if (b.play === undefined && window.OST_PLAY && OST_PLAY.balance) { var p = OST_PLAY.balance(); if (p != null) b.play = Number(p); } } catch (_) {}
+    try { if (window.OST_SESSION && OST_SESSION.balance) { var sv = OST_SESSION.balance(); if (sv != null) b.sess = Number(sv); } } catch (_) {}
+    return b;
+  }
+  // The rail a market's buy actually uses (PRD-3), and its unit.
+  //   play    — BTC 5-min: the OST server ledger, OSTG play balance
+  //   onchain — BTC 5-min when an on-chain round market exists: wallet OSTG
+  //   wallet  — every other market: wallet OST moved on-chain to the OST pool
+  function railOf(m) { return isBtcLive(m) ? (onchainActive ? 'onchain' : 'play') : 'wallet'; }
+  function unitOfRail(r) { return r === 'wallet' ? 'OST' : 'OSTG'; }
+  function fmtAmt(v) { return v == null || !isFinite(v) ? '—' : Number(v).toLocaleString(undefined, { maximumFractionDigits: 2 }); }
   function meshHandle() { try { if (window.OST_MESH_IDENTITY && OST_MESH_IDENTITY.handle) return OST_MESH_IDENTITY.handle; } catch (_) {} return ''; }
   function ledgerOrders() { try { return (window.OST_PREDICTION_API && OST_PREDICTION_API.ledger && OST_PREDICTION_API.ledger()) || []; } catch (_) { return []; } }
   // The user's REAL total OSTG: their on-chain wallet OSTG token (DfgxMbdN, the
@@ -152,25 +216,26 @@
   // distinct on-chain account the canonical read doesn't cover, so it is added.
   // Falls back to the module's own reads only when canonical is unknown.
   function playBal() {
-    var wallet, play, sess, known = false;
-    try { if (window.OST_BALANCE) { var og = OST_BALANCE.onchainOstg(); if (og != null) { wallet = og; known = true; } var pl = OST_BALANCE.play(); if (pl != null) { play = pl; known = true; } } } catch (_) {}
-    if (wallet == null) { try { if (window.OST_SESSION && OST_SESSION.walletBalance) { var w = OST_SESSION.walletBalance(); if (w != null) { wallet = w; known = true; } } } catch (_) {} }
-    if (play == null) { try { if (window.OST_PLAY && OST_PLAY.balance) { var p = OST_PLAY.balance(); if (p != null) { play = p; known = true; } } } catch (_) {} }
-    try { if (window.OST_SESSION && OST_SESSION.balance) { var sv = OST_SESSION.balance(); if (sv != null) { sess = sv; known = true; } } } catch (_) {}
-    if (!known) return undefined;
-    return (Number(wallet) || 0) + (Number(play) || 0) + (Number(sess) || 0);
+    var b = balances();
+    if (b.ostg === undefined && b.play === undefined && b.sess === undefined) return undefined;
+    return (Number(b.ostg) || 0) + (Number(b.play) || 0) + (Number(b.sess) || 0);
+  }
+  // What a buy on this market can spend, in its unit (PRD-2: the sheet shows the
+  // real balance it spends). BTC: play + wallet OSTG + wallet OST (converted 1:1).
+  function spendableFor(m) {
+    var b = balances(), r = railOf(m);
+    if (r === 'wallet') return b.ost;
+    if (r === 'onchain') return b.ostg;
+    if (b.play === undefined && b.ostg === undefined && b.ost === undefined) return undefined;
+    return (Number(b.play) || 0) + (Number(b.ostg) || 0) + (Number(b.ost) || 0);
   }
   // Optimistic hold: after a bet/sell we show the expected balance and refuse to
   // let a slow reconcile-read bounce it the WRONG way before the server confirms
   // — that bounce is what made buying feel non-optimistic.
   var _balHold = null;   // { v, dir:'down'|'up', until }
-  // Sell price LOCK: 5-min BTC odds move every tick, so a sell ticket that
-  // re-quotes on every tick shifts the exit price under the user's finger — the
-  // "whole panoramic view changed" so the tap never resolves to a stable sale.
-  // We snapshot the quote when the sell sheet opens and hold it; the ticket is
-  // static (tap always lands), and the user can tap "update" to re-lock to the
-  // current price. Cleared whenever the sheet closes or switches to buy.
-  var _sellLock = null;
+  // (The old sell-price "lock" is gone — PRD-5: the price was never locked, the
+  // server / cash-out re-prices. The sell sheet shows a live estimate and only
+  // patches its text, so the Sell button under the user's finger never moves.)
   function setBalDisplay(v) {
     if (v != null && _balHold && Date.now() < _balHold.until) {
       var nv = Number(v);
@@ -179,12 +244,16 @@
       else _balHold = null;   // the real balance crossed the optimistic point -> release
     }
     document.querySelectorAll('#ostPredictMobile .opm-balv').forEach(function (e) { e.textContent = (v == null ? '—' : Number(Math.max(0, v)).toLocaleString(undefined, { maximumFractionDigits: 2 })); });
+    // PRD-2: the faucet pays OST, so the header shows OST next to OSTG.
+    var bo = walletAddr() ? balances().ost : undefined;
+    document.querySelectorAll('#ostPredictMobile .opm-balost').forEach(function (e) { e.textContent = fmtAmt(bo); });
   }
   // READ-ONLY repaint of the balance chip from whatever the canonical source
   // currently holds. Safe to call from an event handler — it never triggers a
   // refresh, so it can't loop with the ost:balance event.
   function paintBalance() {
-    var b = playBal();
+    // No wallet = no balance to show ("—"), never a made-up 0.
+    var b = walletAddr() ? playBal() : undefined;
     setBalDisplay(b);
     var f = ''; try { if (window.OST_CCY && OST_CCY.fiat && b != null) f = OST_CCY.fiat(b) || ''; } catch (_) {}
     document.querySelectorAll('#ostPredictMobile .opm-balf').forEach(function (e) { e.textContent = f; });
@@ -192,18 +261,31 @@
   // Repaint the fiat hint when the user changes currency (it used to keep whatever currency
   // was active when the balance last changed - e.g. INR from a moment in onboarding).
   try { window.addEventListener('ost:currencychange', function () { setTimeout(paintBalance, 0); }); } catch (_) {}
-  function refreshBalance() {
+  // force=true after a money action (buy / sell / claim / deposit): read fresh
+  // now. Otherwise (view changes, the idle timer) at most one network refresh
+  // per 20 s and a non-forced OST_BALANCE read (NET-3 — opening the page used to
+  // fire five forced balance reads in a row).
+  var _balNetAt = 0;
+  function refreshBalance(force) {
     // These are ASYNC: they kick off a fetch and fire `ost:balance` /
     // `ost:play:balance` when the fresh number lands. paintBalance() here shows
     // the current value immediately; the event listeners below repaint again the
     // moment the refresh completes — THAT is what makes the chip actually move
     // after a bet/sell instead of showing a stale number forever.
-    try { if (window.OST_BALANCE && OST_BALANCE.refresh) OST_BALANCE.refresh(true); } catch (_) {}   // canonical /balance/truth
-    try { if (window.OST_SESSION && OST_SESSION.refresh) OST_SESSION.refresh(); } catch (_) {}
-    try { if (window.OST_PLAY && OST_PLAY.refresh) OST_PLAY.refresh(); } catch (_) {}
+    var now = Date.now();
+    if (force === true || now - _balNetAt > 20000) {
+      _balNetAt = now;
+      try { if (window.OST_BALANCE && OST_BALANCE.refresh) OST_BALANCE.refresh(force === true); } catch (_) {}   // canonical /balance/truth
+      // C6 / NET-3: OST_BALANCE already carries the play balance; the play
+      // mirror and the 1-tap session are re-read only after a money action.
+      try { if (force === true && onchainActive && window.OST_SESSION && OST_SESSION.exists && OST_SESSION.exists() && OST_SESSION.refresh) OST_SESSION.refresh(); } catch (_) {}
+      try { if (force === true && window.OST_PLAY && OST_PLAY.refresh) OST_PLAY.refresh(); } catch (_) {}
+    }
     paintBalance();
   }
-  function balChip() { return '<div class="opm-bal"><span class="k">OSTG</span><span class="v opm-balv">—</span><span class="f opm-balf"></span></div>'; }
+  // PRD-2: the faucet pays OST and the BTC rail spends OSTG — the chip shows
+  // both (unknown renders "—", never 0).
+  function balChip() { return '<div class="opm-bal" title="OST = wallet OST (faucet, sends, venue + ETH/SOL markets). OSTG = game token (wallet + play balance, BTC 5-min). 1 OST converts to 1 OSTG. Devnet — no cash value."><span class="k">OST · OSTG</span><span class="v"><b class="opm-balost">—</b><i>·</i><b class="opm-balv">—</b></span><span class="f opm-balf"></span></div>'; }
 
   /* ===================================================================== */
   /* BROWSE                                                                 */
@@ -296,7 +378,31 @@
   /* ===================================================================== */
   /* DETAIL                                                                 */
   /* ===================================================================== */
+  // ETH/SOL 5-min rounds: the catalog list can hold a round that has already
+  // closed (it refreshes every few minutes). Always trade the CURRENT round, and
+  // price it from OST_PRICES — the same live source the order fills at (PRD-4).
+  function isFastRound(m) { return !!(m && /^ost-(eth|sol)5m-\d+$/.test(String(m.id || ''))); }
+  function currentFastRound(m) {
+    if (!isFastRound(m)) return m;
+    try {
+      var prefix = String(m.id).replace(/\d+$/, '');
+      var natives = (typeof window.buildOstNativeMarkets === 'function' && window.buildOstNativeMarkets()) || [];
+      for (var i = 0; i < natives.length; i++) if (natives[i] && String(natives[i].id).indexOf(prefix) === 0) return natives[i];
+    } catch (_) {}
+    return m;
+  }
+  function preciseCents(m) {
+    var v = Number(m && m.yesPriceNumber);
+    if (!isFinite(v) || v <= 0) return yesCents(m);
+    if (v <= 1) v *= 100;
+    return Math.max(0.1, Math.min(99.9, Math.round(v * 10) / 10));
+  }
+  function fastMidCents(m) {
+    try { var g = window.OST_PRICES && OST_PRICES.get && OST_PRICES.get(m.id); if (g && g.yes > 0 && g.yes < 1) return Math.round(g.yes * 1000) / 10; } catch (_) {}
+    return NaN;
+  }
   function openMarket(m) {
+    m = currentFastRound(m);
     currentMarket = m; view = 'detail';
     side = 'yes'; myPos = null; seenTrades = {}; firstTrades = true; hist = []; hrs = 0;
     buf = []; dispPrice = 0; _lastTickAt = 0; baseMidSet = false; onchainActive = false;
@@ -331,8 +437,11 @@
       '<button class="n" data-s="no"><span class="lab">No' + (currentMarket && isNative5m(currentMarket) ? ' · lower' : '') + '</span><span class="px" id="opmYnN">—</span><span class="sh" id="opmYnNx"></span></button></div>';
   }
   function poolBlock() {
-    var native = currentMarket && isNative5m(currentMarket);
-    return '<div class="opm-pool"><div class="h"><span>' + (native ? 'Round pool' : 'Market odds') + '</span><span class="rt">' + icon('scale') + ' ' + (native ? 'pari-mutuel' : 'live odds') + '</span></div>' +
+    // Honest label: the BTC round is priced by the OST server (the on-chain
+    // pari-mutuel vault is offline until the crank runs — D4); loadOnchain()
+    // relabels it when a live on-chain round really exists.
+    var btc = currentMarket && isBtcLive(currentMarket);
+    return '<div class="opm-pool"><div class="h"><span>Market odds</span><span class="rt">' + icon('scale') + ' ' + (btc ? 'OST server odds · on-chain pool offline' : 'live odds') + '</span></div>' +
       '<div class="opm-splbar"><span class="yy" id="opmPoolY" style="width:50%">50%</span><span class="nn" id="opmPoolN">50%</span></div>' +
       '<div class="sub"><span id="opmPoolYA"></span><span id="opmPoolTot"></span><span id="opmPoolNA"></span></div></div>';
   }
@@ -573,25 +682,31 @@
     var t = el('opmTicket'); if (!t) return;
     if (mode === 'sell') {
       var cfs = el('opmCfSell');
-      if (!cfs) { t.innerHTML = sellConfirmTicket(); cfs = el('opmCfSell'); if (cfs) cfs.onclick = confirmSell; wireSellLockRow(); return; }
-      // LOCKED: leave the exit price exactly as snapshotted. Ticks no longer move
-      // the numbers under the user's finger — this is the fix for "it doesn't sell
-      // because the whole panoramic view changed". The user taps "update" to
-      // re-lock. Settle (non-lockable) still shows the server-computed amount live.
-      if (_sellLock && !_sellLock.isSettle) return;
-      var q = _sellLock || sellQuote();
+      if (!cfs) return;   // "not sellable" sheet: nothing live to patch
+      if (/Processing|Selling/.test(cfs.textContent)) return;
+      // Live ESTIMATE (PRD-5: nothing is "locked" — the cash-out re-checks the
+      // price and asks again if it moved > 5%). Patches text only, so the Sell
+      // button under the user's finger is never replaced.
+      var q = sellQuote(), u = q.unit;
       var px = el('opmSellPx'); if (px) px.textContent = fmtc(q.c) + '¢';
       var fe = el('opmSellFee'); if (fe) fe.textContent = q.fee.toFixed(2);
-      var pl = el('opmSellPnl'); if (pl) { pl.textContent = (q.up ? '+' : '−') + Math.abs(q.pnl).toFixed(2) + ' OSTG'; pl.style.color = 'var(--opm-' + (q.up ? 'yes' : 'no') + ')'; }
-      var nt = el('opmSellNet'); if (nt) nt.textContent = q.realNet + ' OSTG';
-      if (!/Processing|Selling/.test(cfs.textContent)) cfs.textContent = (q.isSettle ? 'Settle for ' : 'Sell for ') + q.realNet + ' OSTG';
+      var pl = el('opmSellPnl'); if (pl) { pl.textContent = (q.up ? '+' : '−') + Math.abs(q.pnl).toFixed(2) + ' ' + u; pl.style.color = 'var(--opm-' + (q.up ? 'yes' : 'no') + ')'; }
+      var nt = el('opmSellNet'); if (nt) nt.textContent = '≈' + q.realNet + ' ' + u;
+      cfs.textContent = 'Sell for ≈' + q.realNet + ' ' + u;
       return;
     }
     var inp = el('opmAmtIn'); var a = inp ? (parseFloat(inp.value) || 0) : amt;
     var ty = t.querySelector('.opm-tkout .y .px'); if (ty) ty.textContent = fmtc(midYes) + '¢';
     var tn = t.querySelector('.opm-tkout .n .px'); if (tn) tn.textContent = fmtc(100 - midYes) + '¢';
     var bd = el('opmBuyBd'); if (bd) bd.innerHTML = buyBdHtml(buyEstimate(a));   // patch the breakdown; the confirm button below is untouched
-    var cf = el('opmCf'); if (cf && !/Bought|Placing/.test(cf.textContent)) cf.textContent = 'Buy ' + (side === 'yes' ? 'Yes' : 'No') + ' · ' + a + ' OSTG';
+    // The funding plan (what this buy spends, PRD-2) follows the amount + balance.
+    var plan = fundingPlan(a), r = railOf(currentMarket), u2 = plan.unit || unitOfRail(r);
+    var pe = el('opmPlan'); if (pe) pe.textContent = (plan.needWallet || plan.short || plan.empty) ? '' : plan.text;
+    var cur = el('opmAmtCur'); if (cur) cur.textContent = u2;
+    var key = planKey();
+    var ctaBox = el('opmCta');
+    if (ctaBox && t.__planKey !== key) { t.__planKey = key; ctaBox.innerHTML = ctaHtml(plan, r, u2); wireCta(); return; }   // CTA shape changed: swap only the CTA box
+    var cf = el('opmCf'); if (cf && !/Bought|Placing/.test(cf.textContent)) cf.textContent = 'Buy ' + (side === 'yes' ? 'Yes' : 'No') + ' · ' + fmtAmt(a) + ' ' + u2;
   }
 
   function paintOdds() {
@@ -599,10 +714,12 @@
     var yMul = midYes > 0 ? (100 / midYes) : 0, nMul = (100 - midYes) > 0 ? (100 / (100 - midYes)) : 0;
     var yx = el('opmYnYx'); if (yx) yx.textContent = yMul ? yMul.toFixed(2) + '× payout' : '';
     var nx = el('opmYnNx'); if (nx) nx.textContent = nMul ? nMul.toFixed(2) + '× payout' : '';
-    var yp = (poolY + poolN > 0) ? Math.round(poolY / (poolY + poolN) * 100) : midYes;
+    // Whole percent (PRD-7: an unrounded 0.1¢ mid printed "99.94%"-style values).
+    var yp = Math.max(0, Math.min(100, Math.round((poolY + poolN > 0) ? (poolY / (poolY + poolN) * 100) : midYes)));
     var py = el('opmPoolY'), pn = el('opmPoolN'); if (py) { py.style.width = yp + '%'; py.textContent = yp + '%'; } if (pn) pn.textContent = (100 - yp) + '%';
     var ya = el('opmPoolYA'), na = el('opmPoolNA'), tot = el('opmPoolTot');
-    if (poolY + poolN > 0) { if (ya) ya.textContent = 'Yes ' + num0(poolY) + ' OSTG'; if (na) na.textContent = 'No ' + num0(poolN) + ' OSTG'; if (tot) tot.textContent = num0(poolY + poolN) + ' OSTG total'; }
+    var pu = unitOfRail(railOf(currentMarket));
+    if (poolY + poolN > 0) { if (ya) ya.textContent = 'Yes ' + num0(poolY) + ' ' + pu; if (na) na.textContent = 'No ' + num0(poolN) + ' ' + pu; if (tot) tot.textContent = num0(poolY + poolN) + ' ' + pu + ' total'; }
     else { if (ya) ya.textContent = 'Yes ' + yp + '%'; if (na) na.textContent = 'No ' + (100 - yp) + '%'; if (tot) tot.textContent = 'implied odds'; }
     var by = el('opmBuyY'), bn = el('opmBuyN'); if (btcPriceLive()) { if (by) by.textContent = 'Buy Yes · ' + fmtc(midYes) + '¢'; if (bn) bn.textContent = 'Buy No · ' + fmtc(100 - midYes) + '¢'; }
     var pr = el('opmProb'); if (pr) pr.textContent = fmtc(midYes) + '%'; var prb = el('opmProbBar'); if (prb) prb.style.width = midYes + '%';
@@ -626,7 +743,19 @@
     // refresh currentMarket odds from the freshest __ostPredictionMarkets
     var fresh = allMarkets().filter(function (x) { return String(x.id) === String(currentMarket.id); })[0];
     if (fresh) currentMarket = fresh;
-    midYes = yesCents(currentMarket);
+    if (isFastRound(currentMarket)) {
+      // Roll to the current round (the old one closed) and price it from the
+      // SAME source the fill uses, at 0.1¢ precision (PRD-4).
+      var cur = currentFastRound(currentMarket);
+      if (cur && cur.id !== currentMarket.id) { currentMarket = cur; try { el('opmDetail').setAttribute('data-mid', String(cur.id)); } catch (_) {} myPos = null; refreshPosition(); }
+      var fc = fastMidCents(currentMarket);
+      midYes = fc > 0 ? fc : yesCents(currentMarket);
+      paintOdds(); drawStd();
+      return;
+    }
+    // 0.1¢ precision: the same number OST_PRICES gives the sell quote, so a buy
+    // and an immediate sell differ only by the spread (PRD-4).
+    midYes = preciseCents(currentMarket);
     if (legPick) { var lp = Number(legPick.legPrice); if (lp > 1) lp /= 100; if (lp > 0 && lp < 1) midYes = Math.max(0.1, Math.min(99.9, Math.round(lp * 1000) / 10)); }
     paintOdds();
     drawStd();
@@ -732,12 +861,23 @@
     if (!(d.livePrice > 0)) d.livePrice = price || d.priceToBeat;
     return d;
   }
-  var _lastFillPushAt = 0, _fillT = null;
+  // NET-3: a public fill for ANOTHER market never reloads this market's tape,
+  // and this market's tape reloads at most once per 5 s however many fills
+  // arrive (it used to GET /positions/recent on every public event).
+  var _lastFillPushAt = 0, _fillT = null, _fillRunAt = 0;
   window.addEventListener('ost:prediction-update', function (e) {
     var ev = e && e.detail; if (!ev || !/^prediction\.(fill|resolved)$/.test(String(ev.type))) return;
-    _lastFillPushAt = Date.now();
+    _lastFillPushAt = Date.now();   // the socket is delivering
     if (view !== 'detail') return;
-    clearTimeout(_fillT); _fillT = setTimeout(function () { loadTrades(); refreshPosition(); }, 1500);
+    var p = ev.payload || {};
+    var evMid = String(p.marketId || ev.marketId || '');
+    var fid = String(feedTradeId() || '');
+    var mine = false;
+    try { var w = walletAddr(); mine = !!(w && String(ev.wallet || p.wallet || '') === w); } catch (_) {}
+    if (!mine && (!evMid || !fid || evMid !== fid)) return;
+    if (_fillT) return;   // one refresh is already scheduled
+    var wait = Math.max(1500, 5000 - (Date.now() - _fillRunAt));
+    _fillT = setTimeout(function () { _fillT = null; _fillRunAt = Date.now(); loadTrades(); refreshPosition(); }, wait);
   });
   var lastPushRoundAt = 0;
   window.addEventListener('ost:btc-round', function (e) {
@@ -801,7 +941,7 @@
         onchainActive = true;
         poolY = Math.round(Number(m.yes) || 0); poolN = Math.round(Number(m.no) || 0);
         var rt = document.querySelector('#opmDetail .opm-pool .h .rt');
-        if (rt) rt.innerHTML = icon('scale') + ' on-chain vault';
+        if (rt) rt.innerHTML = icon('scale') + ' on-chain vault · pari-mutuel';
         paintOdds();
       }).catch(function () {});
     } catch (_) {}
@@ -901,7 +1041,8 @@
     var head = (venCount ? '<div class="opm-tapehead"><span><i class="ost"></i>OST ' + ostCount + '</span><span><i class="pm"></i>Polymarket ' + venCount + '</span></div>' : '');
     host.innerHTML = head + rows.slice(0, 30).map(function (r) {
       var y = r.side === 'yes'; var isNew = !seenTrades[r.id]; seenTrades[r.id] = 1;
-      var amt = r.venue ? (compact(r.size) + ' sh') : (r.stake > 0 ? compact(r.stake) + ' OSTG' : (r.size > 0 ? compact(r.size) + ' sh' : ''));
+      // PRD-3: the market's real unit (OST on the wallet rail, OSTG on BTC 5-min).
+      var amt = r.venue ? (compact(r.size) + ' sh') : (r.stake > 0 ? compact(r.stake) + ' ' + unitOfRail(railOf(currentMarket)) : (r.size > 0 ? compact(r.size) + ' sh' : ''));
       var px = r.price > 0 ? ' @ ' + fmtc(r.price * 100) + '¢' : '';
       var lab = (r.buy === false ? 'Sold ' : '') + (r.venue && r.outcome && !/^(yes|no)$/i.test(r.outcome) ? r.outcome : (y ? 'Yes' : 'No'));
       return '<div class="opm-trade' + (isNew && !firstTrades ? ' in' : '') + (r.venue ? ' venue' : '') + '"><span class="s ' + (y ? 'y' : 'n') + '">' + esc2(lab) + '</span>' +
@@ -981,23 +1122,46 @@
   }
 
   /* ---- position ---- */
+  var _sellingRef = '';   // the ticket a sell is in flight for (survives re-renders)
+  function orderKey(o) { return String((o && (o.signature || o.sig || o.reference || o.id)) || ''); }
+  // C6: every ticket carries its unit + rail (older tickets: derived from fundedBy).
+  // The ONE classifier (app.js predictionTicketTrust): a p_… server position is
+  // the play rail even when an older client stored it without fundedBy (PRD-1).
+  function trustOf(o) {
+    try { var api = window.OST_PREDICTION_API; if (api && typeof api.ticketTrust === 'function') { var t = api.ticketTrust(o); if (t) return t; } } catch (_) {}
+    var f = String((o && o.fundedBy) || ''), sig = String((o && (o.signature || o.sig)) || '');
+    var native = /^p_\d+_/.test(String((o && (o.serverPositionId || o.signature || o.sig || o.id)) || '').replace(/^desk-/, '')) || f === 'ostg-native';
+    var rail = (native || f === 'ostg' || (o && o.rail === 'play')) ? 'play' : (f === 'onchain' || (o && (o.onChain || o.rail === 'onchain'))) ? 'onchain' : (f === 'credits' || /^credits-/.test(sig)) ? 'credits' : 'wallet';
+    var pend = !!(o && (o.fundingState === 'submitting' || o.fundingState === 'confirming' || o.pending));
+    return { rail: rail, unit: (rail === 'play' || rail === 'onchain') ? 'OSTG' : 'OST', native: native, fake: rail === 'wallet' && !/^[1-9A-HJ-NP-Za-km-z]{64,90}$/.test(sig) && !pend, fakePaid: false, unverifiable: false };
+  }
+  function orderUnit(o) { if (!o) return 'OST'; return trustOf(o).unit; }
+  function orderRail(o) { if (!o) return 'wallet'; return trustOf(o).rail; }
   function refreshPosition() {
     var mid = activeMarketId(); var orders = ledgerOrders();
     var open = orders.filter(function (o) {
-      if (!o || o.cashedOut) return false; var st = String(o.status || o.outcome || '').toLowerCase(); if (st === 'won' || st === 'lost' || st === 'settled' || st === 'sold') return false;
+      if (!o || o.cashedOut) return false; var st = String(o.status || o.outcome || '').toLowerCase(); if (st === 'won' || st === 'lost' || st === 'settled' || st === 'sold' || st === 'refunded' || st === 'failed') return false;
+      if (orderRail(o) === 'credits') return false;   // D1: retired legacy credits tickets are history, never a live position
       var omid = String(o.marketId || '');
       if (isBtcLive(currentMarket)) return mid ? omid === mid : /^ost-btc5m-\d+$/.test(omid);
       return marketOwnsOrder(currentMarket, omid);
     });
-    if (!open.length) { myPos = null; renderPosition(); return; }
+    if (!open.length) { if (!(myPos && myPos.placing)) myPos = null; renderPosition(); return; }
     var o = open.sort(function (a, b) { return Number(b.ts || 0) - Number(a.ts || 0); })[0];
     var sig = o.signature || o.sig || o.id || '';
-    var btn = sig ? document.querySelector('.prediction-cashout-btn[data-order-sig="' + (window.CSS && CSS.escape ? CSS.escape(sig) : sig) + '"]') : null;
-    // ostg-native positions used to be LOCKED until close (the server had no early
-    // exit). They now sell via /play/predict/cashout, so they are no longer locked
-    // — carry the server position id so confirmSell can cash them out on demand.
-    var isNative = (o.fundedBy === 'ostg-native');
-    myPos = { order: o, sig: sig, native: isNative, posId: o.serverPositionId || o.id || sig, side: (o.side === 'no' ? 'no' : 'yes'), shares: Number(o.shares) || 0, entry: Number(o.entry) || Number(o.price) || 0, locked: false, sellBtn: btn, cashText: btn ? btn.textContent : '' };
+    var isNative = trustOf(o).native;
+    var prev = myPos;
+    myPos = {
+      order: o, sig: sig, ref: orderKey(o), native: isNative, posId: o.serverPositionId || o.id || sig,
+      side: (o.side === 'no' ? 'no' : 'yes'), shares: Number(o.shares) || 0, stake: Number(o.stake) || 0,
+      // The RECORDED fill (effective price paid = stake / shares), not a re-quote.
+      entry: Number(o.fillPrice) || Number(o.entry) || Number(o.price) || 0,
+      unit: orderUnit(o), rail: orderRail(o),
+      pending: o.fundingState === 'confirming' || o.fundingState === 'submitting' || !!o.pending,
+      paying: !!o.cashoutPending,
+      selling: !!(_sellingRef && (_sellingRef === orderKey(o) || _sellingRef === sig)),
+      justFilled: prev && prev.justFilled
+    };
     renderPosition();
   }
   // A ladder bet lives on the LEG market (its own id); the page is the group.
@@ -1011,30 +1175,50 @@
     for (var i = 0; i < ms.length; i++) if (marketOwnsOrder(ms[i], omid)) return ms[i];
     return null;
   }
-  function posValueNow() { if (!myPos) return 0; var c = myPos.side === 'yes' ? midYes : (100 - midYes); return myPos.shares * (c / 100); }
-  function posCost() { return myPos ? myPos.shares * (myPos.entry || 0) : 0; }
+  // The cash-out quote for the open position. Wallet tickets: the EXACT number
+  // the cash-out pays (OST_PREDICTION_API.quoteCashOut — PRD-4). BTC server
+  // ledger: an estimate from this page's live odds (the server fills at ITS odds).
+  function posQuote() {
+    if (!myPos) return null;
+    if (!myPos.native && !myPos.placing) {
+      try { var api = window.OST_PREDICTION_API; if (api && api.quoteCashOut && myPos.ref) { var q = api.quoteCashOut(myPos.ref); if (q) return q; } } catch (_) {}
+    }
+    var c = myPos.side === 'yes' ? midYes : (100 - midYes);
+    var gross = Math.min(myPos.shares, myPos.shares * (c / 100));
+    var fee = Math.max(0, gross - posCost()) * 0.02;
+    return { kind: myPos.native ? 'ostg-native-sell' : 'prediction-sell', canCash: gross > 0, gross: gross, net: Math.max(0, gross - fee), fee: fee, mid: c / 100, unit: myPos.unit, rail: myPos.rail, estimate: true };
+  }
+  function posValueNow() { var q = posQuote(); return q ? (Number(q.net) || 0) : 0; }
+  function posCost() { return myPos ? (Number(myPos.stake) || myPos.shares * (myPos.entry || 0)) : 0; }
   function renderPosition() {
     var wrap = el('opmPosWrap'); if (!wrap) return; if (!myPos) { wrap.innerHTML = ''; return; }
-    var val = posValueNow(), cost = posCost(), pnl = val - cost, up = pnl >= 0;
-    var pnlTxt = (up ? '+' : '−') + Math.abs(pnl).toFixed(2) + ' OSTG' + (cost > 0 ? ' (' + (up ? '+' : '−') + Math.abs(pnl / cost * 100).toFixed(0) + '%)' : '');
+    var u = myPos.unit || unitOfRail(railOf(currentMarket));
+    var q = posQuote() || {};
+    var val = Number(q.net) || 0, cost = posCost(), pnl = val - cost, up = pnl >= 0;
+    var pnlTxt = (up ? '+' : '−') + Math.abs(pnl).toFixed(2) + ' ' + u + (cost > 0 ? ' (' + (up ? '+' : '−') + Math.abs(pnl / cost * 100).toFixed(0) + '%)' : '');
     var sideCls = myPos.side === 'yes' ? 'y' : 'n', sideLab = myPos.side === 'yes' ? 'Yes' : 'No';
     var action;
-    var pendTag = myPos.pending ? '<span class="opm-pend">confirming…</span>' : (myPos.justFilled && Date.now() - myPos.justFilled < 4000 ? '<span class="opm-pend ok">✓ filled</span>' : '');
-    if (myPos.selling) { action = '<div class="opm-locked">Selling… confirming with the server</div>'; }
-    else if (myPos.locked) { action = '<div class="opm-locked">' + icon('lock') + ' Locked · settles automatically at round close</div>'; }
-    else if (myPos.sellBtn) { var net = (myPos.cashText.match(/([\d,]+\.?\d*)\s*$/) || [])[1] || val.toFixed(2); var isSettle = /settle|claim/i.test(myPos.cashText); action = '<div class="opm-pcbtns"><button class="addmore" id="opmAddMore">Add more</button><button class="sell" id="opmSellBtn">' + (isSettle ? 'Settle' : 'Sell') + ' · ' + esc(net) + ' OSTG</button></div>'; }
-    else { action = '<div class="opm-pcbtns"><button class="addmore" id="opmAddMore">Add more</button><button class="sell" id="opmSellBtn">Sell · ' + val.toFixed(2) + ' OSTG</button></div>'; }
+    var pendTag = myPos.placing ? '<span class="opm-pend">placing…</span>'
+      : myPos.pending ? '<span class="opm-pend">confirming stake…</span>'
+      : myPos.paying ? '<span class="opm-pend">paying…</span>'
+      : (myPos.justFilled && Date.now() - myPos.justFilled < 4000 ? '<span class="opm-pend ok">✓ filled</span>' : '');
+    if (myPos.selling) action = '<div class="opm-locked">' + (myPos.rail === 'wallet' ? 'Selling… paying OST to your wallet' : 'Selling… the OST server is filling at its current odds') + '</div>';
+    else if (myPos.paying) action = '<div class="opm-locked">Paying… checking whether the payout landed. Check your wallet balance before retrying.</div>';
+    else if (myPos.placing) action = '<div class="opm-locked">' + esc(myPos.placingText || 'Placing your ticket…') + '</div>';
+    else if (myPos.pending) action = '<div class="opm-locked">Confirming your stake on chain — you can sell once it lands.</div>';
+    else if (q && q.canCash === false) action = '<div class="opm-locked">' + esc(q.detail || q.label || 'Not sellable right now') + '</div>';
+    else action = '<div class="opm-pcbtns"><button class="addmore" id="opmAddMore">Add more</button><button class="sell" id="opmSellBtn">Sell · ≈' + val.toFixed(2) + ' ' + esc(u) + '</button></div>';
     wrap.innerHTML = '<div class="opm-poscard"><div class="pch">Your position <span class="side ' + sideCls + '">' + sideLab + '</span>' + pendTag + '<span class="sp"></span><span class="pnl ' + (up ? 'up' : 'down') + '">' + esc(pnlTxt) + '</span></div>' +
-      '<div class="opm-pcgrid"><div class="opm-pcg"><div class="k">Shares</div><div class="v">' + myPos.shares.toFixed(2) + '</div></div><div class="opm-pcg"><div class="k">Avg entry</div><div class="v">' + Math.round((myPos.entry || 0) * 100) + '¢</div></div><div class="opm-pcg"><div class="k">Value now</div><div class="v">' + val.toFixed(2) + '</div></div></div>' + action + '</div>';
+      '<div class="opm-pcgrid"><div class="opm-pcg"><div class="k">Shares</div><div class="v">' + myPos.shares.toFixed(2) + '</div></div><div class="opm-pcg"><div class="k">Avg fill</div><div class="v">' + (myPos.entry > 0 ? fmtc(myPos.entry * 100) + '¢' : '—') + '</div></div><div class="opm-pcg"><div class="k">Value ≈ ' + esc(u) + '</div><div class="v">' + val.toFixed(2) + '</div></div></div>' + action + '</div>';
     var am = el('opmAddMore'); if (am) am.onclick = function () { openSheet('buy', myPos.side); };
     var sb = el('opmSellBtn'); if (sb && !sb.disabled) sb.onclick = doSell;
   }
 
   /* ---- AUTONOMOUS ON-CHAIN AUTO-CLAIM ----
-   * Wins are money the user already earned. For every closed on-chain 5-min
-   * ticket, once the program has resolved it, claim it automatically (session-
-   * signed, no popup) so it lands in the wallet OSTG (= the balance). Losers are
-   * marked, never claim-spammed. Idempotent + attempt-capped. */
+   * For a ticket escrowed in the ON-CHAIN program vault only (fundedBy
+   * 'onchain'): once the program has resolved its round, claim it from the
+   * program (session-signed). PRD-1: this never touches a server-ledger (play
+   * rail) ticket — the OST server pays those itself. Idempotent + capped. */
   var _claimTries = {};
   function patchOrder(o, patch) {
     try {
@@ -1050,9 +1234,10 @@
       var orders = ledgerOrders(); var credited = false;
       for (var i = 0; i < orders.length && i < 16; i++) {
         var o = orders[i]; if (!o || o.cashedOut) continue;
+        if (!(o.onChain || o.fundedBy === 'onchain')) continue;                                // on-chain escrow tickets ONLY
         var st = String(o.status || o.outcome || '').toLowerCase();
         if (st === 'lost' || st === 'sold' || st === 'paid') continue;
-        var mm = String(o.marketId || '').match(/^ost-btc5m-(\d+)$/); if (!mm) continue;   // on-chain rail = btc5m
+        var mm = String(o.marketId || '').match(/^ost-btc5m-(\d+)$/); if (!mm) continue;
         var openAt = o.onChainOpenAt ? Number(o.onChainOpenAt) : Math.floor(Number(mm[1]) / 1000);
         if (!(openAt > 0) || Date.now() < (openAt + 300) * 1000 + 6000) continue;          // round not closed yet
         var key = o.signature || o.sig || o.id || String(openAt);
@@ -1063,101 +1248,156 @@
         try {
           var r = await OST_ONCHAIN.claim(openAt);                                          // session-signed, no popup
           var net = window.OST_ONCHAIN.quoteNet ? Number(OST_ONCHAIN.quoteNet(m, mySide, Number(o.stake) || 0).net) : 0;
-          patchOrder(o, { status: 'won', cashedOut: true, cashoutOst: net, claimSig: r && r.signature });
+          patchOrder(o, { status: 'won', cashedOut: true, cashoutOst: net, cashoutSig: r && r.signature, claimSig: r && r.signature });
           credited = true;
         } catch (e) { /* already claimed / not payable yet — leave for next sweep */ }
       }
-      if (credited) { refreshBalance(); if (view === 'positions') renderPositions(); toast('Auto-claimed your winnings to OSTG.'); }
+      if (credited) { refreshBalance(true); if (view === 'positions') renderPositions(); notify('ok', 'Claimed your on-chain winnings', 'Paid to your wallet as OSTG.'); }
     } catch (_) {} finally { autoClaimOnchain._busy = false; }
   }
 
   /* ---- buy / sell sheet ---- */
-  var amt = 25, mode = 'buy';
+  var amt = 5, mode = 'buy';
   function openSheet(m, s) {
     mode = m; if (s) side = s;
-    // Lock the exit price the instant the sell ticket opens; clear it for buy.
-    _sellLock = (m === 'sell') ? lockSellQuote() : null;
     syncYnSel(); paintTicket(); el('opmSheet').classList.add('open'); el('opmScrim').classList.add('open');
+    if (m === 'buy') { try { if (window.OST_BALANCE && OST_BALANCE.refresh) Promise.resolve(OST_BALANCE.refresh(false)).then(function () { refreshOpenSheet(true); }).catch(function () {}); } catch (_) {} }
   }
-  function closeSheet() { _sellLock = null; var sh = el('opmSheet'), sc = el('opmScrim'); if (sh) sh.classList.remove('open'); if (sc) sc.classList.remove('open'); }
-  // Snapshot the live quote as the locked exit. Re-callable to "update" the lock.
-  function lockSellQuote() { var q = sellQuote(); q.at = Date.now(); return q; }
-  function relockSell() { _sellLock = lockSellQuote(); var t = el('opmTicket'); if (t) { t.innerHTML = sellConfirmTicket(); var cfs = el('opmCfSell'); if (cfs) cfs.onclick = confirmSell; wireSellLockRow(); } }
-  function maxBal() { var b = playBal(); return b > 0 ? Math.floor(b) : 25; }
+  function closeSheet() { var sh = el('opmSheet'), sc = el('opmScrim'); if (sh) sh.classList.remove('open'); if (sc) sc.classList.remove('open'); }
+  function maxBal() { var b = spendableFor(currentMarket); return b > 0 ? Math.floor(b * 100) / 100 : 5; }
   function syncYnSel() { document.querySelectorAll('#opmYn button').forEach(function (b) { b.classList.toggle('sel', b.getAttribute('data-s') === side); }); }
-  // One estimate used by the sheet + its live refresher. When the on-chain arb
-  // is active, part of the stake is the market-maker spread (skimmed to treasury
-  // in the same Solana tx), so the rest is what buys shares — shown, never hidden.
+  // When the on-chain arb is active, part of the stake is the market-maker
+  // spread (skimmed in the same Solana tx) — shown, never hidden.
   function arbBps() { try { if (onchainActive && window.OST_ARB && OST_ARB.bps) return Number(OST_ARB.bps()) || 0; } catch (_) {} return 0; }
+  // One estimate used by the sheet + its live refresher.
+  //   wallet rail: the SAME quote the order fills at (OST_ARB.buyQuote at the
+  //                side price shown) — quote = fill = record (PRD-4).
+  //   play / on-chain: the server / program fills at its own odds — an estimate.
   function buyEstimate(stake) {
-    var c = side === 'yes' ? midYes : (100 - midYes);
+    var r = railOf(currentMarket);
+    var c = side === 'yes' ? midYes : (100 - midYes), px = Math.max(0.001, Math.min(0.999, c / 100));
+    if (r === 'wallet') {
+      var q = null; try { q = (window.OST_ARB && OST_ARB.buyQuote) ? OST_ARB.buyQuote(stake, px) : null; } catch (_) { q = null; }
+      var shares = q && q.shares > 0 ? q.shares : (stake / px);
+      var fee = feeOf(shares, stake), net = shares - fee;
+      var sb = 0; try { sb = q && window.OST_ARB && OST_ARB.bps ? Number(OST_ARB.bps()) || 0 : 0; } catch (_) {}
+      return { c: c, fill: q && q.ask > 0 ? q.ask * 100 : c, spreadAmt: q ? q.arb : 0, sBps: sb, shares: shares, fee: fee, net: net, roi: stake > 0 ? ((net - stake) / stake * 100) : 0, estimate: false };
+    }
     var sBps = arbBps(), spreadAmt = Math.max(0, stake * sBps / 10000), effStake = stake - spreadAmt;
-    var shares = c > 0 ? effStake / (c / 100) : 0, fee = feeOf(shares, effStake), net = shares - fee;
-    return { c: c, spreadAmt: spreadAmt, sBps: sBps, shares: shares, fee: fee, net: net, roi: stake > 0 ? ((net - stake) / stake * 100) : 0 };
+    var sh = c > 0 ? effStake / (c / 100) : 0, fee2 = feeOf(sh, effStake), net2 = sh - fee2;
+    return { c: c, fill: c, spreadAmt: spreadAmt, sBps: sBps, shares: sh, fee: fee2, net: net2, roi: stake > 0 ? ((net2 - stake) / stake * 100) : 0, estimate: true };
   }
   function buyBdHtml(e) {
-    var rows = '<div class="opm-tl"><span class="k">Fill price</span><span class="v">' + fmtc(e.c) + '¢</span></div>' +
-      '<div class="opm-tl"><span class="k">Shares</span><span class="v" id="opmShV">' + e.shares.toFixed(2) + '</span></div>';
+    var winUnit = railOf(currentMarket) === 'wallet' ? 'OST' : 'OSTG';
+    var rows = '<div class="opm-tl"><span class="k">' + (e.estimate ? 'Price now' : 'Fill price') + '</span><span class="v">' + fmtc(e.fill) + '¢</span></div>' +
+      '<div class="opm-tl"><span class="k">Shares' + (e.estimate ? ' (est.)' : '') + '</span><span class="v" id="opmShV">' + (e.estimate ? '≈' : '') + e.shares.toFixed(2) + '</span></div>';
     if (e.spreadAmt > 0) rows += '<div class="opm-tl"><span class="k">Market spread (' + (e.sBps / 100) + '%)</span><span class="v">' + e.spreadAmt.toFixed(2) + '</span></div>';
-    rows += '<div class="opm-tl"><span class="k">Fee (2% profit)</span><span class="v">' + e.fee.toFixed(2) + '</span></div>' +
-      '<div class="opm-tl big"><span class="k">To win</span><span class="v">' + e.net.toFixed(2) + ' OSTG<span class="opm-roi">+' + e.roi.toFixed(0) + '%</span></span></div>';
+    rows += '<div class="opm-tl"><span class="k">Fee (2% of profit)</span><span class="v">' + e.fee.toFixed(2) + '</span></div>' +
+      '<div class="opm-tl big"><span class="k">If right you get</span><span class="v">' + (e.estimate ? '≈' : '') + e.net.toFixed(2) + ' ' + winUnit + '<span class="opm-roi">+' + e.roi.toFixed(0) + '%</span></span></div>';
     return rows;
   }
+  // PRD-2: what this buy will actually spend, said BEFORE the tap. A BTC buy
+  // spends the play balance (OSTG), then wallet OSTG, then wallet OST converted
+  // 1:1 on chain — never a silent failure from an empty account.
+  function fundingPlan(stake) {
+    var r = railOf(currentMarket), b = balances();
+    if (!walletAddr()) return { needWallet: true, text: 'Create a free devnet wallet to trade — it takes two taps, then claim 100 free OST.' };
+    if (!(stake > 0)) return { empty: true, unit: unitOfRail(r), text: 'Enter an amount.' };
+    if (r === 'wallet') {
+      if (b.ost === undefined) return { unit: 'OST', text: 'Pays ' + fmtAmt(stake) + ' OST from your wallet · on-chain transfer to the OST pool, ~2 s · fees paid by OST' };
+      if (b.ost + 1e-9 < stake) return { short: true, unit: 'OST', text: 'You have ' + fmtAmt(b.ost) + ' OST — not enough for ' + fmtAmt(stake) + ' OST.' };
+      return { unit: 'OST', text: 'Pays ' + fmtAmt(stake) + ' OST from your wallet (you have ' + fmtAmt(b.ost) + ') · on-chain transfer to the OST pool, ~2 s · fees paid by OST' };
+    }
+    if (r === 'onchain') {
+      if (b.ostg !== undefined && b.ostg + 1e-9 < stake) return { short: true, unit: 'OSTG', text: 'You have ' + fmtAmt(b.ostg) + ' OSTG in your wallet — not enough for ' + fmtAmt(stake) + ' OSTG.' };
+      return { unit: 'OSTG', text: 'Pays ' + fmtAmt(stake) + ' OSTG from your wallet into the on-chain program vault.' };
+    }
+    if (b.play === undefined && b.ostg === undefined && b.ost === undefined) return { unit: 'OSTG', unknown: true, text: 'Checking your balance…' };
+    var play = Number(b.play) || 0, wg = Number(b.ostg) || 0, wo = Number(b.ost) || 0;
+    if (play + 1e-9 >= stake) return { unit: 'OSTG', text: 'Pays ' + fmtAmt(stake) + ' OSTG from your play balance (you have ' + fmtAmt(play) + ' OSTG).' };
+    var need = stake - play;
+    if (wg + 1e-9 >= need) return { unit: 'OSTG', moves: need, text: 'Pays ' + fmtAmt(stake) + ' OSTG · first moves ' + fmtAmt(need) + ' OSTG from your wallet to your play balance · fees paid by OST' };
+    var conv = need - wg;
+    if (wo + 1e-9 >= conv) return { unit: 'OST', convert: conv, text: 'Pay ' + fmtAmt(stake) + ' OST · converted 1:1 to OSTG · fees paid by OST' + ((play + wg) > 0.005 ? ' (uses your ' + fmtAmt(play + wg) + ' OSTG first)' : '') + ' · takes ~10–30 s' };
+    return { short: true, unit: 'OST', text: 'You have ' + fmtAmt(wo) + ' OST + ' + fmtAmt(play + wg) + ' OSTG — not enough for ' + fmtAmt(stake) + '.' };
+  }
+  function railLine(r) {
+    return r === 'wallet' ? 'Wallet OST · on-chain transfer to the OST pool, ~2 s'
+      : r === 'onchain' ? 'Wallet OSTG · on-chain betting program vault'
+      : 'OST play balance (OSTG) · OST server ledger';
+  }
+  function settleLine() {
+    if (isBtcLive(currentMarket)) return onchainActive ? 'Settled on-chain by the betting program from the Pyth BTC close price' : 'Settled by the OST server from the BTC close price · a win is paid to your play balance automatically';
+    if (isFastRound(currentMarket)) return 'Settles from the 5-minute candle at close · a win is claimed to your wallet as OST';
+    return 'Settles when the market resolves · a win is claimed to your wallet as OST';
+  }
+  // The sheet's call to action (buy button, wallet gate, or "not enough" with
+  // the two ways out). Lives in its own box so a live refresh can swap it
+  // without touching the amount input the user is typing in.
+  function ctaHtml(plan, r, u) {
+    if (plan.needWallet) return '<div class="opm-short">' + esc(plan.text) + '</div><button class="opm-confirm" id="opmCfWallet">Create free wallet / Connect</button>';
+    // "Convert" only helps when there is wallet OST to convert.
+    var canConvert = r !== 'wallet' && Number(balances().ost) > 0;
+    if (plan.short) return '<div class="opm-short" id="opmShort">' + esc(plan.text) + '</div><div class="opm-pcbtns"><button class="addmore" id="opmGetOst">Get free OST</button>' + (canConvert ? '<button class="addmore" id="opmConvert">Convert OST ⇄ OSTG</button>' : '') + '</div>';
+    return '<button class="opm-confirm' + (side === 'no' ? ' no' : '') + '" id="opmCf"' + (plan.empty ? ' disabled' : '') + '>Buy ' + (side === 'yes' ? 'Yes' : 'No') + ' · ' + fmtAmt(amt) + ' ' + esc(u) + '</button>';
+  }
   function buyTicket() {
-    var e = buyEstimate(amt);
+    var e = buyEstimate(amt), r = railOf(currentMarket), plan = fundingPlan(amt), u = plan.unit || unitOfRail(r);
     return '<h3>' + icon('ticket') + ' Buy</h3>' +
       '<div class="opm-tkout"><button class="y' + (side === 'yes' ? ' sel' : '') + '" data-t="yes"><span class="lab">Yes</span><span class="px">' + fmtc(midYes) + '¢</span></button>' +
       '<button class="n' + (side === 'no' ? ' sel' : '') + '" data-t="no"><span class="lab">No</span><span class="px">' + fmtc(100 - midYes) + '¢</span></button></div>' +
-      '<div class="opm-amt"><input id="opmAmtIn" inputmode="decimal" value="' + amt + '"><span class="cur">OSTG</span></div>' +
-      '<div class="opm-quick">' + [10, 25, 100, 'Max'].map(function (q) { return '<button data-q="' + String(q).toLowerCase() + '">' + q + '</button>'; }).join('') + '</div>' +
-      '<div class="opm-src"><span class="l"><span class="d"></span> ' + (onchainActive ? 'Wallet OST · on-chain' : 'Personal OSTG') + '</span></div>' +
-      '<div class="opm-sess" id="opmSess"></div>' +
+      '<div class="opm-amt"><input id="opmAmtIn" inputmode="decimal" value="' + amt + '"><span class="cur" id="opmAmtCur">' + esc(u) + '</span></div>' +
+      '<div class="opm-quick">' + [5, 10, 25, 'Max'].map(function (q) { return '<button data-q="' + String(q).toLowerCase() + '">' + q + '</button>'; }).join('') + '</div>' +
+      '<div class="opm-src"><span class="l"><span class="d"></span> ' + esc(railLine(r)) + '</span></div>' +
+      '<div class="opm-plan" id="opmPlan">' + esc(plan.needWallet || plan.short || plan.empty ? '' : plan.text) + '</div>' +
+      // PRD-5 / D4: 1-tap only exists with a LIVE on-chain round market.
+      (r === 'onchain' ? '<div class="opm-sess" id="opmSess"></div>' : '') +
       '<div class="opm-bd" id="opmBuyBd">' + buyBdHtml(e) + '</div>' +
-      '<button class="opm-confirm' + (side === 'no' ? ' no' : '') + '" id="opmCf">Buy ' + (side === 'yes' ? 'Yes' : 'No') + ' · ' + amt + ' OSTG</button>' +
-      '<div class="opm-fine">' + icon('lock') + ' ' + (isBtcLive(currentMarket) ? 'Settles from the on-chain price at close' : 'Settles when the market resolves') + '</div>';
+      '<div id="opmCta">' + ctaHtml(plan, r, u) + '</div>' +
+      '<div class="opm-fine">' + icon('lock') + ' ' + esc(settleLine()) + (e.estimate ? ' · the share count is an estimate — the server fills at its current odds' : '') +
+        (isBtcLive(currentMarket) && !onchainActive ? '<br>On-chain betting program: offline (devnet R&amp;D)' : '') + '</div>';
   }
+  // Sell quote: wallet tickets use the cash-out's own quote (what gets paid);
+  // BTC server tickets an estimate at this page's live odds.
   function sellQuote() {
+    var q = posQuote() || {};
+    var cost = posCost(), net = Number(q.net) || 0, gross = Number(q.gross) || 0;
     var c = myPos ? (myPos.side === 'yes' ? midYes : (100 - midYes)) : 0;
-    var shares = myPos ? myPos.shares : 0, gross = shares * (c / 100), cost = posCost();
-    var profit = Math.max(0, gross - cost), fee = profit * 0.02;
-    var realNet = (myPos && myPos.cashText && (myPos.cashText.match(/([\d,]+\.?\d*)\s*$/) || [])[1]) || (gross - fee).toFixed(2);
-    var netNum = parseFloat(String(realNet).replace(/,/g, '')) || (gross - fee);
-    var pnl = netNum - cost, up = pnl >= 0;
-    var isSettle = myPos && /settle|claim/i.test(myPos.cashText || '');
-    return { c: c, shares: shares, fee: fee, realNet: String(realNet), pnl: pnl, up: up, isSettle: isSettle };
+    if (!(myPos && myPos.native) && Number(q.mid) > 0) c = Number(q.mid) * 100;
+    var pnl = net - cost;
+    return { c: c, shares: myPos ? myPos.shares : 0, fee: Number(q.fee) || 0, gross: gross, net: net, realNet: net.toFixed(2), pnl: pnl, up: pnl >= 0,
+      canCash: q.canCash !== false, detail: q.detail || q.label || '', unit: (myPos && myPos.unit) || 'OST', rail: (myPos && myPos.rail) || 'wallet', native: !!(myPos && myPos.native) };
   }
   function sellConfirmTicket() {
-    // Use the LOCKED snapshot so the ticket is stable while open (see _sellLock).
-    var q = _sellLock || sellQuote();
-    var lockRow = q.isSettle ? '' :
-      '<div class="opm-tl" style="cursor:pointer" id="opmSellLockRow"><span class="k">' + icon('lock') + ' Exit price locked</span><span class="v" style="color:var(--opm-gold);text-decoration:underline">tap to update</span></div>';
-    return '<h3>' + icon('coin') + ' ' + (q.isSettle ? 'Settle position' : 'Sell your ' + (myPos && myPos.side === 'yes' ? 'Yes' : 'No') + ' position') + '</h3>' +
-      '<div class="opm-fine" style="text-align:left;color:var(--opm-ink2)">' + (q.isSettle ? 'Claim your settled position — the amount is computed and paid by the server.' : 'Exit at the locked price below — it stays put while ticks move, so your tap always sells. Tap “update” to grab the newest price.') + '</div>' +
+    var q = sellQuote(), u = q.unit;
+    // PRD-3: say where the proceeds go — the real rail and unit.
+    var dest = q.rail === 'wallet' ? 'Proceeds go to your wallet as OST (on-chain payout from the OST pool, ~2 s).'
+      : q.rail === 'onchain' ? 'Proceeds go to your wallet as OSTG.' : 'Proceeds go to your play balance (OSTG).';
+    // PRD-5: no "exit price locked" — BTC sells fill at the SERVER's odds.
+    var est = q.native ? 'Estimated — the server fills at its current odds.' : 'Estimate at the live price. If the price moves more than 5% before you tap, you are asked again.';
+    return '<h3>' + icon('coin') + ' Sell your ' + (myPos && myPos.side === 'yes' ? 'Yes' : 'No') + ' position</h3>' +
+      '<div class="opm-fine" style="text-align:left;color:var(--opm-ink2)">' + esc(est) + '</div>' +
       '<div class="opm-bd">' +
-        lockRow +
         '<div class="opm-tl"><span class="k">Selling</span><span class="v">' + q.shares.toFixed(2) + ' shares</span></div>' +
         '<div class="opm-tl"><span class="k">Sell price</span><span class="v" id="opmSellPx">' + fmtc(q.c) + '¢</span></div>' +
-        '<div class="opm-tl"><span class="k">Fee (2% profit)</span><span class="v" id="opmSellFee">' + q.fee.toFixed(2) + '</span></div>' +
-        '<div class="opm-tl"><span class="k">Realized P&amp;L</span><span class="v" id="opmSellPnl" style="color:var(--opm-' + (q.up ? 'yes' : 'no') + ')">' + (q.up ? '+' : '−') + Math.abs(q.pnl).toFixed(2) + ' OSTG</span></div>' +
-        '<div class="opm-tl big"><span class="k">You receive</span><span class="v" id="opmSellNet" style="color:var(--opm-gold)">' + q.realNet + ' OSTG</span></div>' +
+        '<div class="opm-tl"><span class="k">' + (q.native ? 'Fee (2% of profit, est.)' : 'Market spread') + '</span><span class="v" id="opmSellFee">' + q.fee.toFixed(2) + '</span></div>' +
+        '<div class="opm-tl"><span class="k">Realized P&amp;L</span><span class="v" id="opmSellPnl" style="color:var(--opm-' + (q.up ? 'yes' : 'no') + ')">' + (q.up ? '+' : '−') + Math.abs(q.pnl).toFixed(2) + ' ' + esc(u) + '</span></div>' +
+        '<div class="opm-tl big"><span class="k">You receive</span><span class="v" id="opmSellNet" style="color:var(--opm-gold)">≈' + q.realNet + ' ' + esc(u) + '</span></div>' +
       '</div>' +
-      '<button class="opm-confirm sellc" id="opmCfSell">' + (q.isSettle ? 'Settle for ' : 'Sell for ') + q.realNet + ' OSTG</button>' +
-      '<div class="opm-fine">' + icon('lock') + ' Proceeds return to your Play OSTG instantly.</div>';
+      (q.canCash ? '<button class="opm-confirm sellc" id="opmCfSell">Sell for ≈' + q.realNet + ' ' + esc(u) + '</button>' : '<div class="opm-short">' + esc(q.detail || 'Not sellable right now.') + '</div>') +
+      '<div class="opm-fine">' + icon('lock') + ' ' + esc(dest) + '</div>';
   }
-  function wireSellLockRow() { var r = el('opmSellLockRow'); if (r) r.onclick = relockSell; }
-  // One-tap betting (session key). Only meaningful on the on-chain 5-min rail.
+  // One-tap betting (session key). Only on a LIVE on-chain round (PRD-5 / D4).
   function sessionActive() { try { return !!(window.OST_SESSION && OST_SESSION.exists() && OST_SESSION.balance() > 0); } catch (_) { return false; } }
   function renderSessionRow() {
     var host = el('opmSess'); if (!host) return;
-    if (!isBtcLive(currentMarket)) { host.innerHTML = ''; return; }
+    if (!isBtcLive(currentMarket) || !onchainActive || !window.OST_SESSION) { host.innerHTML = ''; return; }
     if (sessionActive()) {
       host.innerHTML = '<div class="opm-sesson"><span>⚡ 1-tap ON · ' + (Number(OST_SESSION.balance()) || 0).toFixed(0) + ' OSTG left</span><button id="opmSessEnd">End</button></div>';
-      var e = el('opmSessEnd'); if (e) e.onclick = function () { e.disabled = true; e.textContent = '…'; OST_SESSION.end().then(function () { toast('Session ended — funds returned to your wallet.'); renderSessionRow(); }).catch(function (err) { toast((err && err.message) || 'Could not end session'); e.disabled = false; e.textContent = 'End'; }); };
+      var e = el('opmSessEnd'); if (e) e.onclick = function () { e.disabled = true; e.textContent = '…'; OST_SESSION.end().then(function () { notify('ok', 'Session ended', 'Funds returned to your wallet.'); renderSessionRow(); }).catch(function (err) { notify('error', 'Could not end the session', errText(err, 'submit', 'OSTG')); e.disabled = false; e.textContent = 'End'; }); };
     } else {
       // Explicit, amount-first consent: the user picks how much OSTG to park in
-      // the session key (hard-capped by OST_SESSION.limits and by the wallet),
-      // and the confirm button's label carries that amount. Nothing is funded
-      // until that tap — the old row moved the whole wallet balance.
+      // the session key (hard-capped by OST_SESSION.limits and by the wallet).
       var lim = (OST_SESSION.limits) || { min: 1, max: 500, suggested: 25 };
       var wal = 0; try { wal = Math.floor(Number(OST_SESSION.walletBalance()) || 0); } catch (_) {}
       var maxF = Math.max(0, Math.min(lim.max, wal));
@@ -1166,7 +1406,7 @@
       var chips = [10, 25, 50, 100, 250].filter(function (v) { return v <= maxF; });
       if (chips.indexOf(maxF) < 0 && maxF < 250) chips.push(maxF);
       host.innerHTML = '<div class="opm-sessoff">' +
-        '<div class="opm-sessh"><span>⚡ 1-tap betting</span><em>Park a small amount in a session key — bets then confirm instantly with no popup. Only this amount can ever be spent; End returns the rest.</em></div>' +
+        '<div class="opm-sessh"><span>⚡ 1-tap betting</span><em>Park a small amount in a session key — bets then confirm with no popup. Only this amount can ever be spent; End returns the rest. Needs a little devnet SOL for the session’s fees.</em></div>' +
         '<div class="opm-sesschips">' + chips.map(function (v) { return '<button type="button" data-v="' + v + '"' + (v === pick ? ' class="on"' : '') + '>' + v + '</button>'; }).join('') +
           '<input type="number" id="opmSessAmt" min="' + lim.min + '" max="' + maxF + '" step="1" value="' + pick + '" aria-label="OSTG to load"></div>' +
         '<button class="opm-sessbtn" id="opmSessOn">Load ' + pick + ' OSTG into 1-tap · 1 signature</button>' +
@@ -1175,9 +1415,9 @@
       var ai = el('opmSessAmt'); if (ai) ai.oninput = function () { var v = Math.floor(Number(this.value) || 0); sessPick = v; var bb = el('opmSessOn'); if (bb) { var ok = v >= lim.min && v <= maxF; bb.disabled = !ok; bb.textContent = ok ? 'Load ' + v + ' OSTG into 1-tap · 1 signature' : 'Enter ' + lim.min + '–' + maxF + ' OSTG'; } };
       var b = el('opmSessOn'); if (b) b.onclick = function () {
         var v = Math.floor(Number((el('opmSessAmt') || {}).value) || pick);
-        if (!(v >= lim.min && v <= maxF)) { toast('Pick between ' + lim.min + ' and ' + maxF + ' OSTG.'); return; }
+        if (!(v >= lim.min && v <= maxF)) { notify('info', 'Pick an amount', 'Between ' + lim.min + ' and ' + maxF + ' OSTG.'); return; }
         b.disabled = true; b.textContent = 'Funding ' + v + ' OSTG… approve in your wallet';
-        OST_SESSION.fund(v, { consent: true }).then(function () { toast('1-tap on — ' + v + ' OSTG loaded. Bets now confirm instantly.'); renderSessionRow(); refreshBalance(); }).catch(function (err) { toast((err && err.message) || 'Could not enable 1-tap'); renderSessionRow(); });
+        OST_SESSION.fund(v, { consent: true }).then(function () { notify('ok', '1-tap on', v + ' OSTG loaded. Bets now confirm instantly.'); renderSessionRow(); refreshBalance(true); }).catch(function (err) { notify('error', 'Could not enable 1-tap', errText(err, 'submit', 'OSTG')); renderSessionRow(); });
       };
     }
   }
@@ -1186,58 +1426,123 @@
   window.addEventListener('ost:session:change', function () { try { if (el('opmSess') && !el('opmSessAmt')) renderSessionRow(); } catch (_) {} });
   function paintTicket() {
     var t = el('opmTicket'); if (!t) return;
-    if (mode === 'sell') { t.innerHTML = sellConfirmTicket(); var cfs = el('opmCfSell'); if (cfs) cfs.onclick = confirmSell; wireSellLockRow(); return; }
+    if (mode === 'sell') { t.innerHTML = sellConfirmTicket(); var cfs = el('opmCfSell'); if (cfs) cfs.onclick = confirmSell; return; }
     t.innerHTML = buyTicket();
+    t.__planKey = planKey();
     renderSessionRow();
     document.querySelectorAll('#opmTicket .opm-tkout button').forEach(function (b) { b.onclick = function () { side = b.getAttribute('data-t'); syncYnSel(); paintTicket(); }; });
     document.querySelectorAll('#opmTicket .opm-quick button').forEach(function (b) { b.onclick = function () { var q = b.getAttribute('data-q'); amt = q === 'max' ? maxBal() : (parseFloat(q) || amt); paintTicket(); }; });
     var inp = el('opmAmtIn'); if (inp) inp.oninput = function () { amt = parseFloat(this.value) || 0; refreshOpenSheet(true); };
-    var cf = el('opmCf'); if (cf) cf.onclick = confirmBuy;
+    wireCta();
   }
+  function wireCta() {
+    var cf = el('opmCf'); if (cf) cf.onclick = confirmBuy;
+    var cw = el('opmCfWallet'); if (cw) cw.onclick = function () { var s = side; closeSheet(); requireWallet('buy', function () { openSheet('buy', s); }); };
+    var go = el('opmGetOst'); if (go) go.onclick = function () {
+      closeSheet();
+      try {
+        if (window.OST_WALLET_HOME && typeof OST_WALLET_HOME.open === 'function') { OST_WALLET_HOME.open('home'); return; }
+        if (window.OST_WALLET && typeof OST_WALLET.openHome === 'function') { OST_WALLET.openHome('home'); return; }
+      } catch (_) {}
+      notify('info', 'Get free OST', 'Open the Wallet tab and tap “Get 100 free OST”.');
+    };
+    var cv = el('opmConvert'); if (cv) cv.onclick = function () {
+      closeSheet();
+      try { if (window.OST_BRIDGE_UI && typeof OST_BRIDGE_UI.open === 'function') { OST_BRIDGE_UI.open(); return; } } catch (_) {}
+      try { if (window.OST_WALLET_HOME && typeof OST_WALLET_HOME.open === 'function') { OST_WALLET_HOME.open('convert'); return; } } catch (_) {}
+      notify('info', 'Convert OST ⇄ OSTG', 'Open Wallet → Convert. 1:1, fees paid by OST.');
+    };
+  }
+  // The sheet's CTA shape depends on wallet + balance; rebuild only when it changes.
+  function planKey() { var p = fundingPlan(amt); return (p.needWallet ? 'w' : p.short ? 's' : p.empty ? 'e' : 'ok') + '|' + (p.unit || '') + '|' + side; }
+  // ONE buy at a time. A desktop double-click on the confirm button used to run
+  // confirmBuy twice before the sheet moved away — two stakes, two tickets, two
+  // charges for one intended buy. The latch is taken BEFORE anything async and
+  // released only when the order settled (or was refused).
+  var _buyInFlight = false, _buyLatchAt = 0;
   function confirmBuy() {
-    var cf = el('opmCf'); if (!cf || cf.disabled) return; var stake = amt;
-    if (!(stake > 0)) { toast('Enter an amount.'); return; }
-    if (!btcPriceLive()) { toast('No live BTC price right now - trading is paused.'); paintTradeGate(); return; }
-    var mid = activeMarketId(); if (!mid) { toast('Market not ready — try again.'); return; }
-    var bSide = side, c = bSide === 'yes' ? midYes : (100 - midYes), sh = c > 0 ? stake / (c / 100) : 0, entry = c / 100;
-    // OPTIMISTIC: reflect the bet the instant they tap — balance down, position in.
-    // The real placeBet reconciles in the background; on failure we revert to truth.
-    var bBefore = playBal();
-    // OPTIMISTIC: the balance drops the instant they tap and HOLDS there (won't
-    // bounce back up on a stale reconcile-read) until the server confirms.
-    // Hold the reduced value long enough to outlast the on-chain wallet read lag
-    // after the top-up deposit — otherwise a stale-high re-read bounces the balance
-    // back up and it "doesn't react". The hold auto-releases the instant a real
-    // read confirms a total <= the optimistic value (see setBalDisplay).
-    if (bBefore != null) { var opt = Math.max(0, bBefore - stake); _balHold = { v: opt, dir: 'down', until: Date.now() + 40000 }; setBalDisplay(opt); }
-    if (myPos && myPos.side === bSide) { var tot = myPos.shares + sh; myPos.entry = (myPos.shares * (myPos.entry || 0) + sh * entry) / (tot || 1); myPos.shares = tot; myPos.pending = true; }
-    else { myPos = { order: {}, sig: '', side: bSide, shares: sh, entry: entry, locked: false, sellBtn: null, cashText: '', pending: true }; }
+    var cf = el('opmCf'); if (!cf || cf.disabled) return; var stake = Number(amt);
+    if (_buyInFlight && Date.now() - _buyLatchAt < 120000) {
+      if (Date.now() - _buyLatchAt > 1500) notify('info', 'Your last order is still being placed', 'One moment — it shows in your position as soon as it lands.');
+      return;
+    }
+    if (!(stake > 0)) { notify('info', 'Enter an amount', 'Type how much to stake.'); return; }
+    var bSide = side;
+    if (!walletAddr()) { closeSheet(); requireWallet('buy', function () { openSheet('buy', bSide); }); return; }
+    if (!btcPriceLive()) { notify('warn', 'Trading paused', 'No live BTC price right now — buying is paused until it returns.'); paintTradeGate(); return; }
+    var mid = activeMarketId(); if (!mid) { notify('warn', 'Market not ready', 'The live round is still loading — try again in a moment.'); return; }
+    var m = currentMarket, r = railOf(m), plan = fundingPlan(stake);
+    if (plan.short) { notify('warn', 'Not enough balance', plan.text); paintTicket(); return; }
+    if (isFastRound(m) && Number(m.closeAtMs) - Date.now() < 15000) { notify('info', 'Round closing', 'This 5-minute round closes in a few seconds — buy in the next round.'); return; }
+    var e = buyEstimate(stake), u = plan.unit || unitOfRail(r);
+    // Wallet-rail orders: build the order now so this notice shares its id
+    // with app.js's background stake notices ('stake-<ref>'), which then
+    // update the SAME card to "Ticket live" or "Ticket not placed".
+    var direct = !isBtcLive(m) ? buildDirectOrder(m, bSide, stake) : null;
+    var nid = direct ? 'stake-' + String(direct.reference).slice(0, 18) : 'buy-' + Date.now().toString(36);
+    myPos = { order: {}, sig: '', ref: '', side: bSide, shares: e.shares, stake: stake, entry: e.fill / 100, unit: r === 'wallet' ? 'OST' : 'OSTG', rail: r, native: r === 'play', placing: true, placingText: 'Placing your ticket…' };
     renderPosition(); closeSheet();
-    // DIRECT ORDER for every non-BTC market. The old path clicked the hidden
-    // legacy board (card → side toggle → stake input → action button) and then
-    // POLLED the ledger every 500ms for up to 45s — that was the "not instant"
-    // feeling. placeOrder records the ticket synchronously (credits) or
-    // optimistically (wallet), so the position is real the moment it returns.
+    notify('pending', 'Placing your ' + (bSide === 'yes' ? 'Yes' : 'No') + ' ticket…', plan.text || '', { id: nid });
     var api = window.OST_PREDICTION_API || {};
-    var run = (!isBtcLive(currentMarket) && typeof api.placeOrder === 'function')
-      ? Promise.resolve().then(function () { return api.placeOrder(buildDirectOrder(currentMarket, bSide, stake)); })
-      : ensurePlayFunds(stake).then(function () { return api.placeBet({ marketId: mid, side: bSide, stake: stake }); });
-    run.then(function () {
-        if (myPos) { myPos.pending = false; myPos.justFilled = Date.now(); }
-        refreshPosition(); renderPosition(); refreshBalance();
-        setTimeout(function () { refreshBalance(); refreshPosition(); loadTrades(); }, 900);
-      })
-      .catch(function (e) { _balHold = null; toast((e && e.message) ? e.message : 'Could not place the bet — reverted.'); refreshBalance(); refreshPosition(); });
+    var step = function (t) { if (myPos && myPos.placing) { myPos.placingText = t; renderPosition(); } notify('pending', t, '', { id: nid }); };
+    // Taken synchronously in the same click that starts the order, so a second
+    // click (desktop double-click) can never start another one.
+    _buyInFlight = true; _buyLatchAt = Date.now();
+    cf.disabled = true; cf.setAttribute('data-busy', '1');
+    var releaseBuy = function () {
+      _buyInFlight = false;
+      var c2 = el('opmCf'); if (c2 && c2.getAttribute('data-busy')) { c2.removeAttribute('data-busy'); c2.disabled = false; }
+    };
+    var run;
+    if (!isBtcLive(m)) {
+      // Every non-BTC market: the direct order (wallet OST rail), filled at the
+      // exact price + shares this sheet showed (quoteLocked — PRD-4).
+      run = (typeof api.placeOrder === 'function')
+        ? Promise.resolve().then(function () { return api.placeOrder(direct); })
+        : Promise.reject(Object.assign(new Error('The market desk is still loading — try again in a moment.'), { code: 'rail_loading' }));
+    } else if (typeof api.placeBet !== 'function') {
+      run = Promise.reject(Object.assign(new Error('The market desk is still loading — try again in a moment.'), { code: 'rail_loading' }));
+    } else {
+      // BTC 5-min: fund the play balance (convert OST → OSTG 1:1 if needed),
+      // then the OST server opens the position.
+      run = ensurePlayFunds(stake, step).then(function () { step('Opening your position…'); return api.placeBet({ marketId: mid, side: bSide, stake: stake }); });
+    }
+    run.then(function (res) {
+      releaseBuy();
+      var rec = (res && res.record) || res || {};
+      if (myPos && myPos.placing) { myPos.placing = false; myPos.justFilled = Date.now(); }
+      refreshPosition(); refreshBalance(true);
+      var walletPending = !!(res && res.pending) || rec.fundingState === 'submitting' || rec.fundingState === 'confirming' || !!rec.pending;
+      if (walletPending) {
+        // The wallet stake confirms in the background; app.js reports the
+        // final outcome (stake-<ref>) and clears this ticket if it is refused.
+        notify('pending', 'Ticket placed — confirming your stake', fmtAmt(stake) + ' ' + (rec.unit || u) + ' is moving on-chain.', { id: nid });
+      } else {
+        notify('ok', 'Position open · ' + (bSide === 'yes' ? 'Yes' : 'No') + ' · ' + (Number(rec.shares) || e.shares).toFixed(2) + ' shares',
+          'Paid ' + fmtAmt(stake) + ' ' + (rec.unit || (r === 'wallet' ? 'OST' : 'OSTG')) + (rec.fundedBy === 'ostg-native' ? ' from your play balance · settled by the OST server' : ''), { id: nid });
+      }
+      setTimeout(function () { refreshBalance(true); refreshPosition(); loadTrades(); }, 900);
+    }).catch(function (err) {
+      releaseBuy();
+      if (myPos && myPos.placing) myPos = null;
+      renderPosition(); refreshPosition(); refreshBalance(true);
+      var code = String((err && err.code) || '');
+      if (code === 'no_wallet') { requireWallet('buy', function () { openSheet('buy', bSide); }); }
+      if (code === 'price_moved' && err.livePrice > 0) { midYes = Math.max(0.1, Math.min(99.9, Math.round(err.livePrice * 1000) / 10)); renderOddsLive(); }
+      var unknown = code === 'state_unknown';
+      notify(unknown ? 'warn' : 'error', unknown ? 'Checking your ticket' : 'Ticket not placed', errText(err, 'build', u), { id: nid });
+    });
   }
   // The order payload app.js's createPredictionMarketOrder expects, built from the
-  // page's own live quote. A picked ladder outcome routes the bet to that REAL leg
-  // market (each Polymarket bucket is its own binary market), so it resolves natively.
+  // page's own live quote — and FILLED at it (quoteLocked: quote = fill = record).
+  // A picked ladder outcome routes the bet to that REAL leg market.
   function buildDirectOrder(m, bSide, stake) {
     var lp = (legPick && String(legPick.marketId) === String(m.id)) ? legPick : null;
     if (!lp && m.isGrouped) { try { lp = window.OST_MARKET_CHART && OST_MARKET_CHART.selection(m.id); } catch (_) {} }
     var yes = Math.max(0.001, Math.min(0.999, midYes / 100));
     var priceFraction = bSide === 'yes' ? yes : 1 - yes;
-    var shares = stake / priceFraction;
+    var q = null; try { q = (window.OST_ARB && OST_ARB.buyQuote) ? OST_ARB.buyQuote(stake, priceFraction) : null; } catch (_) {}
+    var shares = q && q.shares > 0 ? q.shares : stake / priceFraction;
     var marketId = String(m.id), title = m.title || m.contractLabel || 'Market', cond = m.conditionId || (m.raw && (m.raw.conditionId || m.raw.condition_id)) || '';
     var gammaId = m.gammaMarketId || '', ids = tokenIdsOf(m);
     if (lp && lp.legId) { marketId = String(lp.legId); title = title + ' · ' + lp.label; cond = lp.conditionId || cond; gammaId = String(lp.legId); ids = Array.isArray(lp.clobTokenIds) ? lp.clobTokenIds : ids; }
@@ -1248,122 +1553,95 @@
       stake: stake, price: priceFraction, yesPrice: yes, noPrice: 1 - yes, shares: shares, potentialReturn: shares,
       closeAtMs: Number(m.closeAtMs) || 0, clobTokenIds: ids, sourceUrl: m.primaryUrl || '',
       baseYesPrice: yes, fairYesPrice: yes, fairNoPrice: 1 - yes, tradableYesPrice: yes, tradableNoPrice: 1 - yes,
-      quotedAt: Date.now(), quoteSource: live ? 'clob-live' : 'catalog', reference: 'ost-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7)
+      quotedAt: Date.now(), quoteSource: isFastRound(m) ? 'ost-prices' : (live ? 'clob-live' : 'catalog'), quoteLocked: true,
+      reference: 'ost-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7)
     };
   }
-  // DEPOSIT BRIDGE — makes WALLET OSTG directly spendable. If the custodial play
-  // balance can't cover the stake, top it up from the wallet (gas-free pool rail,
-  // OST_PLAY.deposit) before betting. On-chain rail spends the wallet directly,
-  // so no top-up there.
-  function ensurePlayFunds(stake) {
-    try {
-      if (onchainActive) return Promise.resolve();
-      if (!(window.OST_PLAY && OST_PLAY.deposit && OST_PLAY.balance)) return Promise.resolve();
-      var play = Number(OST_PLAY.balance()) || 0;
-      if (play >= stake) return Promise.resolve();
-      var shortfall = Math.ceil((stake - play) * 100) / 100;
-      var w = 0; try { if (window.OST_SESSION && OST_SESSION.walletBalance) w = Number(OST_SESSION.walletBalance()) || 0; } catch (_) {}
-      if (w > 0 && w < shortfall) return Promise.reject(new Error('Not enough OSTG in your wallet for this bet.'));
-      return Promise.resolve(OST_PLAY.deposit(shortfall)).then(function () { refreshBalance(); });
-    } catch (e) { return Promise.reject(e); }
+  // PRD-2: fund the PLAY balance for a BTC buy, one confirmed step at a time:
+  //   play balance ≥ stake          -> nothing to do
+  //   + wallet OSTG covers the rest -> OST_PLAY.deposit (pool pays the fee)
+  //   + wallet OST covers the rest  -> OST_BRIDGE_UI.convert OST → OSTG 1:1, then deposit
+  //   otherwise                     -> refuse BEFORE anything moves, with the numbers
+  // Balances are read fresh from the chain for this decision; an unknown balance
+  // refuses ("try again") rather than broadcasting from an empty account.
+  function readWalletTokens() {
+    var B = window.OST_BRIDGE_UI;
+    var fromCanon = function () { var b = balances(); return { ost: b.ost, ostg: b.ostg }; };
+    if (B && typeof B.balances === 'function') {
+      return Promise.resolve(B.balances()).then(function (a) {
+        var c = fromCanon();
+        return { ost: (a && a[0] != null) ? Number(a[0]) : c.ost, ostg: (a && a[1] != null) ? Number(a[1]) : c.ostg };
+      }).catch(fromCanon);
+    }
+    return Promise.resolve(fromCanon());
+  }
+  function fundErr(code, msg) { var e = new Error(msg); e.code = code; return e; }
+  function ensurePlayFunds(stake, step) {
+    step = step || function () {};
+    if (onchainActive) return Promise.resolve({ moved: 0 });   // the on-chain rail spends wallet OSTG directly
+    if (!(window.OST_PLAY && OST_PLAY.deposit && OST_PLAY.balance)) return Promise.reject(fundErr('play_loading', 'The play balance is still loading — try again in a moment.'));
+    return Promise.resolve(OST_PLAY.refresh ? OST_PLAY.refresh(true) : OST_PLAY.balance()).catch(function () { return OST_PLAY.balance(); }).then(function (pNow) {
+      var play = Number(pNow); if (!isFinite(play)) play = Number(OST_PLAY.balance());
+      if (!isFinite(play)) throw fundErr('balance_unknown', 'Could not read your play balance — nothing was taken. Try again in a moment.');
+      if (play + 1e-9 >= stake) return { moved: 0 };
+      var shortfall = Math.ceil((stake - play) * 1e6) / 1e6;
+      return readWalletTokens().then(function (wb) {
+        if (wb.ostg == null || wb.ost == null || !isFinite(wb.ostg) || !isFinite(wb.ost)) throw fundErr('balance_unknown', 'Could not read your wallet balance — nothing was taken. Try again in a moment.');
+        var needConvert = Math.max(0, Math.ceil((shortfall - wb.ostg) * 1e6) / 1e6);
+        if (needConvert > 0 && wb.ost + 1e-9 < needConvert) {
+          throw fundErr('insufficient_funds_for_ticket', 'You have ' + fmtAmt(wb.ost) + ' OST + ' + fmtAmt(wb.ostg + play) + ' OSTG — not enough for ' + fmtAmt(stake) + '. Get free OST in your wallet, then try again.');
+        }
+        var chain = Promise.resolve();
+        if (needConvert > 0) {
+          if (!(window.OST_BRIDGE_UI && typeof OST_BRIDGE_UI.convert === 'function')) return Promise.reject(fundErr('rail_loading', 'The OST ⇄ OSTG converter is still loading — try again in a moment.'));
+          step('Converting ' + fmtAmt(needConvert) + ' OST → OSTG (1:1)…');
+          chain = Promise.resolve(OST_BRIDGE_UI.convert('deposit', needConvert)).catch(function (ce) {
+            var c = fundErr('convert_failed', 'Could not convert OST → OSTG: ' + errText(ce, 'submit', 'OST') + ' Nothing else moved.');
+            c.cause = ce; throw c;
+          });
+        }
+        return chain.then(function () {
+          step('Moving ' + fmtAmt(shortfall) + ' OSTG to your play balance…');
+          return Promise.resolve(OST_PLAY.deposit(shortfall, { waitMs: needConvert > 0 ? 25000 : 4000 })).catch(function (de) {
+            var msg = needConvert > 0
+              ? 'Your OST was converted to OSTG (it is in your wallet), but moving it to your play balance did not finish: ' + errText(de, 'submit', 'OSTG') + ' Buy again — it skips the conversion.'
+              : 'Moving OSTG to your play balance did not finish: ' + errText(de, 'submit', 'OSTG');
+            var d = fundErr('deposit_failed', msg); d.cause = de; throw d;
+          });
+        }).then(function () { refreshBalance(true); return { moved: shortfall, converted: needConvert }; });
+      });
+    });
   }
   function confirmSell() {
     if (!myPos) { closeSheet(); return; }
     var cfs = el('opmCfSell'); if (cfs) { cfs.disabled = true; cfs.textContent = 'Processing…'; }
-    // ostg-native positions exit through the server cash-out endpoint (there is no
-    // DOM cash-out button for them). This is what unlocks "go out before close".
-    if (myPos.native) { return confirmSellNative(cfs); }
-    var api = window.OST_PREDICTION_API, sig = myPos.sig;
-    if (!(api && typeof api.cashOut === 'function' && sig)) { return confirmSellLegacy(cfs); }
-    // INSTANT: the sale used to click the hidden ledger button and wait a fixed
-    // 1.7s before re-reading. Now it calls the cash-out routine directly. The
-    // balance jumps by the locked quote and the sheet closes the instant they tap;
-    // the position shows "Selling…" until the payout lands, and a failure restores
-    // it and says why (the ticket stays exactly as sellable as it was).
-    var lockedNet = _sellLock && parseFloat(String(_sellLock.realNet).replace(/,/g, ''));
-    var est = lockedNet > 0 ? lockedNet : posValueNow();
-    var b = playBal(); if (b != null && est > 0) { _balHold = { v: b + est, dir: 'up', until: Date.now() + 40000 }; setBalDisplay(b + est); }
-    var sellingPos = myPos; sellingPos.selling = true; closeSheet(); renderPosition();
-    api.cashOut(sig).then(function (r) {
-      if (!r || r.ok === false) throw new Error((r && r.label) ? r.label : 'not sellable yet');
-      if (_balHold) _balHold.until = Date.now() + 4000;
-      myPos = null; renderPosition(); refreshPosition();
-      var got = Number(r.payout) || 0;
-      toast((r.kind === 'prediction-settlement' || /settle|claim/i.test(String(r.kind || '')) ? 'Settled — ' : 'Sold — ') + got.toFixed(2) + ' OSTG back to your balance.');
-      setTimeout(function () { refreshBalance(); refreshPosition(); loadTrades(); }, 600);
-    }).catch(function (e) {
-      _balHold = null; sellingPos.selling = false; renderPosition(); refreshPosition();
-      toast('Could not sell — ' + ((e && e.message) || 'try again') + '.');
-      refreshBalance();
-    });
-  }
-  // Fallback when the cash-out API is not loaded: drive the ledger button.
-  function confirmSellLegacy(cfs) {
-    var sig = myPos.sig, tries = 0;
-    (function attempt() {
-      var btn = document.querySelector('.prediction-cashout-btn[data-order-sig="' + (window.CSS && CSS.escape ? CSS.escape(sig) : sig) + '"]');
-      if (!btn) {
-        if (tries++ < 4) { setTimeout(attempt, 500); return; }
-        if (cfs) { cfs.disabled = false; cfs.textContent = 'Sell'; }
-        toast("This position isn't sellable yet — it settles at close.");
-        return;
-      }
-      try { btn.click(); }
-      catch (e) { if (cfs) { cfs.disabled = false; cfs.textContent = 'Sell'; } toast('Could not start the sale — try again.'); return; }
-      var net = parseFloat(String((btn.textContent.match(/([\d,]+\.?\d*)\s*$/) || [])[1] || '').replace(/,/g, '')) || posValueNow();
-      var b = playBal(); if (b != null && net > 0) { _balHold = { v: b + net, dir: 'up', until: Date.now() + 40000 }; setBalDisplay(b + net); }
-      setTimeout(function () {
-        closeSheet();
-        var still = ledgerOrders().some(function (o) { return (o.signature || o.sig || o.id) === sig && !o.cashedOut && !/won|lost|sold|settled/i.test(String(o.status || '')); });
-        if (still) { _balHold = null; }
-        refreshBalance(); refreshPosition(); loadTrades();
-      }, 1700);
-    })();
-  }
-  // Early cash-out for an ostg-native position via the server. Optimistic: the
-  // balance jumps by the estimated proceeds the instant they tap, and reverts if
-  // the server rejects. The server prices the sell at ITS current odds and pays
-  // shares × price − fee, so the number may settle slightly off the estimate.
-  function confirmSellNative(cfs) {
-    var posId = myPos.posId, order = myPos.order;
-    if (!posId) { if (cfs) { cfs.disabled = false; cfs.textContent = 'Sell'; } toast('This position has no server id yet — try again in a moment.'); return; }
-    if (round && Number(round.closeAt) - Date.now() < 3000) {   // server would reject as round_closed
+    var api = window.OST_PREDICTION_API, ref = myPos.ref || myPos.sig;
+    if (!(api && typeof api.cashOut === 'function' && ref)) { if (cfs) { cfs.disabled = false; cfs.textContent = 'Sell'; } notify('error', 'Sell is still loading', 'Try again in a moment.'); return; }
+    if (myPos.native && round && Number(round.closeAt) - Date.now() < 3000) {   // the server would refuse (round_closed)
       if (cfs) { cfs.disabled = false; cfs.textContent = 'Sell'; }
-      toast('Too close to round end — it settles automatically now.');
+      notify('info', 'Round closing', 'Too close to the round end — it settles automatically from the BTC close price.');
       return;
     }
-    // Use the LOCKED net the user actually saw for the optimistic bump, not a
-    // fresh live recompute (which would already have drifted).
-    var lockedNet = _sellLock && parseFloat(String(_sellLock.realNet).replace(/,/g, ''));
-    var estGross = (lockedNet > 0 ? lockedNet : posValueNow());
-    var b = playBal(); if (b != null && estGross > 0) { _balHold = { v: b + estGross, dir: 'up', until: Date.now() + 40000 }; setBalDisplay(b + estGross); }
-    // INSTANT: the sheet used to sit on "Processing…" for the whole server round-trip.
-    // Close it now and show the position as "Selling…"; a failure restores it + says why.
-    var sellingPos = myPos; sellingPos.selling = true; closeSheet(); renderPosition();
-    var ctrl = new AbortController(); var to = setTimeout(function () { try { ctrl.abort(); } catch (_) {} }, 12000);
-    fetch(API + '/play/predict/cashout', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: posId, marketId: activeMarketId(), wallet: walletAddr() }),
-      signal: ctrl.signal
-    }).then(function (r) { clearTimeout(to); return r.json(); })
-      .then(function (r) {
-        if (!r || r.ok === false) throw new Error((r && (r.note || r.error)) || 'cashout_failed');
-        patchOrder(order, { status: 'sold', cashedOut: true, cashoutOst: Number(r.payout) || 0, cashoutAt: Date.now(), cashoutKind: 'ostg-native-sell' });
-        if (_balHold) _balHold.until = Date.now() + 4000;
-        myPos = null; renderPosition();
-        toast('Sold — ' + (Number(r.payout) || 0).toFixed(2) + ' OSTG back to your balance.');
-        closeSheet();
-        setTimeout(function () { refreshBalance(); refreshPosition(); loadTrades(); }, 600);
-      })
-      .catch(function (e) {
-        clearTimeout(to); _balHold = null;   // release the optimistic bump — the sale didn't take
-        sellingPos.selling = false; renderPosition();
-        if (cfs) { cfs.disabled = false; cfs.textContent = 'Sell'; }
-        var msg = String((e && e.message) || '');
-        if (/round_closed/.test(msg)) toast('Round just closed — it settles automatically.');
-        else toast('Could not sell — ' + (msg || 'try again') + '.');
-        refreshBalance(); refreshPosition();
-      });
+    // The sale goes through the ONE cash-out routine (app.js): wallet tickets
+    // pay OST on chain, BTC server tickets sell back to the server. Every
+    // outcome is reported there (OST_NOTIFY); this card just follows it.
+    var q = sellQuote();
+    var sellingPos = myPos; sellingPos.selling = true; _sellingRef = ref; closeSheet(); renderPosition();
+    api.cashOut(ref, sellingPos.native ? {} : { expectNet: q.net }).then(function (r) {
+      sellingPos.selling = false; _sellingRef = '';
+      if (r && r.pending) { refreshPosition(); setTimeout(function () { refreshBalance(true); refreshPosition(); }, 1500); return; }
+      if (!r || r.ok === false) {
+        refreshPosition();
+        notify('info', 'Not sold', (r && r.label) ? r.label : 'This position is not sellable right now.');
+        return;
+      }
+      myPos = null; renderPosition(); refreshPosition();
+      setTimeout(function () { refreshBalance(true); refreshPosition(); loadTrades(); }, 600);
+    }).catch(function (e) {
+      sellingPos.selling = false; _sellingRef = ''; renderPosition(); refreshPosition(); refreshBalance(true);
+      if (e && e.code === 'price_moved') notify('warn', 'Price moved', String(e.message || 'Review the new price and sell again.'));
+      else if (!(e && e.notified)) notify('error', 'Sell did not go through', errText(e, 'submit', sellingPos.unit || 'OST'));
+    });
   }
   function doSell() { openSheet('sell'); }
 
@@ -1389,109 +1667,157 @@
     syncYnSel();
   }
 
-  function toast(msg) { try { if (typeof window.toast === 'function') { window.toast('info', msg); return; } } catch (_) {} console.log('[predict]', msg); }
+  // Legacy name kept for the few non-money notes on this page (comments, feed).
+  function toast(msg) { notify('info', String(msg || '')); }
 
   /* ================= PORTFOLIO (positions + history) =================
-   * Polymarket-style portfolio: every open position marked to the LIVE price,
-   * unrealized + realized P&L, claimable wins first, full history. The list is
-   * the local ledger shown instantly, then reconciled with the wallet's remote
-   * ledger (so a fresh device sees the same positions) and the resolution engine
-   * (so finished markets show won/lost without waiting for the desk's 30s poll).
-   * It re-renders on every ledger/balance/market event and re-marks every 15s. */
+   * Polymarket-style portfolio: every open position marked to the SAME quote
+   * the cash-out pays (OST_PREDICTION_API.actionFor — PRD-4 / PRD-6), realized
+   * P&L from the RECORDED payout, wins that need a claim first, full history.
+   * PRD-1 / PRD-6: a BTC 5-min (play-rail) win is paid by the OST server to the
+   * play balance — it is never shown with a Claim; a paid ticket is never "Sell";
+   * every row shows its own unit (OST on the wallet rail, OSTG on the play rail).
+   * The list is the local ledger shown instantly, then reconciled with the
+   * wallet's remote ledger and the resolution engines. */
   var posFilter = 'all', _pfStatus = { syncing: false, syncedAt: 0, note: '' }, _pfTimer = 0;
-  function orderState(o) {
+  function actionOf(o) {
+    try { var api = window.OST_PREDICTION_API; if (api && typeof api.actionFor === 'function') return api.actionFor(o); } catch (_) {}
+    return null;
+  }
+  // States: open · confirming · paying · settle (server is settling) · claim
+  // (a wallet win to claim) · paid · lost · legacy (retired credits ticket).
+  function orderState(o, a) {
     if (!o) return 'open';
+    var tr = trustOf(o);
+    // PRD-7: an old client's invented 'local-…' payout is not a receipt.
+    if (o.cashedOut && (tr.fakePaid || (a && a.kind === 'legacy-receipt'))) return 'legacy';
     if (o.cashedOut) return 'paid';
+    if (tr.rail === 'credits') return 'legacy';
     var st = String(o.status || o.outcome || '').toLowerCase();
-    if (st === 'won') return 'claim';
+    if (st === 'failed') return 'legacy';
+    if (o.cashoutPending) return 'paying';
+    if (o.fundingState === 'confirming' || o.fundingState === 'submitting' || o.pending) return 'confirming';
+    // PRD-7 / SRV-3: no real on-chain stake, or a stake not found on chain for
+    // this wallet — history only, never a Claim or a Sell.
+    if (tr.fake || tr.unverifiable || (a && (a.kind === 'legacy-fake' || a.kind === 'unverified'))) return 'legacy';
+    var native = tr.native || tr.rail === 'play';
+    if (native) {
+      // Only the SERVER's answer counts for a play-rail ticket (PRD-1).
+      if (o.serverResolvedAt) {
+        if (st === 'lost') return 'lost';
+        if (st === 'won' || st === 'sold' || st === 'refunded' || st === 'settled') return 'paid';
+      }
+      var close = Number(o.closeAt || o.closeAtMs || 0);
+      if (close > 0 && close <= Date.now()) return 'settle';
+      return 'open';
+    }
     if (st === 'lost') return 'lost';
     if (st === 'sold' || st === 'settled' || st === 'refunded') return 'paid';
     if (String(o.source || '') === 'ost-parlay') return 'open';
-    var close = Number(o.closeAt || o.closeAtMs || 0);
-    if (o.fundedBy === 'ostg-native' && close > 0 && close <= Date.now()) return 'settle';
+    if (tr.rail === 'onchain') return (a && a.finalStatus === 'lost') ? 'lost' : 'open';
+    // A Claim exists ONLY where the cash-out would really pay it (same rule as
+    // the HUD: OST_PREDICTION_API.actionFor).
+    if (a && a.kind === 'prediction-settlement' && a.finalStatus === 'won' && a.canCash) return 'claim';
+    if (a && a.finalStatus === 'lost') return 'lost';
+    if (!a && st === 'won' && tr.rail === 'wallet' && !tr.fake) return 'claim';
     return 'open';
   }
   function isBtcRoundId(id) { return /^ost-btc5m-\d+$/.test(String(id || '')); }
-  // Live price for an open ticket's side, as a fraction. Same sources as the desk.
-  function livePriceFor(o) {
-    var side = o.side === 'no' ? 'no' : 'yes', mid = String(o.marketId || '');
-    try { if (window.OST_PRICES && OST_PRICES.mid) { var v = Number(OST_PRICES.mid(mid, side)); if (v > 0 && v < 1) return v; } } catch (_) {}
-    if (isBtcRoundId(mid)) {
-      try { var r = window.OST_PREDICTION_API && OST_PREDICTION_API.fiveMinRound && OST_PREDICTION_API.fiveMinRound(); if (r && String(r.id || r.marketId || '') === mid && isFinite(Number(r.yesPriceNumber))) { var y = Number(r.yesPriceNumber); return side === 'yes' ? y : 1 - y; } } catch (_) {}
-      return NaN;   // a past round: no live price (it settles, it doesn't trade)
-    }
-    var m = marketForOrderId(mid);
-    if (m) {
-      var yv = NaN;
-      if (m.isGrouped && Array.isArray(m.outcomes)) { var oc = m.outcomes.filter(function (x) { return x && String(x.marketId || x.key || '') === mid; })[0]; if (oc) yv = Number(oc.price); }
-      if (!(yv > 0 && yv < 1)) yv = Number(m.yesPriceNumber);
-      if (yv > 1) yv /= 100;
-      if (yv > 0 && yv < 1) return side === 'yes' ? yv : 1 - yv;
-    }
-    return NaN;
-  }
   function parlaySlipOf(o) { try { var id = String(o.marketId || '').replace(/^ost-parlay:/, ''); return (window.OST_PARLAY && OST_PARLAY.slips() || []).filter(function (x) { return x.id === id; })[0] || null; } catch (_) { return null; } }
   function markTicket(o) {
-    var st = orderState(o), stake = Number(o.stake) || 0, shares = Number(o.shares) || 0;
-    var entry = Number(o.entry || o.price) || (shares > 0 ? stake / shares : 0);
-    var t = { o: o, st: st, stake: stake, shares: shares, entry: entry, value: stake, pnl: 0, live: false, label: '', net: 0 };
+    var a = actionOf(o);
+    var st = orderState(o, a), stake = Number(o.stake) || 0, shares = Number(o.shares) || 0;
+    var entry = Number(o.fillPrice) || Number(o.entry) || Number(o.price) || (shares > 0 ? stake / shares : 0);
+    var t = { o: o, a: a, st: st, stake: stake, shares: shares, entry: entry, value: stake, pnl: 0, live: false, label: '', net: 0, unit: (a && a.unit) || orderUnit(o), rail: (a && a.rail) || orderRail(o), canCash: false };
     if (String(o.source || '') === 'ost-parlay') {
       var sl = parlaySlipOf(o);
       if (st === 'open') { t.value = sl ? (Number(OST_PARLAY.valueOf(sl)) || 0) : stake; t.net = sl ? (Number(OST_PARLAY.offerOf(sl)) || 0) : 0; t.live = !!sl; t.pnl = t.value - stake; t.label = 'parlay'; return t; }
     }
-    if (st === 'paid') { t.value = Number(o.cashoutOst) || 0; t.pnl = t.value - stake; return t; }
+    // Realized: the RECORDED payout (never a re-quote — PRD-4 / PRD-6).
+    if (st === 'paid') { t.value = Number(o.cashoutOst != null ? o.cashoutOst : o.payout) || 0; t.pnl = t.value - stake; return t; }
     if (st === 'lost') { t.value = 0; t.pnl = -stake; return t; }
-    if (st === 'claim') { t.value = Number(o.potentialReturn) || shares || stake; t.net = feeNet(t.value, stake); t.pnl = t.net - stake; return t; }
-    if (st === 'settle') { t.value = shares || stake; t.net = t.value; t.pnl = 0; return t; }
-    var lp = livePriceFor(o);
-    if (lp > 0 && shares > 0) { t.value = shares * lp; t.live = true; } else t.value = stake;
-    t.net = feeNet(t.value, stake); t.pnl = t.value - stake;
+    if (st === 'legacy') { t.value = 0; t.pnl = 0; return t; }
+    if (st === 'paying') { t.value = Number(o.cashoutRequestedOst) || (a ? Number(a.net) || 0 : 0); t.net = t.value; t.pnl = t.value - stake; return t; }
+    if (st === 'claim') { t.net = a ? Number(a.net) || 0 : (Number(o.potentialReturn) || shares); t.value = t.net; t.pnl = t.net - stake; t.canCash = true; return t; }
+    if (st === 'settle' || st === 'confirming') { t.value = stake; t.net = 0; t.pnl = 0; t.unknown = true; return t; }
+    // Open: the exact number a sell pays right now (or the server estimate).
+    if (a) {
+      t.net = Number(a.net) || 0; t.canCash = !!a.canCash; t.label = a.label || '';
+      if (t.net > 0) { t.value = t.net; t.live = Number(a.livePrice) > 0; }
+      t.pnl = t.value - stake;
+    }
     return t;
   }
-  function feeNet(gross, stake) { try { if (window.OST_HOUSE && OST_HOUSE.quote) return Number(OST_HOUSE.quote(gross, stake).net) || gross; } catch (_) {} return gross - Math.max(0, gross - stake) * 0.02; }
   function computePortfolio(marked) {
     var p = { open: 0, openValue: 0, openStake: 0, unrealized: 0, realized: 0, claim: 0, claimValue: 0, won: 0, lost: 0, paid: 0, staked: 0 };
     marked.forEach(function (t) {
+      if (t.st === 'legacy') return;   // D1: retired credits are not money — kept out of every total
       p.staked += t.stake;
-      if (t.st === 'open' || t.st === 'settle') { p.open++; p.openValue += t.value; p.openStake += t.stake; p.unrealized += t.pnl; }
+      if (t.st === 'open' || t.st === 'settle' || t.st === 'confirming' || t.st === 'paying') { p.open++; p.openValue += t.value; p.openStake += t.stake; p.unrealized += t.pnl; }
       else if (t.st === 'claim') { p.claim++; p.claimValue += t.net; p.won++; p.unrealized += t.pnl; }
       else if (t.st === 'paid') { p.paid++; p.realized += t.pnl; if (t.pnl > 0.005) p.won++; }
       else if (t.st === 'lost') { p.lost++; p.realized += t.pnl; }
     });
     return p;
   }
-  function cashBtnFor(sig) { if (!sig) return null; try { return document.querySelector('.prediction-cashout-btn[data-order-sig="' + (window.CSS && CSS.escape ? CSS.escape(sig) : sig) + '"]'); } catch (_) { return null; } }
   function signed(v, dp) { v = Number(v) || 0; return (v > 0.005 ? '+' : v < -0.005 ? '−' : '') + Math.abs(v).toFixed(dp == null ? 2 : dp); }
   function ticketRow(t) {
-    var o = t.o, st = t.st, side = o.side === 'no' ? 'no' : 'yes';
-    var sig = o.signature || o.sig || o.id || '', isParlay = String(o.source || '') === 'ost-parlay';
+    var o = t.o, st = t.st, side = o.side === 'no' ? 'no' : 'yes', u = esc(t.unit);
+    var ref = orderKey(o), isParlay = String(o.source || '') === 'ost-parlay';
+    var playRail = t.rail === 'play';
     var actionHtml, badge = '';
     if (isParlay && st === 'open') {
       var slipId = String(o.marketId || '').replace(/^ost-parlay:/, '');
       actionHtml = t.net >= 0.05 ? '<button class="opm-tbtn" data-parlay-sell="' + esc(slipId) + '">Sell · ' + t.net.toFixed(2) + '</button>' : '<span class="opm-tbadge">⚡ live</span>';
     } else if (st === 'claim') {
-      var cb = cashBtnFor(sig); var netTxt = cb ? ((cb.textContent.match(/([\d,]+\.?\d*)\s*$/) || [])[1] || t.net.toFixed(2)) : t.net.toFixed(2);
-      actionHtml = '<button class="opm-tbtn claimw" data-sig="' + esc(sig) + '">Claim · ' + esc(netTxt) + '</button>';
+      actionHtml = '<button class="opm-tbtn claimw" data-ref="' + esc(ref) + '">Claim · ' + t.net.toFixed(2) + ' ' + u + '</button>';
     } else if (st === 'settle') {
-      actionHtml = '<button class="opm-tbtn" data-sig="' + esc(sig) + '">Settle</button>';
+      actionHtml = '<span class="opm-tbadge">Settling · paid automatically</span>';
+    } else if (st === 'paying') {
+      actionHtml = '<span class="opm-tbadge">Paying…</span>';
+    } else if (st === 'confirming') {
+      actionHtml = '<span class="opm-tbadge">Confirming stake…</span>';
     } else if (st === 'open') {
-      var native = o.fundedBy === 'ostg-native', closed = Number(o.closeAt || o.closeAtMs || 0) > 0 && Number(o.closeAt || o.closeAtMs) <= Date.now();
-      var cb2 = cashBtnFor(sig);
-      if (native && !cb2) actionHtml = '<span class="opm-tbadge">Locked · settles at close</span>';
-      else if (closed && !cb2) actionHtml = '<span class="opm-tbadge">Awaiting result</span>';
-      else { var n2 = cb2 ? ((cb2.textContent.match(/([\d,]+\.?\d*)\s*$/) || [])[1] || t.net.toFixed(2)) : t.net.toFixed(2); actionHtml = '<button class="opm-tbtn" data-sig="' + esc(sig) + '">Sell · ' + esc(n2) + '</button>'; }
-    } else if (st === 'paid') { actionHtml = '<span class="opm-tres" style="color:' + (t.pnl >= 0 ? 'var(--opm-yes)' : 'var(--opm-no)') + '">' + signed(t.pnl) + '</span>'; badge = (String(o.status || '').toLowerCase() === 'sold' || /sell|cashout/.test(String(o.cashoutKind || ''))) ? 'Sold' : (String(o.status || '').toLowerCase() === 'refunded' ? 'Refunded' : 'Won'); }
-    else if (st === 'lost') { actionHtml = '<span class="opm-tres" style="color:var(--opm-no)">−' + t.stake.toFixed(2) + '</span>'; badge = 'Lost'; }
+      if (t.canCash && t.net > 0) actionHtml = '<button class="opm-tbtn" data-ref="' + esc(ref) + '">Sell · ≈' + t.net.toFixed(2) + ' ' + u + '</button>';
+      else actionHtml = '<span class="opm-tbadge">' + esc(t.label && !/^sell/i.test(t.label) ? t.label : 'Open') + '</span>';
+    } else if (st === 'paid') {
+      actionHtml = '<span class="opm-tres" style="color:' + (t.pnl >= 0 ? 'var(--opm-yes)' : 'var(--opm-no)') + '">' + signed(t.pnl) + ' ' + u + '</span>';
+      var ost = String(o.status || '').toLowerCase();
+      badge = (ost === 'sold' || /sell|cashout/.test(String(o.cashoutKind || ''))) ? 'Sold' : (ost === 'refunded' ? 'Refunded' : 'Won');
+      if (playRail) badge += ' · paid to play balance';
+      else if (o.cashoutSig && !/^(local|credits|sim)-/.test(String(o.cashoutSig))) badge += ' · paid to wallet';
+    }
+    else if (st === 'lost') { actionHtml = '<span class="opm-tres" style="color:var(--opm-no)">−' + t.stake.toFixed(2) + ' ' + u + '</span>'; badge = 'Lost'; }
+    else if (st === 'legacy') {
+      actionHtml = '<span class="opm-tbadge">Not cashable</span>';
+      var lk = t.a && t.a.kind;
+      badge = String(o.status || '') === 'failed' ? 'Not placed'
+        : lk === 'legacy-receipt' ? 'Legacy receipt · never paid on chain'
+        : lk === 'unverified' ? 'Stake not found on chain'
+        : lk === 'legacy-fake' ? 'Legacy · no on-chain stake'
+        : 'Legacy credits';
+    }
     else { actionHtml = '<span class="opm-tbadge">Open</span>'; }
+    // A payout that failed on chain is not hidden: the row says nothing was
+    // paid, and Sell / Claim is offered again (PRD-6).
+    if (!badge && o.cashoutFailedAt && (st === 'claim' || st === 'open') && Date.now() - Number(o.cashoutFailedAt) < 86400000) badge = 'Last payout failed · nothing was paid';
     var title = o.title || o.marketTitle || o.marketId || 'Ticket';
     var when = o.cashoutAt || o.resolvedAt || o.ts || o.createdAt;
-    var valTxt = (st === 'open' || st === 'settle') ? ('<b class="' + (t.pnl >= 0 ? 'up' : 'down') + '">' + t.value.toFixed(2) + '</b> <i>' + signed(t.pnl) + (t.stake > 0 ? ' (' + signed(t.pnl / t.stake * 100, 0) + '%)' : '') + (t.live ? '' : ' · at entry') + '</i>')
-      : st === 'claim' ? ('<b class="up">won · ' + t.net.toFixed(2) + '</b>') : '';
+    var valTxt = (st === 'open' || st === 'paying') ? ('<b class="' + (t.pnl >= 0 ? 'up' : 'down') + '">' + t.value.toFixed(2) + ' ' + u + '</b> <i>' + signed(t.pnl) + (t.stake > 0 ? ' (' + signed(t.pnl / t.stake * 100, 0) + '%)' : '') + (t.live ? '' : ' · at entry') + '</i>')
+      : st === 'claim' ? ('<b class="up">won · ' + t.net.toFixed(2) + ' ' + u + '</b>')
+      : st === 'settle' ? '<i>Settled by the OST server from the BTC close price</i>' : '';
+    // Meta line: each piece is its own no-wrap chip, so a phone wraps BETWEEN
+    // pieces, never mid-word (PRD-6).
+    var meta = ['<span class="opm-tside ' + (side === 'yes' ? 'y' : 'n') + '">' + esc(o.outcomeLabel && !isParlay ? o.outcomeLabel : (side === 'yes' ? 'Yes' : 'No')) + '</span>',
+      '<span>' + t.stake.toFixed(2) + ' <small>' + u + '</small></span>'];
+    if (t.entry > 0 && !isParlay) meta.push('<span>@ ' + fmtc(t.entry * 100) + '¢</span>');
+    if (t.shares > 0 && !isParlay) meta.push('<span>' + t.shares.toFixed(1) + ' sh</span>');
+    meta.push('<span>' + ago(when) + '</span>');
+    if (badge) meta.push('<span><em>' + esc(badge) + '</em></span>');
     return '<div class="opm-trow st-' + st + '" data-mid="' + esc(o.marketId || '') + '">' +
       '<div class="opm-timg"></div>' +
       '<div class="opm-tmain"><div class="opm-ttitle">' + esc(title) + '</div>' +
-        '<div class="opm-tmeta"><span class="opm-tside ' + (side === 'yes' ? 'y' : 'n') + '">' + esc(o.outcomeLabel && !isParlay ? o.outcomeLabel : (side === 'yes' ? 'Yes' : 'No')) + '</span> ' +
-          t.stake.toFixed(2) + ' <small>OSTG</small>' + (t.entry > 0 && !isParlay ? ' @ ' + fmtc(t.entry * 100) + '¢' : '') + (t.shares > 0 && !isParlay ? ' · ' + t.shares.toFixed(1) + ' sh' : '') + ' · ' + ago(when) + (badge ? ' · <em>' + badge + '</em>' : '') + '</div>' +
+        '<div class="opm-tmeta">' + meta.join('') + '</div>' +
         (valTxt ? '<div class="opm-tval">' + valTxt + '</div>' : '') + '</div>' +
       '<div class="opm-tact">' + actionHtml + '</div></div>';
   }
@@ -1504,6 +1830,7 @@
           '<div class="opm-ps"><div class="k">Realized P&amp;L</div><div class="v" id="opmPfReal">—</div></div>' +
           '<div class="opm-ps"><div class="k">Open · Won · Lost</div><div class="v" id="opmPfCounts">—</div></div>' +
         '</div>' +
+        '<div class="opm-pfnote">Totals add OST (wallet rail) and OSTG (play rail) 1:1 · devnet, no cash value.</div>' +
         '<div class="opm-pfstatus" id="opmPfStatus"></div>' +
         '<div id="opmPfClaim"></div>' +
         '<div class="opm-chips" id="opmPosChips">' + [['all', 'All'], ['open', 'Open'], ['claim', 'Claimable'], ['paid', 'History'], ['lost', 'Lost']].map(function (c) { return '<button class="opm-chip' + (c[0] === 'all' ? ' on' : '') + '" data-f="' + c[0] + '">' + c[1] + '</button>'; }).join('') + '</div>' +
@@ -1527,11 +1854,12 @@
       stEl.innerHTML = '<span class="d' + (_pfStatus.syncing ? ' busy' : '') + '"></span>' + esc(txt) + '<span class="sp"></span>' + (orders.length ? orders.length + ' tickets' : '');
     }
     var claimHost = el('opmPfClaim');
-    if (claimHost) { var cl = marked.filter(function (t) { return t.st === 'claim'; }); claimHost.innerHTML = cl.length ? '<div class="opm-claimbar"><span>🎉 ' + cl.length + ' win' + (cl.length > 1 ? 's' : '') + ' to claim · ' + num2(pf.claimValue) + ' OSTG</span><button class="opm-tbtn claimw" id="opmClaimAll">Claim all</button></div>' : '';
+    if (claimHost) { var cl = marked.filter(function (t) { return t.st === 'claim'; }); claimHost.innerHTML = cl.length ? '<div class="opm-claimbar"><span>🎉 ' + cl.length + ' win' + (cl.length > 1 ? 's' : '') + ' to claim · ' + num2(pf.claimValue) + ' OST to your wallet</span><button class="opm-tbtn claimw" id="opmClaimAll">Claim all</button></div>' : '';
       var ca = el('opmClaimAll'); if (ca) ca.onclick = function () { ca.disabled = true; ca.textContent = 'Claiming…'; claimAll(cl); }; }
     var list = el('opmPosList'); if (!list) return;
-    var rows = marked.filter(function (t) { return posFilter === 'all' || t.st === posFilter || (posFilter === 'open' && t.st === 'settle') || (posFilter === 'paid' && t.st === 'lost'); });
-    var order = { claim: 0, settle: 1, open: 2, paid: 3, lost: 3 };
+    var isOpenish = function (s) { return s === 'open' || s === 'settle' || s === 'paying' || s === 'confirming'; };
+    var rows = marked.filter(function (t) { return posFilter === 'all' || t.st === posFilter || (posFilter === 'open' && isOpenish(t.st)) || (posFilter === 'paid' && (t.st === 'lost' || t.st === 'legacy')); });
+    var order = { claim: 0, paying: 1, settle: 1, confirming: 1, open: 2, paid: 3, lost: 3, legacy: 4 };
     if (posFilter === 'all') rows.sort(function (a, b) { return (order[a.st] - order[b.st]) || (Number(b.o.ts || 0) - Number(a.o.ts || 0)); });
     if (!rows.length) {
       list.innerHTML = '<div class="opm-empty">' + (orders.length ? 'Nothing in this filter yet.' : (_pfStatus.syncing ? 'Loading your positions…' : 'No positions yet. Open a market and take a side — your tickets, wins and history show up here.')) + '</div>';
@@ -1539,39 +1867,43 @@
     }
     var html = '', lastGroup = '';
     rows.forEach(function (t) {
-      var g = (t.st === 'claim' || t.st === 'settle') ? 'Ready to claim' : t.st === 'open' ? 'Open positions' : 'History';
+      var g = t.st === 'claim' ? 'Ready to claim' : isOpenish(t.st) ? 'Open positions' : 'History';
       if (posFilter === 'all' && g !== lastGroup) { html += '<div class="opm-sec2">' + g + '</div>'; lastGroup = g; }
       html += ticketRow(t);
     });
     list.innerHTML = html;
     try { if (window.OST_MARKET_ART) OST_MARKET_ART.apply(); } catch (_) {}
     list.querySelectorAll('.opm-tbtn[data-parlay-sell]').forEach(function (b) {
-      b.onclick = function (e) { e.stopPropagation(); b.disabled = true; b.textContent = '…'; try { OST_PARLAY.sell(b.getAttribute('data-parlay-sell')); } catch (_) {} setTimeout(function () { refreshBalance(); renderPositions(); }, 300); };
+      b.onclick = function (e) { e.stopPropagation(); b.disabled = true; b.textContent = '…'; try { OST_PARLAY.sell(b.getAttribute('data-parlay-sell')); } catch (_) {} setTimeout(function () { refreshBalance(true); renderPositions(); }, 300); };
     });
-    list.querySelectorAll('.opm-tbtn[data-sig]').forEach(function (b) {
-      b.onclick = function (e) { e.stopPropagation(); cashOutTicket(b.getAttribute('data-sig'), b); };
+    list.querySelectorAll('.opm-tbtn[data-ref]').forEach(function (b) {
+      b.onclick = function (e) { e.stopPropagation(); cashOutTicket(b.getAttribute('data-ref'), b); };
     });
     list.querySelectorAll('.opm-trow').forEach(function (r) {
-      r.onclick = function () { var m = marketForOrderId(r.getAttribute('data-mid')); if (m) openMarket(m); else toast('That market is no longer in the live list.'); };
+      r.onclick = function () { var m = marketForOrderId(r.getAttribute('data-mid')); if (m) openMarket(m); else notify('info', 'Market closed', 'That market is no longer in the live list.'); };
     });
   }
   function num2(v) { return (Number(v) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
-  function cashOutTicket(sig, b) {
+  // Sell / claim one ticket through the ONE cash-out routine (app.js). It shows
+  // every outcome itself (OST_NOTIFY); this only covers "nothing to cash" and
+  // errors it did not already report.
+  function cashOutTicket(ref, b, opts) {
     var api = window.OST_PREDICTION_API;
     if (b) { b.disabled = true; b.textContent = '…'; }
-    if (api && typeof api.cashOut === 'function' && sig) {
-      return api.cashOut(sig).then(function (r) { if (r && r.ok !== false) toast(((r.kind === 'prediction-settlement' || /resolve|claim/.test(String(r.kind || ''))) ? 'Claimed ' : 'Sold for ') + (Number(r.payout) || 0).toFixed(2) + ' OSTG.'); else if (r && r.label) toast(r.label); })
-        .catch(function (err) { toast('Could not cash out — ' + ((err && err.message) || 'try again') + '.'); })
-        .then(function () { refreshBalance(); renderPositions(); });
+    if (!(api && typeof api.cashOut === 'function' && ref)) {
+      if (b) b.disabled = false;
+      notify('error', 'Payouts are still loading', 'Try again in a moment.');
+      return Promise.resolve();
     }
-    var real = cashBtnFor(sig); if (!real) { if (b) b.disabled = false; toast('Settling — try again shortly.'); return Promise.resolve(); }
-    try { real.click(); } catch (_) {} setTimeout(function () { refreshBalance(); renderPositions(); }, 1500);
-    return Promise.resolve();
+    return Promise.resolve(api.cashOut(ref, opts || {}))
+      .then(function (r) { if (r && r.ok === false && r.label) notify('info', 'Nothing to pay yet', r.label); })
+      .catch(function (err) { if (!(err && err.notified)) notify('error', 'Payout did not go through', errText(err, 'submit', 'OST')); })
+      .then(function () { refreshBalance(true); renderPositions(); });
   }
   function claimAll(list) {
     var chain = Promise.resolve();
-    list.forEach(function (t) { var sig = t.o.signature || t.o.sig || t.o.id; if (sig) chain = chain.then(function () { return cashOutTicket(sig, null); }); });
-    chain.then(function () { refreshBalance(); renderPositions(); });
+    list.forEach(function (t) { var ref = orderKey(t.o); if (ref) chain = chain.then(function () { return cashOutTicket(ref, null); }); });
+    chain.then(function () { refreshBalance(true); renderPositions(); });
   }
   // Reconcile with the server: the wallet's remote ledger + fresh resolutions.
   function syncPortfolio(force) {
@@ -1580,7 +1912,9 @@
     if (!force && _pfStatus.syncedAt && Date.now() - _pfStatus.syncedAt < 20000) { renderPositions(); return; }
     _pfStatus.syncing = true; _pfStatus.note = ''; renderPositions();
     var jobs = [];
-    if (walletAddr() && typeof api.syncOrders === 'function') jobs.push(Promise.resolve(api.syncOrders()).catch(function () { return false; }));
+    // NET-3: one remote sync per user action — the ↻ button forces it; an
+    // automatic open is throttled by app.js (≤ 1 per 60 s).
+    if (walletAddr() && typeof api.syncOrders === 'function') jobs.push(Promise.resolve(api.syncOrders({ force: !!force })).catch(function () { return false; }));
     if (typeof api.refreshResolutions === 'function') jobs.push(Promise.resolve(api.refreshResolutions()).catch(function () { return false; }));
     try { if (window.OST_PARLAY && OST_PARLAY.settleScan) OST_PARLAY.settleScan(); } catch (_) {}
     var to = new Promise(function (res) { setTimeout(res, 12000); });
@@ -1648,7 +1982,7 @@
   // Background confirm / fail / sell of a ticket (wallet rail settles after the tap).
   window.addEventListener('ost:prediction:order-changed', function () { if (view === 'detail') refreshPosition(); if (view === 'positions') renderPositions(); });
   window.addEventListener('ost:prediction-resolutions-refreshed', function () { if (view === 'positions') renderPositions(); });
-  window.addEventListener('ost:money:change', function () { refreshBalance(); if (view === 'positions') renderPositions(); });
+  window.addEventListener('ost:money:change', function () { refreshBalance(true); if (view === 'positions') renderPositions(); });
   window.addEventListener('ost:play:balance', paintBalance);
   // THE missing link: OST_BALANCE fires this when its async /balance/truth read
   // (and on-chain OSTG) lands. Without it the chip stayed frozen on the pre-bet
@@ -1680,12 +2014,39 @@
     // in the background — a big part of the request storm).
     setInterval(function () { if (view === 'detail' && isBtcLive(currentMarket) && !document.hidden && Date.now() - lastPushRoundAt > 20000) loadRound(); }, 6000);   // push-first: poll only when the socket is stale
     setInterval(function () { if (view === 'detail' && !document.hidden) { if (Date.now() - _lastFillPushAt > 60000) loadTrades(); refreshPosition(); if (!isBtcLive(currentMarket)) paintStandard(); } }, 30000);   // push-first   // was 13s
-    setInterval(function () { if (!document.hidden) refreshBalance(); }, 40000);
+    // NET-3 / C6: idle re-reads only while this page is on screen, ≥ 60 s apart
+    // (OST_BALANCE throttles itself; no play / session poll from here).
+    setInterval(function () { var host = el('ostPredictMobile'); if (!document.hidden && host && host.offsetParent !== null) refreshBalance(); }, 60000);
+    // PRD-4: an ETH/SOL 5-min round re-prices every second. The detail (and an
+    // open buy sheet) follows OST_PRICES — the SAME source the fill checks — so
+    // the quote the user taps is the price the order is filled at. Local only
+    // (no network): OST_PRICES derives the odds from the cached spot feed.
+    setInterval(function () {
+      if (view !== 'detail' || document.hidden || !isFastRound(currentMarket)) return;
+      var cur = currentFastRound(currentMarket);
+      if (cur && cur.id !== currentMarket.id) { paintStandard(); return; }
+      var fc = fastMidCents(currentMarket);
+      if (fc > 0 && Math.abs(fc - midYes) >= 0.1) { midYes = fc; paintOdds(); renderOddsLive(); }
+    }, 1500);
     // autonomous autopay: claim resolved on-chain wins to the wallet OSTG.
     // Runs only while visible; it no-ops immediately when there are no open
     // on-chain tickets, so it isn't network churn most of the time.
     setTimeout(function () { if (!document.hidden) autoClaimOnchain(); }, 8000);
     setInterval(function () { if (!document.hidden) autoClaimOnchain(); }, 60000);
+    // SRV-2 / PRD-6: after a reload, finish what the last session left open —
+    // a wallet stake still 'confirming', a payout still 'Paying…' (looked up by
+    // signature / payoutId, never re-sent as a new transaction), and BTC
+    // server-ledger results (read-only). Once per wallet attach.
+    var _reconciledFor = '';
+    function reconcileOnLoad() {
+      var w = walletAddr(); if (!w || _reconciledFor === w) return; _reconciledFor = w;
+      var api = window.OST_PREDICTION_API || {};
+      try { if (typeof api.reconcilePendingStakes === 'function') api.reconcilePendingStakes(); } catch (_) {}
+      try { if (typeof api.reconcilePendingCashouts === 'function') api.reconcilePendingCashouts(); } catch (_) {}
+      try { if (typeof api.refreshNativeResolutions === 'function') api.refreshNativeResolutions(); } catch (_) {}
+    }
+    setTimeout(reconcileOnLoad, 3000);
+    window.addEventListener('ost:wallet-changed', function () { setTimeout(reconcileOnLoad, 2000); });
     // markets can arrive after boot
     var t = 0; var iv2 = setInterval(function () { if (allMarkets().length) { if (view === 'browse') renderBrowse(); clearInterval(iv2); } else if (++t > 40) clearInterval(iv2); }, 700);
   }

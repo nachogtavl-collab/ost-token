@@ -158,6 +158,23 @@
     return { ok: true, applied: applied };
   }
 
+  // Deliberately remove a key AND every backup copy of it. Without this, a
+  // user's "Forget this browser wallet" was undone on the next load: recover()
+  // saw the key missing and restored the secret from the backup snapshot.
+  function forget(key) {
+    if (!key) return false;
+    try { localStorage.removeItem(key); } catch (_) {}
+    try { localStorage.removeItem('ost.dataguard.corrupt.' + key); } catch (_) {}
+    [BACKUP_KEY, PREV_KEY].forEach(function (bk) {
+      var snap = readBackup(bk);
+      if (snap && snap.keys && Object.prototype.hasOwnProperty.call(snap.keys, key)) {
+        delete snap.keys[key];
+        writeBackup(bk, snap);
+      }
+    });
+    return true;
+  }
+
   // ---- boot: recover FIRST, before app scripts read storage --------------
   var recovered = recover();
   doBackup();
@@ -178,6 +195,7 @@
     recover: recover,
     export: exportAll,
     import: importAll,
+    forget: forget,
     critical: CRITICAL.slice(),
     lastRecovered: recovered,
     status: function () { return readBackup(META_KEY); }

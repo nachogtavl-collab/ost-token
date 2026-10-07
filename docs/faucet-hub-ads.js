@@ -31,8 +31,17 @@
     publicKey: window.OST_AD_TREASURY_PUBKEY || '',
     btcPayoutAddress: '',     // set in Adsterra/A-Ads dashboard
     usdtPayoutAddress: '',    // TRC20/ERC20 — set in PropellerAds/Coinzilla
-    note: 'All ad revenue is reconciled weekly: BTC/USDT → SOL via Jupiter → swap pool refill.'
+    // Honest status (CLAUDE.md): no sweep runs today, so nothing is converted.
+    note: 'R&D: no sweep runs today. Ad revenue is not converted to SOL or OST and does not refill any pool.'
   };
+  function walletUid() {
+    try {
+      var W = window.OST_WALLET;
+      if (W && typeof W.pubkey === 'function') { var pk = W.pubkey(); if (pk) return String(pk); }
+      if (W && W.session && W.session.publicKey && W.session.publicKey.toBase58) return W.session.publicKey.toBase58();
+    } catch (_) {}
+    return 'anon';
+  }
   // ------------------------------------------------------------------------
 
   // ----- A-Ads always-on banner -------------------------------------------
@@ -52,7 +61,7 @@
       div.innerHTML = '<iframe title="A-Ads sponsored banner" data-aa="' + A_ADS_UNIT + '" src="//ad.a-ads.com/' + A_ADS_UNIT + '?size=' + s.w + 'x' + s.h + '" ' +
         'style="width:' + s.w + 'px;height:' + s.h + 'px;border:0;padding:0;overflow:hidden;background-color:transparent;" ' +
         'scrolling="no" allow="autoplay"></iframe>' +
-        '<div style="font-size:0.7rem;opacity:0.5;margin-top:4px;">Ad revenue funds OST treasury · <a href="#fhRevDashboard" style="color:inherit;">see dashboard</a></div>';
+        '<div style="font-size:0.7rem;opacity:0.5;margin-top:4px;">Sponsored banner · ads are R&amp;D and fund nothing in OST · <a href="#fhRevDashboard" style="color:inherit;">details</a></div>';
       // wheel banner goes inside the hub, footer goes at end of page
       var hub = document.getElementById('ostFaucetHubSection');
       if (hub) {
@@ -142,7 +151,7 @@
       // devtools - so the "anti self-click farming" comment described something
       // that did not exist. It is now enforced by the ad treasury Durable
       // Object, which the client cannot edit.
-      var uid = (window.OST_WALLET && window.OST_WALLET.address) || 'anon';
+      var uid = walletUid();
 
       if (!ADSTERRA_ZONE) {
         // No rewarded inventory configured: say so instead of silently
@@ -187,55 +196,37 @@
       { name: 'AdGate Media (rewarded)',   live: false,           payout: 'USDT · S2S',      url: 'https://adgatemedia.com' },
       { name: 'Pollfish / CPX (surveys)',  live: false,           payout: 'USD · S2S',       url: 'https://www.pollfish.com' }
     ];
-    function totalViewsToday() {
-      var uid = (window.OST_WALLET && window.OST_WALLET.address) || 'anon';
-      var k = 'ost.ads.views.' + uid + '.' + new Date().toISOString().slice(0, 10);
-      try { return parseInt(localStorage.getItem(k) || '0', 10); } catch (e) { return 0; }
-    }
+    // Honest status (CLAUDE.md honesty rule, FCT-2 / C12 D1): a banner that
+    // shows is "banner shown", never "LIVE" revenue; nothing here is converted
+    // to OST, and retired legacy credits are shown as not cashable, never as OST.
     var rows = providers.map(function (p) {
-      var status = p.live ? '<span style="color:#6ce6a4;">● LIVE</span>' : '<span style="opacity:0.55;">○ awaiting key</span>';
+      var status = p.live ? '<span style="color:#93c5fd;">● banner shown</span>' : '<span style="opacity:0.55;">○ not set up</span>';
       return '<tr><td>' + status + '</td><td><a href="' + p.url + '" target="_blank" rel="noopener">' + p.name + '</a></td><td>' + p.payout + '</td></tr>';
     }).join('');
-    var hub = window.OST_FAUCET_HUB ? window.OST_FAUCET_HUB.state() : {};
-    var lifetime = Number(hub.lifetime || 0).toFixed(2);
-    var pending  = Number(hub.credits || 0).toFixed(2);
-    var views = totalViewsToday();
+    var hub = {};
+    try { hub = window.OST_FAUCET_HUB ? (window.OST_FAUCET_HUB.state() || {}) : {}; } catch (_) { hub = {}; }
+    var legacy = Math.max(0, Number(hub.credits || 0) || 0);
+    var legacyCard = legacy > 0
+      ? '<div class="fh-card"><div class="fh-card-title">Retired legacy credits (not cashable)</div><div class="fh-streak-num">' + legacy.toFixed(2) + '</div><div class="fh-card-meta">Old vault credits are retired: they are not OST, have no cash value and can’t be cashed out. Claim free devnet OST in the hub above instead.</div></div>'
+      : '';
     return '' +
       '<div class="container">' +
       '<div class="fh-section" id="fhRevDashboard">' +
-        '<h3>📊 Ad Revenue → OST Loop</h3>' +
-        '<p class="fh-sub">Public dashboard: every cent we earn from ads converts to SOL → refills the swap pool → cashes out as OST to users. Vault retained funds satellites, legacy research, and quantum projects.</p>' +
+        '<h3>📊 Ads — R&amp;D, not live</h3>' +
+        '<p class="fh-sub">Ads are an experiment on devnet. No rewarded ads are paid, ad revenue is not converted to SOL or OST, and it does not refill any pool. Devnet tokens have no cash value.</p>' +
         '<div class="fh-grid">' +
-          '<div class="fh-card"><div class="fh-card-title">Your ad views today</div><div class="fh-streak-num">' + views + '</div><div class="fh-card-meta">Daily cap: 20 views · resets at 00:00 UTC</div></div>' +
-          '<div class="fh-card"><div class="fh-card-title">Your lifetime OST earned</div><div class="fh-streak-num">' + lifetime + '</div><div class="fh-card-meta">Includes faucet, spins, taps, ads, tasks</div></div>' +
-          '<div class="fh-card"><div class="fh-card-title">Your pending credits</div><div class="fh-streak-num">' + pending + '</div><div class="fh-card-meta">Cash out from the hub above</div></div>' +
-          '<div class="fh-card" style="grid-column:span 2;"><div class="fh-card-title">OST AD TREASURY (vault)</div>' +
-            '<div style="font-family:monospace;font-size:0.85rem;word-break:break-all;background:rgba(0,0,0,0.25);padding:8px 10px;border-radius:8px;">' + (AD_TREASURY.publicKey || 'Treasury vault not configured') + '</div>' +
+          legacyCard +
+          '<div class="fh-card" style="grid-column:span 2;"><div class="fh-card-title">OST ad treasury (vault)</div>' +
+            '<div style="font-family:monospace;font-size:0.85rem;word-break:break-all;background:rgba(0,0,0,0.25);padding:8px 10px;border-radius:8px;">' + (AD_TREASURY.publicKey || 'Not configured') + '</div>' +
             '<div class="fh-card-meta">' + AD_TREASURY.note + '</div>' +
           '</div>' +
         '</div>' +
         '<div style="margin-top:18px;overflow-x:auto;">' +
           '<table style="width:100%;border-collapse:collapse;font-size:0.92rem;">' +
-            '<thead><tr style="opacity:0.8;text-align:left;"><th style="padding:6px 10px;">Status</th><th style="padding:6px 10px;">Network</th><th style="padding:6px 10px;">Payout</th></tr></thead>' +
+            '<thead><tr style="opacity:0.8;text-align:left;"><th style="padding:6px 10px;">Status</th><th style="padding:6px 10px;">Network</th><th style="padding:6px 10px;">Network’s own payout terms</th></tr></thead>' +
             '<tbody>' + rows + '</tbody>' +
           '</table>' +
         '</div>' +
-        '<p class="fh-sub" style="margin-top:14px;">Affiliate partners with crypto payouts: ' +
-          '<a href="https://accounts.binance.com/register?ref=" target="_blank" rel="noopener">Binance</a> · ' +
-          '<a href="https://www.bybit.com/invite" target="_blank" rel="noopener">Bybit</a> · ' +
-          '<a href="https://www.okx.com/join" target="_blank" rel="noopener">OKX</a> · ' +
-          '<a href="https://www.kucoin.com/r/" target="_blank" rel="noopener">KuCoin</a> · ' +
-          '<a href="https://partners.bitget.com" target="_blank" rel="noopener">Bitget</a> · ' +
-          '<a href="https://shop.ledger.com" target="_blank" rel="noopener">Ledger</a> · ' +
-          '<a href="https://trezor.io/affiliate" target="_blank" rel="noopener">Trezor</a> · ' +
-          '<a href="https://phantom.app" target="_blank" rel="noopener">Phantom</a>' +
-        '</p>' +
-        '<p class="fh-sub">DePIN micro-task partners: ' +
-          '<a href="https://toloka.ai" target="_blank" rel="noopener">Toloka</a> · ' +
-          '<a href="https://scale.com" target="_blank" rel="noopener">Scale AI</a> · ' +
-          '<a href="https://oceanprotocol.com" target="_blank" rel="noopener">Ocean Protocol</a> · ' +
-          '<a href="https://grass.io" target="_blank" rel="noopener">Grass.io</a>' +
-        '</p>' +
       '</div>' +
       '</div>';
   }

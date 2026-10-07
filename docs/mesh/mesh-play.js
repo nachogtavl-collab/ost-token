@@ -124,10 +124,34 @@
     return '';
   }
 
+  // C1: nobody clicks #walletBtn. With no wallet, the wallet home start view
+  // opens with the reason; with one, Mesh closes and the wallet shows.
   function openWallet() {
-    location.hash = '#wallet';
-    var btn = document.getElementById('walletBtn') || document.getElementById('connectWalletBtn');
-    if (btn && !walletAddress()) btn.click();
+    leaveMesh(function () {
+      if (window.OST_WALLET && typeof window.OST_WALLET.requireWallet === 'function' && !walletAddress()) {
+        try { window.OST_WALLET.requireWallet({ reason: 'games', label: 'play in the arena' }); return; } catch (_) {}
+      }
+      location.hash = '#wallet';
+    });
+  }
+
+  // The Mesh overlays (classic pavilion, OST Mesh app) sit above the page, so
+  // navigating to Wallet underneath them looked like a dead button. Close them
+  // first, then navigate once their own Back entry has unwound (it would
+  // otherwise undo the navigation).
+  function leaveMesh(then) {
+    var pav = document.getElementById('ost-mesh-pavilion');
+    var pavOpen = !!(pav && pav.classList.contains('is-open'));
+    var appOpen = false;
+    try { appOpen = !!document.querySelector('#ostMeshApp.open'); } catch (_) {}
+    if (!pavOpen && !appOpen) { then(); return; }
+    try { if (pavOpen && window.OST_MESH && typeof window.OST_MESH.close === 'function') window.OST_MESH.close(); } catch (_) {}
+    try { if (appOpen && window.OST_MESH_APP && typeof window.OST_MESH_APP.close === 'function') window.OST_MESH_APP.close(); } catch (_) {}
+    var done = false;
+    function go() { if (done) return; done = true; window.removeEventListener('popstate', onPop); try { then(); } catch (_) {} }
+    function onPop() { setTimeout(go, 30); }
+    window.addEventListener('popstate', onPop);
+    setTimeout(go, 500);
   }
 
   function toast(text) {
@@ -270,9 +294,10 @@
     refreshWalletLine();
     refreshSharePreviews();
     refreshUnifiedBalances();
+    // Local reads only on the timers; the wallet figure repaints on `ost:balance`.
     setInterval(refreshWalletLine, 4000);
     setInterval(refreshSharePreviews, 5000);
-    setInterval(refreshUnifiedBalances, 5000);
+    window.addEventListener('ost:balance', function () { refreshUnifiedBalances(); });
   }
 
   function mountFairGamesEntry() {
@@ -855,6 +880,18 @@
     return address;
   }
 
+  // Money errors are worded by OST_MONEY_ERRORS (C3): never raw JSON or
+  // platform strings. Plain messages from this module pass through.
+  // The error's own stage (a failed quote = nothing sent) and asset win over
+  // these fallbacks, so a short SOL/OSTG send names the right token.
+  function moneyText(err, asset) {
+    var m = (err && err.message) || '';
+    try {
+      if (window.OST_MONEY_ERRORS && ((err && err.code) || window.OST_MONEY_ERRORS.isRaw(m))) return window.OST_MONEY_ERRORS.text(err, { stage: 'submit', asset: (err && err.asset) || asset || 'OST' });
+    } catch (_) {}
+    return m || 'Something went wrong — try again in a moment.';
+  }
+
   async function depositStake(state) {
     var amount = Number(state && state.stake && state.stake.amount || 0) || 0;
     var asset = String(state && state.stake && state.stake.asset || 'OST').toUpperCase();
@@ -925,7 +962,7 @@
     retry.addEventListener('click', function () {
       retry.disabled = true;
       Promise.resolve(fn()).catch(function (err) {
-        setArenaStatus(err.message);
+        setArenaStatus(moneyText(err));
         retry.disabled = false;
       });
     });
@@ -992,7 +1029,7 @@
       } else {
         challenges.delete(id);
       }
-      setArenaStatus(err.message);
+      setArenaStatus(moneyText(err));
     }
   }
 
@@ -1096,7 +1133,7 @@
       req.textContent = Number(state.stake.amount || 0) > 0 ? 'Cash out pot' : 'Request payout';
       req.addEventListener('click', function () {
         if (Number(state.stake.amount || 0) > 0) {
-          cashOutPot(state, req).catch(function (err) { setArenaStatus(err.message); req.disabled = false; req.textContent = 'Cash out pot'; });
+          cashOutPot(state, req).catch(function (err) { setArenaStatus(moneyText(err)); req.disabled = false; req.textContent = 'Cash out pot'; });
         } else {
           sendPaymentRequest({ amount: state.stake.amount, asset: state.stake.asset, note: 'Payout for ' + GAME_NAMES[state.game], address: winnerWallet });
         }
@@ -1198,7 +1235,7 @@
     var existing = challenges.get(payload.id);
     if (existing && existing.role === 'opponent' && existing.ownDeposit) {
       setArenaStatus('Challenge signal repeated. Resending your locked accept signal.');
-      acceptChallenge(payload).catch(function (err) { setArenaStatus(err.message); });
+      acceptChallenge(payload).catch(function (err) { setArenaStatus(moneyText(err)); });
       return;
     }
     if (incomingChallenges.has(payload.id)) {
@@ -1217,7 +1254,7 @@
     accept.textContent = 'Accept';
     accept.addEventListener('click', function () {
       accept.disabled = true;
-      acceptChallenge(payload).catch(function (err) { setArenaStatus(err.message); accept.disabled = false; });
+      acceptChallenge(payload).catch(function (err) { setArenaStatus(moneyText(err)); accept.disabled = false; });
     });
     var decline = document.createElement('button');
     decline.textContent = 'Decline';
@@ -1231,8 +1268,8 @@
   function handleRemotePayload(payload) {
     if (!payload || payload.kind !== 'mesh-app' || payload.app !== APP) return false;
     if (payload.type === 'game.challenge') renderIncomingChallenge(payload);
-    else if (payload.type === 'game.accept') handleGameAccept(payload).catch(function (err) { setArenaStatus(err.message); });
-    else if (payload.type === 'game.reveal') handleGameReveal(payload).catch(function (err) { setArenaStatus(err.message); });
+    else if (payload.type === 'game.accept') handleGameAccept(payload).catch(function (err) { setArenaStatus(moneyText(err)); });
+    else if (payload.type === 'game.reveal') handleGameReveal(payload).catch(function (err) { setArenaStatus(moneyText(err)); });
     else if (payload.type === 'game.decline') gameLog(makeCard('Challenge declined', 'Peer declined the game challenge.'));
     else if (payload.type === 'wallet.card') renderWalletCard(payload);
     else if (payload.type === 'wallet.paid') renderWalletReceipt(payload);
@@ -1258,13 +1295,16 @@
     refreshUnifiedBalances();
   }
 
+  // Wallet OST comes from OST_BALANCE (contract C6): no RPC of our own, and an
+  // unknown balance shows "—", never 0.
   async function refreshUnifiedBalances() {
     var strip = document.getElementById('omaBalanceStrip');
     if (!strip) return;
-    var walletBal = 0;
+    var walletBal = null;
     var addr = walletAddress();
     try {
-      if (addr && window.OST_WALLET && typeof window.OST_WALLET.getOstBalance === 'function') walletBal = await window.OST_WALLET.getOstBalance(addr);
+      var B = addr && window.OST_BALANCE && typeof window.OST_BALANCE.get === 'function' ? window.OST_BALANCE.get() : null;
+      if (B && B.ost != null && (!B.wallet || B.wallet === addr)) walletBal = Number(B.ost);
     } catch (_) {}
     var fair = fairGameTotals();
     var ledger = readJson('ost.wallet.platformLedger.v1', {}) || {};
@@ -1275,7 +1315,7 @@
     }, 0);
     var offline = readJson('ost.offline.vault.v1', {}) || {};
     strip.innerHTML = [
-      balanceTile('Wallet OST', formatAmount(walletBal)),
+      balanceTile('Wallet OST', walletBal == null ? '—' : formatAmount(walletBal)),
       balanceTile('Fair games', formatAmount(Math.max(0, fair.escrow - fair.cashout))),
       balanceTile('Predictions', formatAmount(predictionOpen)),
       balanceTile('Memecoins/offline', formatAmount(Number(ledger.launchpadExposure || 0) + Number(offline.balance || offline.total || 0)))
@@ -1288,10 +1328,14 @@
 
   function handleWalletAction(action) {
     if (action === 'buy' || action === 'swap') return openWalletPanel('convert');
-    if (action === 'bridge') return openWalletPanel('portals');
+    // BRG-5: "Bridge" opens the OST ⇄ OSTG bridge itself (Wallet → Convert).
+    if (action === 'bridge') {
+      if (window.OST_BRIDGE_UI && typeof window.OST_BRIDGE_UI.open === 'function') return window.OST_BRIDGE_UI.open();
+      return openWalletPanel('convert');
+    }
     if (action === 'receive') return shareReceiveAddress();
     if (action === 'cashout') return openWalletPanel('convert');
-    if (action === 'offline') return activateSection('offline');
+    if (action === 'offline') return leaveMesh(function () { activateSection('offline'); });
   }
 
   function activateSection(id) {
@@ -1300,11 +1344,18 @@
   }
 
   function openWalletPanel(panel) {
-    activateSection('wallet');
-    window.setTimeout(function () {
-      var tab = document.querySelector('[data-wallet-tab="' + panel + '"], [data-wallet-panel-target="' + panel + '"]');
-      if (tab && typeof tab.click === 'function') tab.click();
-    }, 220);
+    leaveMesh(function () {
+      activateSection('wallet');
+      window.setTimeout(function () {
+        if (typeof window.setWalletPanel === 'function') { try { window.setWalletPanel(panel); } catch (_) {} }
+        else {
+          var tab = document.querySelector('[data-wallet-tab="' + panel + '"], [data-wallet-panel-target="' + panel + '"]');
+          if (tab && typeof tab.click === 'function') tab.click();
+        }
+        var host = document.getElementById('wallet-panel-' + panel);
+        if (host && host.scrollIntoView) { try { host.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (_) { host.scrollIntoView(); } }
+      }, 220);
+    });
   }
 
   function sendPaymentRequest(opts) {
@@ -1318,7 +1369,7 @@
     sendPayload('wallet.card', payload).then(function () {
       renderLocalCard(walletCardNode('Payment request sent', payload));
       toast('Payment request sent.');
-    }).catch(function (err) { setArenaStatus(err.message); });
+    }).catch(function (err) { setArenaStatus(moneyText(err)); });
   }
 
   function shareReceiveAddress() {
@@ -1329,7 +1380,7 @@
     sendPayload('wallet.card', payload).then(function () {
       renderLocalCard(walletCardNode('Receive address shared', payload));
       toast('Receive address shared.');
-    }).catch(function (err) { setArenaStatus(err.message); });
+    }).catch(function (err) { setArenaStatus(moneyText(err)); });
   }
 
   function walletCardNode(title, payload) {
@@ -1350,10 +1401,15 @@
     if (payload.mode === 'request' && payload.address) {
       var pay = document.createElement('button');
       pay.className = 'primary';
-      pay.textContent = String(payload.asset || 'OST').toUpperCase() === 'OST' ? 'Pay now' : 'Open swap';
+      var reqAsset = String(payload.asset || 'OST').toUpperCase();
+      var payable = reqAsset === 'OST' || reqAsset === 'OSTG' || reqAsset === 'SOL';
+      pay.textContent = payable ? 'Pay now' : 'Open swap';
       pay.addEventListener('click', function () {
-        if (String(payload.asset || 'OST').toUpperCase() !== 'OST') return openWalletPanel('convert');
-        directSendOst(payload.address, payload.amount, payload.note || 'OST Mesh payment').catch(function (err) { setArenaStatus(err.message); });
+        if (!payable) return openWalletPanel('convert');
+        if (pay.disabled) return;
+        pay.disabled = true;     // one payment per tap
+        directSendAsset(payload.address, payload.amount, payload.note || 'OST Mesh payment', reqAsset)
+          .catch(function (err) { if (!(err && err.code === 'send_in_flight')) setArenaStatus(moneyText(err, reqAsset)); pay.disabled = false; });
       });
       actions.appendChild(pay);
     }
@@ -1375,24 +1431,79 @@
     var amount = Number(document.getElementById('omaPayAmount')?.value || 0) || 0;
     var note = document.getElementById('omaPayNote')?.value || 'OST Mesh direct payment';
     if (!knownPeerWallet) return setArenaStatus('Ask the peer to share a receive address first.');
-    directSendOst(knownPeerWallet, amount, note).catch(function (err) { setArenaStatus(err.message); });
+    if (directSendBusy) return setArenaStatus('A payment is already on its way — wait for it to finish.');
+    directSendOst(knownPeerWallet, amount, note).catch(function (err) {
+      if (err && err.code === 'send_in_flight') return;
+      setArenaStatus(moneyText(err, 'OST'));
+    });
   }
 
-  async function directSendOst(toAddress, amount, note) {
+  function directSendOst(toAddress, amount, note) { return directSendAsset(toAddress, amount, note, 'OST'); }
+
+  // ONE Mesh payment at a time: a double tap must never build/sign a second
+  // transfer while the first is still in flight (review: arena double-send).
+  var directSendBusy = null;
+  function setSendButtons(disabled) {
+    ['omaSendPeer'].forEach(function (id) {
+      var b = document.getElementById(id);
+      if (b) { b.disabled = !!disabled; b.setAttribute('aria-busy', disabled ? 'true' : 'false'); }
+    });
+  }
+  function directSendAsset(toAddress, amount, note, asset) {
+    if (directSendBusy) {
+      setArenaStatus('A payment is already on its way — wait for it to finish.');
+      return Promise.reject(Object.assign(new Error('A payment is already on its way — wait for it to finish.'), { code: 'send_in_flight' }));
+    }
+    setSendButtons(true);
+    var p = directSendAssetNow(toAddress, amount, note, asset);
+    directSendBusy = p;
+    var release = function () { if (directSendBusy === p) directSendBusy = null; setSendButtons(false); };
+    // Every caller (button, payment card, OST_MESH_ARENA.sendOstTo) gets the
+    // outcome on the status line, worded with the asset that was sent.
+    p.then(release, function (err) { release(); setArenaStatus(moneyText(err, String(asset || 'OST').toUpperCase())); });
+    return p;
+  }
+
+  // OST / OSTG: pool-paid peer transfer (OST pays the fee and the recipient's
+  // account — no SOL needed). SOL: native transfer under the rent rule. All
+  // through the shared Send rail (OST_SEND) so balance, address and rent
+  // checks match the wallet's Send sheet; resolves { sig, pending } (C4).
+  async function directSendAssetNow(toAddress, amount, note, asset) {
+    asset = String(asset || 'OST').toUpperCase();
     amount = Number(amount || 0);
-    if (!Number.isFinite(amount) || amount <= 0) throw new Error('Enter a valid OST amount.');
+    if (!Number.isFinite(amount) || amount <= 0) throw Object.assign(new Error('Enter a valid amount.'), { code: 'invalid_amount' });
     requireWalletAddress();
     var w = window.OST_WALLET;
-    if (!w || !w.session || !w.session.publicKey) throw new Error('Connect a wallet first.');
-    if (!window.OST_RESCUE || typeof window.OST_RESCUE.sendPeerOst !== 'function') throw new Error('OST fee vault is still loading.');
-    setArenaStatus('Sending OST directly inside Mesh...');
-    var sig = await window.OST_RESCUE.sendPeerOst(String(toAddress), amount, note ? String(note) : '');
-    if (typeof window.recordOstSnapshot === 'function') window.recordOstSnapshot({ ts: Date.now(), kind: 'send', amount: amount, sig: sig, to: toAddress });
-    try { window.dispatchEvent(new CustomEvent('ost:wallet-changed')); } catch (_) {}
-    await sendPayload('wallet.paid', { mode: 'paid', amount: amount, asset: 'OST', note: note, address: walletAddress(), sig: sig }).catch(function () {});
-    renderLocalCard(makeCard('OST sent', '<strong>' + escapeHtml(formatAmount(amount)) + ' OST</strong> sent to <code>' + escapeHtml(short(toAddress)) + '</code><br><code>' + escapeHtml(sig) + '</code>'));
+    if (!w || !w.session || !w.session.publicKey) throw Object.assign(new Error('Connect a wallet first.'), { code: 'no_wallet' });
+    setArenaStatus('Sending ' + asset + ' directly inside Mesh…');
+    var sig = '', pending = false;
+    if (window.OST_SEND && typeof window.OST_SEND.send === 'function') {
+      var r = await window.OST_SEND.send({ asset: asset, to: String(toAddress), amount: String(amount), memo: note ? String(note) : '', source: 'mesh-play' });
+      sig = String(r.sig); pending = !!r.pending;
+    } else if (asset === 'OST' && window.OST_RESCUE && typeof window.OST_RESCUE.sendPeerOst === 'function') {
+      var sigObj = await window.OST_RESCUE.sendPeerOst(String(toAddress), amount, note ? String(note) : '');
+      sig = String(sigObj); pending = !!(sigObj && sigObj.pending);
+    } else {
+      throw Object.assign(new Error('The send rail is still loading.'), { code: 'bad_response' });
+    }
+    if (typeof window.recordOstSnapshot === 'function') window.recordOstSnapshot({ ts: Date.now(), kind: asset === 'OST' ? 'send' : 'send-' + asset.toLowerCase(), asset: asset, amount: amount, sig: sig, to: toAddress, pending: pending });
+    await sendPayload('wallet.paid', { mode: 'paid', amount: amount, asset: asset, note: note, address: walletAddress(), sig: sig }).catch(function () {});
+    renderLocalCard(makeCard(pending ? asset + ' still confirming' : asset + ' sent', '<strong>' + escapeHtml(formatAmount(amount)) + ' ' + escapeHtml(asset) + '</strong> ' + (pending ? 'on its way to' : 'sent to') + ' <code>' + escapeHtml(short(toAddress)) + '</code><br><code>' + escapeHtml(sig) + '</code>'));
     refreshUnifiedBalances();
-    setArenaStatus('OST sent directly to peer wallet.');
+    if (pending) {
+      setArenaStatus('Still confirming ' + formatAmount(amount) + ' ' + asset + ' to ' + short(toAddress) + ' — check your balance before retrying.');
+      // The rail keeps looking it up; say what happened once it is known.
+      var onTx = function (ev) {
+        var d = ev && ev.detail;
+        if (!d || !d.resolved || String(d.sig) !== sig) return;
+        window.removeEventListener('ost:wallet-tx', onTx);
+        setArenaStatus(d.status === 'confirmed' ? asset + ' sent directly to peer wallet.' : 'Didn’t go through — ' + formatAmount(amount) + ' ' + asset + ' was not sent. Nothing moved; you can try again.');
+        refreshUnifiedBalances();
+      };
+      window.addEventListener('ost:wallet-tx', onTx);
+    } else {
+      setArenaStatus(asset + ' sent directly to peer wallet.');
+    }
     return sig;
   }
 
@@ -1460,7 +1571,7 @@
     sendPayload('share.card', share).then(function () {
       renderLocalCard(shareCardNode('Shared ' + (share.shareType === 'prediction' ? 'prediction market' : 'memecoin'), share));
       toast('Share card sent.');
-    }).catch(function (err) { setArenaStatus(err.message); });
+    }).catch(function (err) { setArenaStatus(moneyText(err)); });
   }
 
   function shareCardNode(title, payload) {
@@ -1542,7 +1653,7 @@
       openMeshArena();
       selectTab('wallet');
       try { sendPaymentRequest({ amount: amount, asset: asset || 'OST', note: note }); }
-      catch (err) { setArenaStatus(err && err.message ? err.message : 'Could not send request.'); }
+      catch (err) { setArenaStatus(moneyText(err)); }
       return true;
     },
     challenge: function (address, game) {
