@@ -122,7 +122,8 @@
       // The server said in words that nothing went out.
       nothingSent: !!(ownBody && (ownBody.preBroadcast === true || ownBody.nothingSent === true)) ||
         /nothing was (?:signed or )?sent|nothing was paid|nothing moved|before sending/i.test(serverText + ' ' + str(ownBody ? (ownBody.message || ownBody.note || '') : '')),
-      pending: !!((o && o.pending) || body.pending)
+      pending: !!((o && o.pending) || body.pending),
+      raw: (o && typeof o === 'object') ? o : null
     };
   }
 
@@ -192,8 +193,24 @@
       case 'no_token_account':
         return R('No ' + unit + ' in this wallet yet', 'This wallet has no ' + unit + ' account yet. Claim free OST first, then try again.');
       case 'no_sol':
-      case 'insufficient_sol':
-        return R('Not enough SOL', 'This needs devnet SOL in your wallet. Get SOL by cashing out 10 OST → SOL in Convert.');
+      case 'insufficient_sol': {
+        // Say what is there, what is missing, and how to get it (C8: Get SOL =
+        // cash out OST → SOL), with the OST amount that actually covers it.
+        var oo = (x.raw && typeof x.raw === 'object') ? x.raw : {};
+        var haveSol = b.haveSol != null ? Number(b.haveSol) : (b.have != null && (asset === 'SOL' || !asset) ? Number(b.have) : (oo.haveSol != null ? Number(oo.haveSol) : NaN));
+        var needSol = b.needSol != null ? Number(b.needSol) : (oo.needSol != null ? Number(oo.needSol) : NaN);
+        var getOst = 0;
+        try { if (window.OST_GET_SOL && typeof window.OST_GET_SOL.ostForError === 'function') getOst = Number(window.OST_GET_SOL.ostForError(oo && Object.keys(oo).length ? oo : { needSol: needSol, haveSol: haveSol })) || 0; } catch (_) {}
+        if (!(getOst > 0)) getOst = Number(oo.getSolOst || b.getSolOst) || 10;
+        var solTxt = (Number.isFinite(haveSol) ? 'You have ' + fmtNum(haveSol, 6) + ' SOL' + (Number.isFinite(needSol) && needSol > haveSol ? ' and need ' + fmtNum(needSol, 6) + '. ' : '. ') : 'This needs devnet SOL in your wallet. ');
+        return R('Not enough SOL', solTxt + 'Get SOL by cashing out ' + getOst + ' OST → SOL (OST and OSTG sends never need SOL).', {
+          retryable: true,
+          getSolOst: getOst,
+          action: { label: 'Get SOL: cash out ' + getOst + ' OST', run: function () { try { if (window.OST_GET_SOL && typeof window.OST_GET_SOL.open === 'function') window.OST_GET_SOL.open(getOst); } catch (_) {} } }
+        });
+      }
+      case 'too_many_decimals':
+        return R('Too many decimals', unit + ' has 9 decimal places — use at most 9 digits after the point.');
       case 'below_rent_minimum':
         return R('Amount too small for a new Solana account',
           (b.minOst != null
@@ -293,7 +310,7 @@
       case 'verify_unavailable':
         return F('Couldn’t verify right now', 'The ticket couldn’t be checked on chain, so nothing was paid. Try again shortly.');
       case 'server_settled':
-        return R('Already settled', 'The OST server already settled this ticket. Check your play balance.');
+        return R('Settled by the OST server', 'This ticket is paid to your play balance by the OST server, not by a wallet payout. Nothing was sent — check your play balance.');
       case 'ticket_unverified':
         return R('Ticket not verified', 'This ticket doesn’t match a confirmed stake, so nothing was paid.');
       case 'payout_exceeds_ticket':

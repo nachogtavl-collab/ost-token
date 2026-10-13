@@ -145,7 +145,7 @@
       'verify.lead': 'Trust is earned with facts, not promises.',
       'verify.closing': 'Read the code. Check the company. Verify the treasury. <strong>Then decide.</strong>',
       'wallet.title': 'Connect or Create Wallet', 'wallet.sub': 'Choose an existing wallet or generate a local OST wallet in this browser.',
-      'footer.mission': 'Every transaction helps fund satellite infrastructure for universal internet access. <strong>A gift we build together.</strong>',
+      'footer.mission': 'Satellite internet for everyone is an R&amp;D vision &mdash; nothing is built yet and no transaction pays for it. <strong>A gift we build together.</strong>',
       'footer.copy': 'Open source. Built with love for every human on Earth.',
       'hero.free': '&#128176; FREE TO TRY',
       'hero.freetext': 'Devnet test network: OST pays every network fee, so trying it costs you nothing. No real money.',
@@ -160,10 +160,10 @@
       'vision.s1.title': 'Temporary Scaffolding', 'vision.s1.sub': 'Solana + Jupiter + Bridges',
       'vision.s2.title': 'OST Interchange Protocol', 'vision.s2.sub': 'Own matching engine &amp; trading algorithm',
       'vision.s3.title': 'OST Sovereign Network', 'vision.s3.sub': 'Zero third-party dependencies',
-      'vision.p1': '&#128274; ZK Private', 'vision.p2': '&#9889; 0.4s Settlement', 'vision.p3': '&#128176; Zero Fees Forever',
+      'vision.p1': '&#128274; ZK Private', 'vision.p2': '&#9889; 0.4s Settlement', 'vision.p3': '&#128176; OST pays network fees',
       'vision.p4': '&#128295; Own Matching Engine', 'vision.p5': '&#127757; Own DEX &amp; Bridges', 'vision.p6': '&#128752; Satellite Internet',
-      'vision.spacex.title': 'OST &times; SpaceX',
-      'vision.spacex.text': 'Partnering to bring uncensored internet and payments to 2.6 billion people without connectivity via low-earth orbit satellites.',
+      'vision.spacex.title': 'Space vision &middot; R&amp;D',
+      'vision.spacex.text': 'An R&amp;D vision: uncensored internet and payments for the 2.6 billion people offline, via low-earth-orbit satellites. Not a SpaceX partnership &mdash; nothing is funded or launched yet.',
       'vision.spacex.btn': 'Explore the Journey &#8594;',
       'newhere.title': '&#127381; New Here? Start Your OST Journey',
       'newhere.sub': 'Claim a 100 OST head start, create family vault plans, or earn rewards by learning and contributing.',
@@ -297,7 +297,7 @@
       'transmit.file.data': 'Archive payload',
       'sell.title': 'Sell or Trade OST', 'sell.sub': 'Cash out to any crypto or fiat. Same speed, same privacy.',
       'censor.title': '&#128683; Internet Censorship Is Happening Now', 'censor.sub': 'Real events. Real people. OST is the answer to digital oppression.',
-      'spacex.title': 'OST &times; SpaceX &mdash; The Journey to Space', 'spacex.sub': 'Follow our partnership roadmap from Earth to Mars. Every milestone is real, every goal is funded by donations and investors &mdash; never by taxing your transactions.',
+      'spacex.title': 'The Journey to Space &mdash; an OST vision', 'spacex.sub': 'A vision roadmap from Earth to Mars, inspired by SpaceX &mdash; not a partnership. There is no agreement with SpaceX or Starlink, and nothing here is funded or launched yet. OST charges users no transaction fees.',
       'roadmap.title': '&#128640; Roadmap &amp; Progress', 'roadmap.sub': 'Where we are, what we\'ve built, and what comes next.',
       'offline.scenarios': 'Real-World Scenarios', 'offline.scenariosub': 'Verified data from the World Bank, UNHCR, IEA, and EM-DAT. These are not hypotheticals — they happen today.',
       'ai.hook.title': 'Running a Server, Bot, or Localhost?',
@@ -446,7 +446,7 @@
       'verify.lead': 'La confianza se gana con hechos, no con promesas.',
       'verify.closing': 'Lee el codigo. Verifica la empresa. Audita el tesoro. <strong>Luego decide.</strong>',
       'wallet.title': 'Conectar Tu Billetera', 'wallet.sub': 'Elige una billetera para conectar a OST.',
-      'footer.mission': 'Cada transaccion ayuda a financiar infraestructura satelital. <strong>Un regalo que construimos juntos.</strong>',
+      'footer.mission': 'El internet satelital para todos es una visión de I+D: aún no hay nada construido y ninguna transacción lo paga. <strong>Un regalo que construimos juntos.</strong>',
       'footer.copy': 'Codigo abierto. Construido con amor para cada ser humano.',
       'hero.free': '&#128176; GRATIS PARA PROBAR',
       'hero.freetext': 'Red de pruebas devnet: OST paga cada comisión de red, así que probarlo no te cuesta nada. Sin dinero real.',
@@ -463,8 +463,8 @@
       'vision.s3.title': 'Red Soberana OST', 'vision.s3.sub': 'Cero dependencias de terceros',
       'vision.p1': '&#128274; ZK Privado', 'vision.p2': '&#9889; 0.4s Liquidación', 'vision.p3': '&#128176; Cero Comisiones',
       'vision.p4': '&#128295; Motor Propio', 'vision.p5': '&#127757; DEX y Puentes Propios', 'vision.p6': '&#128752; Internet Satelital',
-      'vision.spacex.title': 'OST &times; SpaceX',
-      'vision.spacex.text': 'Alianza para llevar internet y pagos sin censura a 2.6 mil millones de personas sin conectividad mediante satélites de órbita baja.',
+      'vision.spacex.title': 'Visión espacial &middot; I+D',
+      'vision.spacex.text': 'Una visión de I+D: internet y pagos sin censura para los 2.600 millones de personas sin conexión, mediante satélites de órbita baja. No es una alianza con SpaceX &mdash; nada está financiado ni lanzado todavía.',
       'vision.spacex.btn': 'Explorar el Viaje &#8594;',
       'newhere.title': '&#127381; ¿Nuevo Aquí? Comienza Tu Viaje OST',
       'newhere.sub': 'Reclama OST gratis, crea bóvedas familiares o gana recompensas contribuyendo infraestructura.',
@@ -634,7 +634,7 @@
       'transmit.file.data': 'Carga de archivo',
       'sell.title': 'Vender o Intercambiar OST', 'sell.sub': 'Retira a cualquier cripto o fiat. Misma velocidad, misma privacidad.',
       'censor.title': '&#128683; La Censura de Internet Está Ocurriendo Ahora', 'censor.sub': 'Eventos reales. Personas reales. OST es la respuesta a la opresión digital.',
-      'spacex.title': 'OST &times; SpaceX &mdash; El Viaje al Espacio', 'spacex.sub': 'Sigue nuestra hoja de ruta desde la Tierra hasta Marte. Cada hito es real, cada objetivo está financiado por donaciones e inversores.',
+      'spacex.title': 'El Viaje al Espacio &mdash; una visión de OST', 'spacex.sub': 'Una hoja de ruta visionaria de la Tierra a Marte, inspirada en SpaceX &mdash; no es una alianza. No existe ningún acuerdo con SpaceX ni Starlink y nada de esto está financiado ni lanzado todavía.',
       'roadmap.title': '&#128640; Hoja de Ruta y Progreso', 'roadmap.sub': 'Dónde estamos, qué hemos construido y qué sigue.',
       'offline.scenarios': 'Escenarios del Mundo Real', 'offline.scenariosub': 'Datos verificados del Banco Mundial, ACNUR, AIE y EM-DAT. No son hipotéticos — ocurren hoy.',
       'ai.hook.title': '¿Tienes un Servidor, Bot o Localhost?',
@@ -756,7 +756,7 @@
       'verify.lead': '信任靠事实赢得，而非承诺。',
       'verify.closing': '阅读代码。检查公司。验证国库。<strong>然后做决定。</strong>',
       'wallet.title': '连接你的钱包', 'wallet.sub': '选择一个钱包连接到OST。',
-      'footer.mission': '每笔交易都帮助资助卫星基础设施，实现全球互联网接入。<strong>我们共同建设的礼物。</strong>',
+      'footer.mission': '面向所有人的卫星互联网只是研发愿景——目前尚未建成任何东西，也没有任何交易为它付费。<strong>我们共同建设的礼物。</strong>',
       'footer.copy': '开源。为地球上每个人用爱建造。',
       'hero.free': '&#128176; \u514d\u8d39\u8bd5\u7528',
       'hero.freetext': '\u5f00\u53d1\u7f51\u6d4b\u8bd5\u7f51\u7edc\uff1aOST \u652f\u4ed8\u6240\u6709\u7f51\u7edc\u8d39\u7528\uff0c\u8bd5\u7528\u4e0d\u82b1\u4f60\u4e00\u5206\u94b1\u3002\u4e0d\u6d89\u53ca\u771f\u5b9e\u8d44\u91d1\u3002',
@@ -769,10 +769,10 @@
       'vision.s1.title': '\u4e34\u65f6\u652f\u67b6', 'vision.s1.sub': 'Solana + Jupiter + \u8de8\u94fe\u6865',
       'vision.s2.title': 'OST\u4ea4\u6362\u534f\u8bae', 'vision.s2.sub': '\u81ea\u6709\u5339\u914d\u5f15\u64ce\u548c\u4ea4\u6613\u7b97\u6cd5',
       'vision.s3.title': 'OST\u4e3b\u6743\u7f51\u7edc', 'vision.s3.sub': '\u96f6\u7b2c\u4e09\u65b9\u4f9d\u8d56',
-      'vision.p1': '&#128274; ZK\u79c1\u5bc6', 'vision.p2': '&#9889; 0.4\u79d2\u7ed3\u7b97', 'vision.p3': '&#128176; \u6c38\u4e45\u96f6\u8d39\u7528',
+      'vision.p1': '&#128274; ZK\u79c1\u5bc6', 'vision.p2': '&#9889; 0.4\u79d2\u7ed3\u7b97', 'vision.p3': '&#128176; \u7f51\u7edc\u8d39\u7531OST\u652f\u4ed8',
       'vision.p4': '&#128295; \u81ea\u6709\u5339\u914d\u5f15\u64ce', 'vision.p5': '&#127757; \u81ea\u6709DEX\u548c\u6865', 'vision.p6': '&#128752; \u536b\u661f\u4e92\u8054\u7f51',
-      'vision.spacex.title': 'OST &times; SpaceX',
-      'vision.spacex.text': '\u4e0eSpaceX\u5408\u4f5c\uff0c\u901a\u8fc7\u4f4e\u8f68\u536b\u661f\u4e3a26\u4ebf\u65e0\u7f51\u7edc\u4eba\u53e3\u5e26\u6765\u65e0\u5ba1\u67e5\u4e92\u8054\u7f51\u548c\u652f\u4ed8\u3002',
+      'vision.spacex.title': '\u592a\u7a7a\u613f\u666f &middot; \u7814\u53d1\u4e2d',
+      'vision.spacex.text': '\u7814\u53d1\u613f\u666f\uff1a\u901a\u8fc7\u4f4e\u8f68\u536b\u661f\u4e3a26\u4ebf\u65e0\u7f51\u7edc\u4eba\u53e3\u63d0\u4f9b\u65e0\u5ba1\u67e5\u7684\u4e92\u8054\u7f51\u548c\u652f\u4ed8\u3002\u8fd9\u4e0d\u662f\u4e0eSpaceX\u7684\u5408\u4f5c &mdash; \u76ee\u524d\u5c1a\u65e0\u4efb\u4f55\u8d44\u91d1\u6216\u53d1\u5c04\u3002',
       'vision.spacex.btn': '\u63a2\u7d22\u65c5\u7a0b &#8594;',
       'newhere.title': '&#127381; \u65b0\u6765\u7684\uff1f\u5f00\u59cbOST\u4e4b\u65c5',
       'newhere.sub': '\u9886\u53d6\u514d\u8d39OST\uff0c\u521b\u5efa\u5bb6\u5ead\u91d1\u5e93\uff0c\u6216\u901a\u8fc7\u8d21\u732e\u57fa\u7840\u8bbe\u65bd\u83b7\u53d6\u5956\u52b1\u3002',
@@ -785,7 +785,7 @@
       'wallet.getTitle': '\u83b7\u53d6\u4f60\u7684\u4e2a\u4ebaOST\u94b1\u5305', 'wallet.getSub': '\u9009\u62e9\u5982\u4f55\u521b\u5efa\u6216\u8fde\u63a5\u4f60\u7684\u94b1\u5305\u3002Web3Auth\u65e0\u9700\u52a9\u8bb0\u8bcd\u3002',
       'sell.title': '\u51fa\u552e\u6216\u4ea4\u6613OST', 'sell.sub': '\u63d0\u73b0\u5230\u4efb\u4f55\u52a0\u5bc6\u8d27\u5e01\u6216\u6cd5\u5e01\u3002\u540c\u6837\u7684\u901f\u5ea6\uff0c\u540c\u6837\u7684\u9690\u79c1\u3002',
       'censor.title': '&#128683; \u4e92\u8054\u7f51\u5ba1\u67e5\u6b63\u5728\u53d1\u751f', 'censor.sub': '\u771f\u5b9e\u4e8b\u4ef6\u3002\u771f\u5b9e\u7684\u4eba\u3002OST\u662f\u5bf9\u6570\u5b57\u538b\u8feb\u7684\u56de\u7b54\u3002',
-      'spacex.title': 'OST &times; SpaceX &mdash; \u592a\u7a7a\u4e4b\u65c5', 'spacex.sub': '\u8ddf\u968f\u6211\u4eec\u4ece\u5730\u7403\u5230\u706b\u661f\u7684\u5408\u4f5c\u8def\u7ebf\u56fe\u3002\u6bcf\u4e2a\u91cc\u7a0b\u7891\u90fd\u662f\u771f\u5b9e\u7684\uff0c\u6bcf\u4e2a\u76ee\u6807\u90fd\u7531\u6350\u6b3e\u548c\u6295\u8d44\u8005\u8d44\u52a9\u3002',
+      'spacex.title': '\u592a\u7a7a\u4e4b\u65c5 &mdash; OST \u613f\u666f', 'spacex.sub': '\u53d7SpaceX\u542f\u53d1\u3001\u4ece\u5730\u7403\u5230\u706b\u661f\u7684\u613f\u666f\u8def\u7ebf\u56fe &mdash; \u5e76\u975e\u5408\u4f5c\u3002\u6211\u4eec\u4e0eSpaceX\u6216Starlink\u6ca1\u6709\u4efb\u4f55\u534f\u8bae\uff0c\u8fd9\u91cc\u7684\u4e00\u5207\u5c1a\u672a\u83b7\u5f97\u8d44\u91d1\u6216\u53d1\u5c04\u3002',
       'roadmap.title': '&#128640; \u8def\u7ebf\u56fe\u548c\u8fdb\u5c55', 'roadmap.sub': '\u6211\u4eec\u5728\u54ea\u91cc\uff0c\u6211\u4eec\u5efa\u4e86\u4ec0\u4e48\uff0c\u63a5\u4e0b\u6765\u4f1a\u53d1\u751f\u4ec0\u4e48\u3002',
       'offline.scenarios': '\u73b0\u5b9e\u4e16\u754c\u573a\u666f', 'offline.scenariosub': '\u6765\u81ea\u4e16\u754c\u94f6\u884c\u3001UNHCR\u3001IEA\u548cEM-DAT\u7684\u9a8c\u8bc1\u6570\u636e\u3002\u8fd9\u4e0d\u662f\u5047\u8bbe \u2014 \u5b83\u4eec\u4eca\u5929\u5c31\u5728\u53d1\u751f\u3002',
       'ai.hook.title': '\u8fd0\u884c\u670d\u52a1\u5668\u3001\u673a\u5668\u4eba\u6216\u672c\u5730\u4e3b\u673a\uff1f',
@@ -907,7 +907,7 @@
       'verify.lead': 'Доверие завоёвывается фактами, а не обещаниями.',
       'verify.closing': 'Читайте код. Проверяйте компанию. Верифицируйте казну. <strong>Потом решайте.</strong>',
       'wallet.title': 'Подключить Кошелек', 'wallet.sub': 'Выберите кошелёк для подключения к OST.',
-      'footer.mission': 'Каждая транзакция помогает финансировать спутниковую инфраструктуру. <strong>Подарок, который мы строим вместе.</strong>',
+      'footer.mission': 'Спутниковый интернет для всех — пока лишь исследовательская идея: ничего не построено, и ни одна транзакция за него не платит. <strong>Подарок, который мы строим вместе.</strong>',
       'footer.copy': 'Открытый исходный код. Создано с любовью для каждого человека на Земле.',
       'hero.free': '&#128176; \u0411\u0415\u0421\u041f\u041b\u0410\u0422\u041d\u041e \u041f\u041e\u041f\u0420\u041e\u0411\u041e\u0412\u0410\u0422\u042c',
       'hero.freetext': '\u0422\u0435\u0441\u0442\u043e\u0432\u0430\u044f \u0441\u0435\u0442\u044c devnet: OST \u043e\u043f\u043b\u0430\u0447\u0438\u0432\u0430\u0435\u0442 \u0432\u0441\u0435 \u0441\u0435\u0442\u0435\u0432\u044b\u0435 \u043a\u043e\u043c\u0438\u0441\u0441\u0438\u0438, \u043f\u043e\u044d\u0442\u043e\u043c\u0443 \u043f\u0440\u043e\u0431\u043e\u0432\u0430\u0442\u044c \u0431\u0435\u0441\u043f\u043b\u0430\u0442\u043d\u043e. \u0411\u0435\u0437 \u0440\u0435\u0430\u043b\u044c\u043d\u044b\u0445 \u0434\u0435\u043d\u0435\u0433.',
@@ -922,8 +922,8 @@
       'vision.s3.title': '\u0421\u0443\u0432\u0435\u0440\u0435\u043d\u043d\u0430\u044f \u0441\u0435\u0442\u044c OST', 'vision.s3.sub': '\u041d\u0443\u043b\u0435\u0432\u044b\u0435 \u0437\u0430\u0432\u0438\u0441\u0438\u043c\u043e\u0441\u0442\u0438',
       'vision.p1': '&#128274; ZK \u041f\u0440\u0438\u0432\u0430\u0442\u043d\u043e\u0441\u0442\u044c', 'vision.p2': '&#9889; 0.4\u0441 \u0420\u0430\u0441\u0447\u0451\u0442', 'vision.p3': '&#128176; \u041d\u0443\u043b\u0435\u0432\u044b\u0435 \u043a\u043e\u043c\u0438\u0441\u0441\u0438\u0438',
       'vision.p4': '&#128295; \u0421\u043e\u0431\u0441\u0442\u0432\u0435\u043d\u043d\u044b\u0439 \u0434\u0432\u0438\u0436\u043e\u043a', 'vision.p5': '&#127757; \u0421\u043e\u0431\u0441\u0442\u0432\u0435\u043d\u043d\u044b\u0439 DEX', 'vision.p6': '&#128752; \u0421\u043f\u0443\u0442\u043d\u0438\u043a\u043e\u0432\u044b\u0439 \u0438\u043d\u0442\u0435\u0440\u043d\u0435\u0442',
-      'vision.spacex.title': 'OST &times; SpaceX',
-      'vision.spacex.text': '\u041f\u0430\u0440\u0442\u043d\u0451\u0440\u0441\u0442\u0432\u043e \u0434\u043b\u044f \u043f\u0440\u0435\u0434\u043e\u0441\u0442\u0430\u0432\u043b\u0435\u043d\u0438\u044f \u0441\u0432\u043e\u0431\u043e\u0434\u043d\u043e\u0433\u043e \u0438\u043d\u0442\u0435\u0440\u043d\u0435\u0442\u0430 2.6 \u043c\u043b\u0440\u0434 \u043b\u044e\u0434\u0435\u0439 \u0447\u0435\u0440\u0435\u0437 \u0441\u043f\u0443\u0442\u043d\u0438\u043a\u0438.',
+      'vision.spacex.title': '\u041a\u043e\u0441\u043c\u0438\u0447\u0435\u0441\u043a\u043e\u0435 \u0432\u0438\u0434\u0435\u043d\u0438\u0435 &middot; R&amp;D',
+      'vision.spacex.text': '\u0418\u0441\u0441\u043b\u0435\u0434\u043e\u0432\u0430\u0442\u0435\u043b\u044c\u0441\u043a\u0430\u044f \u0438\u0434\u0435\u044f: \u0441\u0432\u043e\u0431\u043e\u0434\u043d\u044b\u0439 \u0438\u043d\u0442\u0435\u0440\u043d\u0435\u0442 \u0438 \u043f\u043b\u0430\u0442\u0435\u0436\u0438 \u0434\u043b\u044f 2,6 \u043c\u043b\u0440\u0434 \u043b\u044e\u0434\u0435\u0439 \u0431\u0435\u0437 \u0441\u0432\u044f\u0437\u0438 \u0447\u0435\u0440\u0435\u0437 \u043d\u0438\u0437\u043a\u043e\u043e\u0440\u0431\u0438\u0442\u0430\u043b\u044c\u043d\u044b\u0435 \u0441\u043f\u0443\u0442\u043d\u0438\u043a\u0438. \u042d\u0442\u043e \u043d\u0435 \u043f\u0430\u0440\u0442\u043d\u0451\u0440\u0441\u0442\u0432\u043e \u0441\u043e SpaceX &mdash; \u043d\u0438\u0447\u0435\u0433\u043e \u043f\u043e\u043a\u0430 \u043d\u0435 \u043f\u0440\u043e\u0444\u0438\u043d\u0430\u043d\u0441\u0438\u0440\u043e\u0432\u0430\u043d\u043e \u0438 \u043d\u0435 \u0437\u0430\u043f\u0443\u0449\u0435\u043d\u043e.',
       'vision.spacex.btn': '\u0418\u0441\u0441\u043b\u0435\u0434\u043e\u0432\u0430\u0442\u044c &#8594;',
       'newhere.title': '&#127381; \u041d\u043e\u0432\u0438\u0447\u043e\u043a? \u041d\u0430\u0447\u043d\u0438 \u043f\u0443\u0442\u044c OST',
       'newhere.sub': '\u041f\u043e\u043b\u0443\u0447\u0438 \u0431\u0435\u0441\u043f\u043b\u0430\u0442\u043d\u044b\u0435 OST, \u0441\u043e\u0437\u0434\u0430\u0439 \u0441\u0435\u043c\u0435\u0439\u043d\u044b\u0435 \u0445\u0440\u0430\u043d\u0438\u043b\u0438\u0449\u0430 \u0438\u043b\u0438 \u043f\u043e\u043b\u0443\u0447\u0430\u0439 \u043d\u0430\u0433\u0440\u0430\u0434\u044b \u0437\u0430 \u0438\u043d\u0444\u0440\u0430\u0441\u0442\u0440\u0443\u043a\u0442\u0443\u0440\u0443.',
@@ -936,7 +936,7 @@
       'wallet.getTitle': '\u041f\u043e\u043b\u0443\u0447\u0438\u0442\u0435 \u0441\u0432\u043e\u0439 \u043a\u043e\u0448\u0435\u043b\u0451\u043a OST', 'wallet.getSub': '\u0412\u044b\u0431\u0435\u0440\u0438\u0442\u0435 \u0441\u043f\u043e\u0441\u043e\u0431 \u0441\u043e\u0437\u0434\u0430\u043d\u0438\u044f \u043a\u043e\u0448\u0435\u043b\u044c\u043a\u0430. \u0421\u0435\u043c\u0435\u043d\u043d\u0430\u044f \u0444\u0440\u0430\u0437\u0430 \u043d\u0435 \u043d\u0443\u0436\u043d\u0430 c Web3Auth.',
       'sell.title': '\u041f\u0440\u043e\u0434\u0430\u0442\u044c \u0438\u043b\u0438 \u043e\u0431\u043c\u0435\u043d\u044f\u0442\u044c OST', 'sell.sub': '\u0412\u044b\u0432\u043e\u0434 \u0432 \u043b\u044e\u0431\u0443\u044e \u043a\u0440\u0438\u043f\u0442\u043e \u0438\u043b\u0438 \u0444\u0438\u0430\u0442. \u0422\u0430 \u0436\u0435 \u0441\u043a\u043e\u0440\u043e\u0441\u0442\u044c, \u0442\u0430 \u0436\u0435 \u043f\u0440\u0438\u0432\u0430\u0442\u043d\u043e\u0441\u0442\u044c.',
       'censor.title': '&#128683; \u0418\u043d\u0442\u0435\u0440\u043d\u0435\u0442-\u0446\u0435\u043d\u0437\u0443\u0440\u0430 \u043f\u0440\u043e\u0438\u0441\u0445\u043e\u0434\u0438\u0442 \u0441\u0435\u0439\u0447\u0430\u0441', 'censor.sub': '\u0420\u0435\u0430\u043b\u044c\u043d\u044b\u0435 \u0441\u043e\u0431\u044b\u0442\u0438\u044f. \u0420\u0435\u0430\u043b\u044c\u043d\u044b\u0435 \u043b\u044e\u0434\u0438. OST &mdash; \u043e\u0442\u0432\u0435\u0442 \u043d\u0430 \u0446\u0438\u0444\u0440\u043e\u0432\u043e\u0435 \u0443\u0433\u043d\u0435\u0442\u0435\u043d\u0438\u0435.',
-      'spacex.title': 'OST &times; SpaceX &mdash; \u041f\u0443\u0442\u0435\u0448\u0435\u0441\u0442\u0432\u0438\u0435 \u0432 \u043a\u043e\u0441\u043c\u043e\u0441', 'spacex.sub': '\u0421\u043b\u0435\u0434\u0438\u0442\u0435 \u0437\u0430 \u043d\u0430\u0448\u0438\u043c \u043f\u0443\u0442\u0451\u043c \u043e\u0442 \u0417\u0435\u043c\u043b\u0438 \u0434\u043e \u041c\u0430\u0440\u0441\u0430. \u041a\u0430\u0436\u0434\u044b\u0439 \u044d\u0442\u0430\u043f \u0440\u0435\u0430\u043b\u0435\u043d.',
+      'spacex.title': '\u041f\u0443\u0442\u0435\u0448\u0435\u0441\u0442\u0432\u0438\u0435 \u0432 \u043a\u043e\u0441\u043c\u043e\u0441 &mdash; \u0432\u0438\u0434\u0435\u043d\u0438\u0435 OST', 'spacex.sub': '\u0414\u043e\u0440\u043e\u0436\u043d\u0430\u044f \u043a\u0430\u0440\u0442\u0430-\u0432\u0438\u0434\u0435\u043d\u0438\u0435 \u043e\u0442 \u0417\u0435\u043c\u043b\u0438 \u0434\u043e \u041c\u0430\u0440\u0441\u0430, \u0432\u0434\u043e\u0445\u043d\u043e\u0432\u043b\u0451\u043d\u043d\u0430\u044f SpaceX, &mdash; \u043d\u0435 \u043f\u0430\u0440\u0442\u043d\u0451\u0440\u0441\u0442\u0432\u043e. \u0421\u043e\u0433\u043b\u0430\u0448\u0435\u043d\u0438\u0439 \u0441\u043e SpaceX \u0438\u043b\u0438 Starlink \u043d\u0435\u0442, \u043d\u0438\u0447\u0435\u0433\u043e \u043f\u043e\u043a\u0430 \u043d\u0435 \u043f\u0440\u043e\u0444\u0438\u043d\u0430\u043d\u0441\u0438\u0440\u043e\u0432\u0430\u043d\u043e \u0438 \u043d\u0435 \u0437\u0430\u043f\u0443\u0449\u0435\u043d\u043e.',
       'roadmap.title': '&#128640; \u0414\u043e\u0440\u043e\u0436\u043d\u0430\u044f \u043a\u0430\u0440\u0442\u0430', 'roadmap.sub': '\u0413\u0434\u0435 \u043c\u044b \u0441\u0435\u0439\u0447\u0430\u0441, \u0447\u0442\u043e \u043c\u044b \u043f\u043e\u0441\u0442\u0440\u043e\u0438\u043b\u0438 \u0438 \u0447\u0442\u043e \u0434\u0430\u043b\u044c\u0448\u0435.',
       'offline.scenarios': '\u0420\u0435\u0430\u043b\u044c\u043d\u044b\u0435 \u0441\u0446\u0435\u043d\u0430\u0440\u0438\u0438', 'offline.scenariosub': '\u041f\u0440\u043e\u0432\u0435\u0440\u0435\u043d\u043d\u044b\u0435 \u0434\u0430\u043d\u043d\u044b\u0435 \u0412\u0441\u0435\u043c\u0438\u0440\u043d\u043e\u0433\u043e \u0431\u0430\u043d\u043a\u0430, \u041e\u041e\u041d \u0438 EM-DAT. \u042d\u0442\u043e \u043d\u0435 \u0433\u0438\u043f\u043e\u0442\u0435\u0437\u044b.',
       'ai.hook.title': '\u0415\u0441\u0442\u044c \u0441\u0435\u0440\u0432\u0435\u0440, \u0431\u043e\u0442 \u0438\u043b\u0438 localhost?',
@@ -1058,7 +1058,7 @@
       'verify.lead': 'विश्वास तथ्यों से अर्जित होता है, वादों से नहीं।',
       'verify.closing': 'कोड पढ़ें। कंपनी जांचें। खजाना सत्यापित करें। <strong>फिर तय करें।</strong>',
       'wallet.title': 'अपना वॉलेट कनेक्ट करें', 'wallet.sub': 'OST से जुड़ने के लिए एक वॉलेट चुनें।',
-      'footer.mission': 'हर लेनदेन सार्वभौमिक इंटरनेट के लिए उपग्रह बुनियादी ढांचे को निधि देने में मदद करता है। <strong>एक उपहार जो हम साथ मिलकर बनाते हैं।</strong>',
+      'footer.mission': 'सबके लिए उपग्रह इंटरनेट अभी केवल एक R&amp;D विज़न है — अभी कुछ भी नहीं बना है और कोई भी लेनदेन इसके लिए भुगतान नहीं करता। <strong>एक उपहार जो हम साथ मिलकर बनाते हैं।</strong>',
       'footer.copy': 'ओपन सोर्स। पृथ्वी पर हर इंसान के लिए प्यार से बनाया गया।',
       'hero.free': '&#128176; आज़माने के लिए मुफ़्त',
       'hero.freetext': 'डेवनेट टेस्ट नेटवर्क: हर नेटवर्क शुल्क OST चुकाता है, इसलिए आज़माने में आपका कुछ खर्च नहीं होता। कोई असली पैसा नहीं।',
@@ -1071,10 +1071,10 @@
       'vision.s1.title': 'अस्थायी मचान', 'vision.s1.sub': 'Solana + Jupiter + ब्रिज',
       'vision.s2.title': 'OST इंटरचेंज प्रोटोकॉल', 'vision.s2.sub': 'अपना मैचिंग इंजन',
       'vision.s3.title': 'OST सॉवरेन नेटवर्क', 'vision.s3.sub': 'शून्य तृतीय-पक्ष निर्भरता',
-      'vision.p1': '&#128274; ZK गोपनीय', 'vision.p2': '&#9889; 0.4s निपटान', 'vision.p3': '&#128176; शून्य शुल्क सदैव',
+      'vision.p1': '&#128274; ZK गोपनीय', 'vision.p2': '&#9889; 0.4s निपटान', 'vision.p3': '&#128176; नेटवर्क शुल्क OST देता है',
       'vision.p4': '&#128295; अपना इंजन', 'vision.p5': '&#127757; अपना DEX', 'vision.p6': '&#128752; उपग्रह इंटरनेट',
-      'vision.spacex.title': 'OST &times; SpaceX',
-      'vision.spacex.text': 'कम कक्षा उपग्रहों के माध्यम से 2.6 अरब लोगों तक बिना सेंसर इंटरनेट और भुगतान पहुंचाने के लिए साझेदारी।',
+      'vision.spacex.title': 'अंतरिक्ष विज़न &middot; R&amp;D',
+      'vision.spacex.text': 'R&amp;D विज़न: कम कक्षा उपग्रहों के माध्यम से 2.6 अरब ऑफ़लाइन लोगों तक बिना सेंसर इंटरनेट और भुगतान। यह SpaceX के साथ साझेदारी नहीं है &mdash; अभी कुछ भी वित्तपोषित या लॉन्च नहीं हुआ है।',
       'vision.spacex.btn': 'यात्रा देखें &#8594;',
       'newhere.title': '&#127381; नए हैं? अपनी OST यात्रा शुरू करें',
       'newhere.sub': 'मुफ्त OST प्राप्त करें, पारिवारिक वॉल्ट बनाएं, या बुनियादी ढांचे में योगदान देकर पुरस्कार अर्जित करें।',
@@ -1087,7 +1087,7 @@
       'wallet.getTitle': 'अपना व्यक्तिगत OST वॉलेट प्राप्त करें', 'wallet.getSub': 'अपना वॉलेट बनाने या कनेक्ट करने का तरीका चुनें।',
       'sell.title': 'OST बेचें या व्यापार करें', 'sell.sub': 'किसी भी क्रिप्टो या फिएट में निकासी। समान गति, समान गोपनीयता।',
       'censor.title': '&#128683; इंटरनेट सेंसरशिप अभी हो रही है', 'censor.sub': 'वास्तविक घटनाएं। वास्तविक लोग। OST डिजिटल उत्पीड़न का उत्तर है।',
-      'spacex.title': 'OST &times; SpaceX &mdash; अंतरिक्ष की यात्रा', 'spacex.sub': 'पृथ्वी से मंगल तक हमारी साझेदारी रोडमैप का अनुसरण करें।',
+      'spacex.title': 'अंतरिक्ष की यात्रा &mdash; OST का विज़न', 'spacex.sub': 'पृथ्वी से मंगल तक का विज़न रोडमैप, SpaceX से प्रेरित &mdash; साझेदारी नहीं। SpaceX या Starlink के साथ कोई समझौता नहीं है और अभी कुछ भी वित्तपोषित या लॉन्च नहीं हुआ है।',
       'roadmap.title': '&#128640; रोडमैप और प्रगति', 'roadmap.sub': 'हम कहां हैं, क्या बनाया है, और आगे क्या है।',
       'offline.scenarios': 'वास्तविक दुनिया के परिदृश्य', 'offline.scenariosub': 'विश्व बैंक, UNHCR और EM-DAT से सत्यापित डेटा। ये काल्पनिक नहीं हैं।',
       'ai.hook.title': 'सर्वर, बॉट या लोकलहोस्ट चला रहे हैं?',
@@ -1209,7 +1209,7 @@
       'verify.lead': 'الثقة تُكتسب بالحقائق لا بالوعود.',
       'verify.closing': 'اقرأ الكود. تحقق من الشركة. دقق في الخزينة. <strong>ثم قرر.</strong>',
       'wallet.title': 'ربط محفظتك', 'wallet.sub': 'اختر محفظة للاتصال بـ OST.',
-      'footer.mission': 'كل معاملة تساعد في تمويل البنية التحتية للأقمار الصناعية. <strong>هدية نبنيها معاً.</strong>',
+      'footer.mission': 'الإنترنت عبر الأقمار الصناعية للجميع مجرد رؤية بحثية — لم يُبنَ شيء بعد ولا تدفع أي معاملة مقابله. <strong>هدية نبنيها معاً.</strong>',
       'footer.copy': 'مفتوح المصدر. مبني بحب لكل إنسان على الأرض.',
       'hero.free': '&#128176; مجاني للتجربة',
       'hero.freetext': 'شبكة اختبار devnet: يدفع OST كل رسوم الشبكة، لذا فالتجربة لا تكلفك شيئًا. لا أموال حقيقية.',
@@ -1224,8 +1224,8 @@
       'vision.s3.title': 'شبكة OST السيادية', 'vision.s3.sub': 'صفر تبعيات لطرف ثالث',
       'vision.p1': '&#128274; خصوصية ZK', 'vision.p2': '&#9889; تسوية 0.4ث', 'vision.p3': '&#128176; صفر رسوم',
       'vision.p4': '&#128295; محرك خاص', 'vision.p5': '&#127757; DEX خاص', 'vision.p6': '&#128752; إنترنت فضائي',
-      'vision.spacex.title': 'OST &times; SpaceX',
-      'vision.spacex.text': 'شراكة لتوفير إنترنت ومدفوعات بدون رقابة لـ2.6 مليار شخص عبر أقمار صناعية منخفضة المدار.',
+      'vision.spacex.title': 'رؤية الفضاء &middot; بحث وتطوير',
+      'vision.spacex.text': 'رؤية بحث وتطوير: إنترنت ومدفوعات بلا رقابة لـ2.6 مليار شخص غير متصل عبر أقمار صناعية منخفضة المدار. ليست شراكة مع SpaceX &mdash; لم يُموَّل أو يُطلق أي شيء بعد.',
       'vision.spacex.btn': 'استكشف الرحلة &#8594;',
       'newhere.title': '&#127381; جديد هنا؟ ابدأ رحلة OST',
       'newhere.sub': 'احصل على OST مجاني، أنشئ خزائن عائلية، أو اكسب مكافآت بالمساهمة في البنية التحتية.',
@@ -1238,7 +1238,7 @@
       'wallet.getTitle': 'احصل على محفظة OST الخاصة بك', 'wallet.getSub': 'اختر طريقة إنشاء أو ربط محفظتك.',
       'sell.title': 'بيع أو تداول OST', 'sell.sub': 'سحب إلى أي عملة رقمية أو ورقية. نفس السرعة والخصوصية.',
       'censor.title': '&#128683; رقابة الإنترنت تحدث الآن', 'censor.sub': 'أحداث حقيقية. أشخاص حقيقيون. OST هو الجواب.',
-      'spacex.title': 'OST &times; SpaceX &mdash; الرحلة إلى الفضاء', 'spacex.sub': 'تابع خارطة طريق شراكتنا من الأرض إلى المريخ.',
+      'spacex.title': 'الرحلة إلى الفضاء &mdash; رؤية OST', 'spacex.sub': 'خارطة طريق رؤيوية من الأرض إلى المريخ مستوحاة من SpaceX &mdash; وليست شراكة. لا يوجد أي اتفاق مع SpaceX أو Starlink، ولم يُموَّل أو يُطلق أي شيء بعد.',
       'roadmap.title': '&#128640; خارطة الطريق والتقدم', 'roadmap.sub': 'أين نحن، ماذا بنينا، وما التالي.',
       'offline.scenarios': 'سيناريوهات العالم الحقيقي', 'offline.scenariosub': 'بيانات موثقة من البنك الدولي وUNHCR. ليست افتراضية.',
       'ai.hook.title': 'تشغل خادمًا أو بوت أو localhost؟',
@@ -1360,7 +1360,7 @@
       'verify.lead': 'Confianca se conquista com fatos, nao promessas.',
       'verify.closing': 'Leia o codigo. Verifique a empresa. Audite o tesouro. <strong>Depois decida.</strong>',
       'wallet.title': 'Conectar Sua Carteira', 'wallet.sub': 'Escolha uma carteira para conectar ao OST.',
-      'footer.mission': 'Cada transacao ajuda a financiar infraestrutura de satelites. <strong>Um presente que construimos juntos.</strong>',
+      'footer.mission': 'A internet via satélite para todos é uma visão de P&amp;D: nada foi construído ainda e nenhuma transação paga por ela. <strong>Um presente que construímos juntos.</strong>',
       'footer.copy': 'Codigo aberto. Construido com amor para cada ser humano na Terra.',
       'hero.free': '&#128176; GRÁTIS PARA EXPERIMENTAR',
       'hero.freetext': 'Rede de teste devnet: o OST paga todas as taxas de rede, então experimentar não custa nada. Sem dinheiro real.',
@@ -1375,8 +1375,8 @@
       'vision.s3.title': 'Rede Soberana OST', 'vision.s3.sub': 'Zero dependências de terceiros',
       'vision.p1': '&#128274; ZK Privado', 'vision.p2': '&#9889; 0.4s Liquidação', 'vision.p3': '&#128176; Zero Taxas',
       'vision.p4': '&#128295; Motor Próprio', 'vision.p5': '&#127757; DEX e Pontes Próprias', 'vision.p6': '&#128752; Internet via Satélite',
-      'vision.spacex.title': 'OST &times; SpaceX',
-      'vision.spacex.text': 'Parceria para levar internet e pagamentos sem censura a 2,6 bilhões de pessoas via satélites de órbita baixa.',
+      'vision.spacex.title': 'Visão espacial &middot; P&amp;D',
+      'vision.spacex.text': 'Uma visão de P&amp;D: internet e pagamentos sem censura para 2,6 bilhões de pessoas sem conexão, via satélites de órbita baixa. Não é uma parceria com a SpaceX &mdash; nada foi financiado ou lançado ainda.',
       'vision.spacex.btn': 'Explorar a Jornada &#8594;',
       'newhere.title': '&#127381; Novo Aqui? Comece Sua Jornada OST',
       'newhere.sub': 'Resgate OST grátis, crie cofres familiares ou ganhe recompensas contribuindo com infraestrutura.',
@@ -1389,7 +1389,7 @@
       'wallet.getTitle': 'Obtenha Sua Carteira OST Pessoal', 'wallet.getSub': 'Escolha como criar ou conectar sua carteira.',
       'sell.title': 'Vender ou Trocar OST', 'sell.sub': 'Saque para qualquer cripto ou fiat. Mesma velocidade, mesma privacidade.',
       'censor.title': '&#128683; A Censura na Internet Está Acontecendo Agora', 'censor.sub': 'Eventos reais. Pessoas reais. OST é a resposta à opressão digital.',
-      'spacex.title': 'OST &times; SpaceX &mdash; A Jornada ao Espaço', 'spacex.sub': 'Acompanhe nosso roteiro da Terra a Marte.',
+      'spacex.title': 'A Jornada ao Espaço &mdash; uma visão da OST', 'spacex.sub': 'Um roteiro de visão da Terra a Marte, inspirado na SpaceX &mdash; não é uma parceria. Não existe acordo com a SpaceX ou a Starlink e nada aqui foi financiado ou lançado ainda.',
       'roadmap.title': '&#128640; Roteiro e Progresso', 'roadmap.sub': 'Onde estamos, o que construímos e o que vem a seguir.',
       'offline.scenarios': 'Cenários do Mundo Real', 'offline.scenariosub': 'Dados verificados do Banco Mundial, ACNUR e EM-DAT. Não são hipóteses.',
       'ai.hook.title': 'Rodando um Servidor, Bot ou Localhost?',
@@ -1511,7 +1511,7 @@
       'verify.lead': 'La confiance se gagne avec des faits, pas des promesses.',
       'verify.closing': 'Lisez le code. Verifiez l\'entreprise. Auditez le tresor. <strong>Puis decidez.</strong>',
       'wallet.title': 'Connecter Votre Portefeuille', 'wallet.sub': 'Choisissez un portefeuille pour vous connecter a OST.',
-      'footer.mission': 'Chaque transaction aide a financer l\'infrastructure satellite. <strong>Un cadeau que nous construisons ensemble.</strong>',
+      'footer.mission': 'L\'internet par satellite pour tous est une vision de R&amp;D : rien n\'est encore construit et aucune transaction ne le paie. <strong>Un cadeau que nous construisons ensemble.</strong>',
       'footer.copy': 'Open source. Construit avec amour pour chaque habitant de la Terre.',
       'hero.free': '&#128176; GRATUIT À ESSAYER',
       'hero.freetext': 'Réseau de test devnet : OST paie tous les frais de réseau, donc essayer ne vous coûte rien. Pas d\'argent réel.',
@@ -1526,8 +1526,8 @@
       'vision.s3.title': 'Réseau Souverain OST', 'vision.s3.sub': 'Zéro dépendances tierces',
       'vision.p1': '&#128274; ZK Privé', 'vision.p2': '&#9889; 0,4s Règlement', 'vision.p3': '&#128176; Zéro Frais',
       'vision.p4': '&#128295; Moteur Propre', 'vision.p5': '&#127757; DEX et Ponts Propres', 'vision.p6': '&#128752; Internet par Satellite',
-      'vision.spacex.title': 'OST &times; SpaceX',
-      'vision.spacex.text': 'Partenariat pour apporter internet et paiements sans censure à 2,6 milliards de personnes via des satellites en orbite basse.',
+      'vision.spacex.title': 'Vision spatiale &middot; R&amp;D',
+      'vision.spacex.text': 'Une vision R&amp;D : internet et paiements sans censure pour les 2,6 milliards de personnes hors ligne, via des satellites en orbite basse. Ce n\'est pas un partenariat avec SpaceX &mdash; rien n\'est financé ni lancé pour l\'instant.',
       'vision.spacex.btn': 'Explorer le Voyage &#8594;',
       'newhere.title': '&#127381; Nouveau Ici ? Commencez Votre Voyage OST',
       'newhere.sub': 'Réclamez des OST gratuits, créez des coffres familiaux ou gagnez des récompenses en contribuant à l\'infrastructure.',
@@ -1540,7 +1540,7 @@
       'wallet.getTitle': 'Obtenez Votre Portefeuille OST', 'wallet.getSub': 'Choisissez comment créer ou connecter votre portefeuille.',
       'sell.title': 'Vendre ou Échanger OST', 'sell.sub': 'Retrait vers n\'importe quelle crypto ou fiat. Même vitesse, même confidentialité.',
       'censor.title': '&#128683; La Censure d\'Internet Se Produit Maintenant', 'censor.sub': 'Événements réels. Personnes réelles. OST est la réponse.',
-      'spacex.title': 'OST &times; SpaceX &mdash; Le Voyage dans l\'Espace', 'spacex.sub': 'Suivez notre feuille de route de la Terre à Mars.',
+      'spacex.title': 'Le Voyage dans l\'Espace &mdash; une vision d\'OST', 'spacex.sub': 'Une feuille de route visionnaire de la Terre à Mars, inspirée par SpaceX &mdash; pas un partenariat. Aucun accord avec SpaceX ou Starlink n\'existe et rien ici n\'est encore financé ni lancé.',
       'roadmap.title': '&#128640; Feuille de Route et Progrès', 'roadmap.sub': 'Où nous en sommes, ce que nous avons construit et la suite.',
       'offline.scenarios': 'Scénarios du Monde Réel', 'offline.scenariosub': 'Données vérifiées de la Banque Mondiale, du HCR et d\'EM-DAT.',
       'ai.hook.title': 'Vous avez un Serveur, Bot ou Localhost ?',
@@ -1662,7 +1662,7 @@
       'verify.lead': '信頼は事実で獲得するもので、約束ではありません。',
       'verify.closing': 'コードを読む。会社を確認する。トレジャリーを検証する。<strong>それから判断してください。</strong>',
       'wallet.title': 'ウォレットを接続', 'wallet.sub': 'OSTに接続するウォレットを選択してください。',
-      'footer.mission': 'すべての取引が衛星インフラの資金調達を支援します。<strong>共に築く贈り物。</strong>',
+      'footer.mission': 'すべての人のための衛星インターネットは研究開発のビジョンです。まだ何も構築されておらず、どの取引もその費用を払っていません。<strong>共に築く贈り物。</strong>',
       'footer.copy': 'オープンソース。地球のすべての人々のために愛を込めて作りました。',
       'hero.free': '&#128176; 無料でお試し',
       'hero.freetext': 'devnet テストネットワーク：ネットワーク手数料はすべて OST が支払うので、試すのに費用はかかりません。実際のお金は使いません。',
@@ -1675,10 +1675,10 @@
       'vision.s1.title': '一時的な足場', 'vision.s1.sub': 'Solana + Jupiter + ブリッジ',
       'vision.s2.title': 'OSTインターチェンジ', 'vision.s2.sub': '独自のマッチングエンジン',
       'vision.s3.title': 'OSTソブリンネットワーク', 'vision.s3.sub': 'サードパーティ依存ゼロ',
-      'vision.p1': '&#128274; ZKプライベート', 'vision.p2': '&#9889; 0.4秒決済', 'vision.p3': '&#128176; 永久手数料ゼロ',
+      'vision.p1': '&#128274; ZKプライベート', 'vision.p2': '&#9889; 0.4秒決済', 'vision.p3': '&#128176; ネットワーク手数料はOSTが負担',
       'vision.p4': '&#128295; 独自エンジン', 'vision.p5': '&#127757; 独自DEXとブリッジ', 'vision.p6': '&#128752; 衛星インターネット',
-      'vision.spacex.title': 'OST &times; SpaceX',
-      'vision.spacex.text': '低軌道衛星を通じて26億人に検閲なしのインターネットと決済を提供するパートナーシップ。',
+      'vision.spacex.title': '宇宙ビジョン &middot; 研究開発中',
+      'vision.spacex.text': '研究開発中のビジョン：低軌道衛星で、オフラインの26億人に検閲のないインターネットと決済を。SpaceXとの提携ではなく、資金調達も打ち上げもまだありません。',
       'vision.spacex.btn': 'ジャーニーを探索 &#8594;',
       'newhere.title': '&#127381; 初めてですか？OSTの旅を始めましょう',
       'newhere.sub': '無料OSTを請求し、ファミリーボールトを作成し、インフラ貢献で報酬を獲得しましょう。',
@@ -1691,7 +1691,7 @@
       'wallet.getTitle': 'あなたのOSTウォレットを取得', 'wallet.getSub': 'ウォレットの作成または接続方法を選択してください。',
       'sell.title': 'OSTの売却・取引', 'sell.sub': '任意の暗号通貨またはフィアットに引き出し。同じ速度、同じプライバシー。',
       'censor.title': '&#128683; インターネット検閲が今起きている', 'censor.sub': '実際の出来事。実際の人々。OSTはデジタル弾圧への答え。',
-      'spacex.title': 'OST &times; SpaceX &mdash; 宇宙への旅', 'spacex.sub': '地球から火星までのパートナーシップロードマップをフォロー。',
+      'spacex.title': '宇宙への旅 &mdash; OSTのビジョン', 'spacex.sub': 'SpaceXに触発された、地球から火星へのビジョンロードマップ &mdash; 提携ではありません。SpaceXやStarlinkとの契約はなく、資金調達も打ち上げもまだありません。',
       'roadmap.title': '&#128640; ロードマップと進捗', 'roadmap.sub': '現在地、構築したもの、次のステップ。',
       'offline.scenarios': '実世界のシナリオ', 'offline.scenariosub': '世界銀行、UNHCR、EM-DATの検証済みデータ。仮説ではありません。',
       'ai.hook.title': 'サーバー、ボット、ロカホストを運用中？',
@@ -1813,7 +1813,7 @@
       'verify.lead': '신뢰는 약속이 아닌 사실로 얻는 것입니다.',
       'verify.closing': '코드를 읽으세요. 회사를 확인하세요. 재무를 검증하세요. <strong>그런 다음 결정하세요.</strong>',
       'wallet.title': '지갑 연결하기', 'wallet.sub': 'OST에 연결할 지갑을 선택하세요.',
-      'footer.mission': '모든 거래가 위성 인프라 자금 조달을 돕습니다. <strong>함께 만드는 선물.</strong>',
+      'footer.mission': '모두를 위한 위성 인터넷은 연구개발 비전일 뿐입니다. 아직 아무것도 만들어지지 않았고 어떤 거래도 그 비용을 내지 않습니다. <strong>함께 만드는 선물.</strong>',
       'footer.copy': '오픈 소스. 지구의 모든 사람을 위해 사랑으로 만들었습니다.',
       'hero.free': '&#128176; 무료 체험',
       'hero.freetext': 'devnet 테스트 네트워크: 모든 네트워크 수수료를 OST가 부담하므로 체험 비용이 없습니다. 실제 돈은 사용되지 않습니다.',
@@ -1826,10 +1826,10 @@
       'vision.s1.title': '임시 기반', 'vision.s1.sub': 'Solana + Jupiter + 브리지',
       'vision.s2.title': 'OST 교환 프로토콜', 'vision.s2.sub': '자체 매칭 엔진',
       'vision.s3.title': 'OST 주권 네트워크', 'vision.s3.sub': '서드파티 의존성 제로',
-      'vision.p1': '&#128274; ZK 프라이버시', 'vision.p2': '&#9889; 0.4초 결제', 'vision.p3': '&#128176; 수수료 영원히 제로',
+      'vision.p1': '&#128274; ZK 프라이버시', 'vision.p2': '&#9889; 0.4초 결제', 'vision.p3': '&#128176; 네트워크 수수료는 OST가 부담',
       'vision.p4': '&#128295; 자체 엔진', 'vision.p5': '&#127757; 자체 DEX와 브리지', 'vision.p6': '&#128752; 위성 인터넷',
-      'vision.spacex.title': 'OST &times; SpaceX',
-      'vision.spacex.text': '저궤도 위성을 통해 26억 인구에게 무검열 인터넷과 결제를 제공하기 위한 파트너십.',
+      'vision.spacex.title': '우주 비전 &middot; 연구개발',
+      'vision.spacex.text': '연구개발 비전: 저궤도 위성으로 오프라인 26억 인구에게 무검열 인터넷과 결제를. SpaceX와의 파트너십이 아니며, 아직 자금 조달이나 발사는 없습니다.',
       'vision.spacex.btn': '여정 탐험 &#8594;',
       'newhere.title': '&#127381; 처음이신가요? OST 여정을 시작하세요',
       'newhere.sub': '무료 OST를 받고, 가족 볼트를 만들고, 인프라 기여로 보상을 받으세요.',
@@ -1842,7 +1842,7 @@
       'wallet.getTitle': '개인 OST 지갑 받기', 'wallet.getSub': '지갑을 만들거나 연결하는 방법을 선택하세요.',
       'sell.title': 'OST 판매 또는 거래', 'sell.sub': '모든 암호화폐 또는 법정화폐로 출금. 같은 속도, 같은 프라이버시.',
       'censor.title': '&#128683; 인터넷 검열이 지금 일어나고 있습니다', 'censor.sub': '실제 사건. 실제 사람들. OST는 디지털 억압에 대한 답.',
-      'spacex.title': 'OST &times; SpaceX &mdash; 우주로의 여정', 'spacex.sub': '지구에서 화성까지 파트너십 로드맵을 따라가세요.',
+      'spacex.title': '우주로의 여정 &mdash; OST 비전', 'spacex.sub': 'SpaceX에서 영감을 받은 지구에서 화성까지의 비전 로드맵 &mdash; 파트너십이 아닙니다. SpaceX 또는 Starlink와의 계약은 없으며 아직 자금 조달이나 발사는 없습니다.',
       'roadmap.title': '&#128640; 로드맵과 진행 상황', 'roadmap.sub': '현재 위치, 구축한 것, 다음 단계.',
       'offline.scenarios': '현실 세계 시나리오', 'offline.scenariosub': '세계은행, UNHCR, EM-DAT의 검증된 데이터. 가설이 아닙니다.',
       'ai.hook.title': '서버, 봇 또는 로컬호스트를 운영 중이신가요?',
@@ -1964,7 +1964,7 @@
       'verify.lead': 'Güven vaatlerle degil, gerceklerle kazanilir.',
       'verify.closing': 'Kodu okuyun. Sirketi kontrol edin. Hazineyi dogrulayin. <strong>Sonra karar verin.</strong>',
       'wallet.title': 'Cuzdaninizi Baglayiniz', 'wallet.sub': 'OST\'ye baglanmak icin bir cuzdan secin.',
-      'footer.mission': 'Her islem uydu altyapisi icin fon saglamaya yardimci olur. <strong>Birlikte insa ettigimiz bir hediye.</strong>',
+      'footer.mission': 'Herkes için uydu interneti bir Ar-Ge vizyonudur: henüz hiçbir şey kurulmadı ve hiçbir işlem bunun için ödeme yapmıyor. <strong>Birlikte inşa ettiğimiz bir hediye.</strong>',
       'footer.copy': 'Acik kaynak. Yeryuzundeki her insan icin sevgiyle insa edildi.',
       'hero.free': '&#128176; DENEMESİ ÜCRETSİZ',
       'hero.freetext': 'Devnet test ağı: tüm ağ ücretlerini OST öder, yani denemek size hiçbir şeye mal olmaz. Gerçek para yok.',
@@ -1977,10 +1977,10 @@
       'vision.s1.title': 'Geçici İskele', 'vision.s1.sub': 'Solana + Jupiter + Köprüler',
       'vision.s2.title': 'OST Değişim Protokolü', 'vision.s2.sub': 'Kendi eşleştirme motoru',
       'vision.s3.title': 'OST Egemen Ağı', 'vision.s3.sub': 'Sıfır üçüncü taraf bağımlılığı',
-      'vision.p1': '&#128274; ZK Gizli', 'vision.p2': '&#9889; 0.4sn Uzlaşma', 'vision.p3': '&#128176; Sıfır Ücret Sonsuza Dek',
+      'vision.p1': '&#128274; ZK Gizli', 'vision.p2': '&#9889; 0.4sn Uzlaşma', 'vision.p3': '&#128176; Ağ ücretlerini OST öder',
       'vision.p4': '&#128295; Kendi Motoru', 'vision.p5': '&#127757; Kendi DEX ve Köprüleri', 'vision.p6': '&#128752; Uydu İnterneti',
-      'vision.spacex.title': 'OST &times; SpaceX',
-      'vision.spacex.text': 'Düşük yörünge uyduları aracılığıyla 2,6 milyar kişiye sansürsüz internet ve ödeme sağlamak için ortaklık.',
+      'vision.spacex.title': 'Uzay vizyonu &middot; Ar-Ge',
+      'vision.spacex.text': 'Ar-Ge vizyonu: düşük yörünge uydularıyla çevrimdışı 2,6 milyar kişiye sansürsüz internet ve ödeme. SpaceX ortaklığı değildir &mdash; henüz hiçbir şey finanse edilmedi veya fırlatılmadı.',
       'vision.spacex.btn': 'Yolculuğu Keşfet &#8594;',
       'newhere.title': '&#127381; Yeni Misin? OST Yolculuğuna Başla',
       'newhere.sub': 'Ücretsiz OST al, aile kasaları oluştur veya altyapı katkısıyla ödül kazan.',
@@ -1993,7 +1993,7 @@
       'wallet.getTitle': 'Kişisel OST Cüzdanınızı Alın', 'wallet.getSub': 'Cüzdanınızı nasıl oluşturacağınızı veya bağlayacağınızı seçin.',
       'sell.title': 'OST Sat veya Takas Et', 'sell.sub': 'Herhangi bir kriptoya veya fiata çek. Aynı hız, aynı gizlilik.',
       'censor.title': '&#128683; İnternet Sansürü Şu Anda Yaşanıyor', 'censor.sub': 'Gerçek olaylar. Gerçek insanlar. OST dijital baskıya cevaptır.',
-      'spacex.title': 'OST &times; SpaceX &mdash; Uzaya Yolculuk', 'spacex.sub': 'Dünya\'dan Mars\'a ortaklık yol haritamızı takip edin.',
+      'spacex.title': 'Uzaya Yolculuk &mdash; bir OST vizyonu', 'spacex.sub': 'SpaceX\'ten ilham alan, Dünya\'dan Mars\'a bir vizyon yol haritası &mdash; ortaklık değildir. SpaceX veya Starlink ile bir anlaşma yoktur ve burada henüz hiçbir şey finanse edilmedi veya fırlatılmadı.',
       'roadmap.title': '&#128640; Yol Haritası ve İlerleme', 'roadmap.sub': 'Neredeyiz, ne inşa ettik ve sırada ne var.',
       'offline.scenarios': 'Gerçek Dünya Senaryoları', 'offline.scenariosub': 'Dünya Bankası, BMMYK ve EM-DAT\'tan doğrulanmış veriler.',
       'ai.hook.title': 'Sunucu, Bot veya Localhost Çalıştırıyor musunuz?',
@@ -3671,6 +3671,9 @@
           wallet: wallet,
           marketTitle: record.title || record.marketTitle || '',
           signature: signature,
+          // MK-RECORD-SERVER: the server stores `price` — share the FILL (what
+          // the stake really bought at), not the quote mid; the mid rides as quoteMid.
+          price: Number(record.fillPrice) > 0 && Number(record.fillPrice) < 1 ? Number(record.fillPrice) : record.price,
           ts: record.createdAt || record.ts || Date.now()
         }))
       }).then(function(res) {
@@ -3979,8 +3982,15 @@
         if (c === 'round_open_price_unknown') return 'This round has no opening price yet — try again in a few seconds.';
         if (c === 'predictions_not_live') return 'BTC 5-minute trading is paused on the OST server right now.';
         if (c === 'wallet_auth_required' || c === 'unauthorized') return 'Your wallet sign-in expired — reconnect your wallet and try again.';
+        if (c === 'price_moved') return 'The price moved before your order opened — nothing was taken. Review the new price and buy again.';
         return note || 'The OST server could not open this position.';
       }
+      // MK-BTC-QUOTE: the price limit the user agreed to (side price + slippage).
+      // The server refuses with price_moved instead of filling above it.
+      const maxEntry = Number(order.maxEntry);
+      const openBody = { wallet: walletAddr, marketId: order.marketId, side: order.side, stake: stakeAmt, bucket: src };
+      if (maxEntry > 0 && maxEntry < 1) openBody.maxEntry = maxEntry;
+      if (Number(order.quotedPrice) > 0 && Number(order.quotedPrice) < 1) openBody.quotedPrice = Number(order.quotedPrice);
       // Hard timeout so a stalled worker never hangs the bet.
       const _ctrl = new AbortController();
       const _to = setTimeout(() => { try { _ctrl.abort(); } catch (_) {} }, 15000);
@@ -3988,7 +3998,7 @@
       try {
         resp = await fetch(base + '/play/predict/open', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ wallet: walletAddr, marketId: order.marketId, side: order.side, stake: stakeAmt, bucket: src }),
+          body: JSON.stringify(openBody),
           signal: _ctrl.signal
         });
       } catch (e) { netErr = e; }
@@ -4029,8 +4039,18 @@
         return recordNative({ id: found.id, entry: found.entry, shares: found.shares }, null);
       }
       if (r.ok === false || !r.position) {
-        const e = new Error(humanOpenError(r.error, r.note || r.message));
-        e.code = r.error || 'open_failed'; e.body = r;
+        const e = new Error(humanOpenError(r.error || r.code, r.note || r.message));
+        e.code = r.error || r.code || 'open_failed'; e.body = r;
+        // price_moved (409, nothing debited): e.livePrice is the SIDE price the
+        // server would fill at now (the worker's `entry`); the worker's own
+        // `livePrice` is the YES price and rides as e.liveYesPrice.
+        if (e.code === 'price_moved') {
+          const ent = Number(r.entry != null ? r.entry : r.price);
+          const lim = Number(r.maxEntry) > 0 ? Number(r.maxEntry) : Number(order.maxEntry);
+          if (Number(r.livePrice) > 0 && Number(r.livePrice) < 1) e.liveYesPrice = Number(r.livePrice);
+          if (lim > 0 && lim < 1) e.maxEntry = lim;
+          if (ent > 0 && ent < 1) { e.livePrice = ent; e.entry = ent; e.message = 'The price moved to ' + (ent * 100).toFixed(1) + '¢ before your order opened' + (lim > 0 && lim < 1 ? ' (your limit was ' + (lim * 100).toFixed(1) + '¢)' : '') + ' — nothing was taken. Review the new price and buy again.'; }
+        }
         throw e;
       }
       return recordNative(r.position, r.balance);
@@ -4053,7 +4073,7 @@
           openAt: Number(pos.openAt || order.openAt || 0), closeAt: Number(pos.closeAt || order.closeAt || 0),
           openPrice: Number(pos.openPrice || order.openPrice),
           priceToBeat: Number(pos.priceToBeat || order.priceToBeat), livePrice: Number(order.livePrice),
-          quotedPrice: Number(order.price), reference: order.reference || '',
+          quotedPrice: Number(order.quotedPrice) > 0 ? Number(order.quotedPrice) : Number(order.price), maxEntry: Number(order.maxEntry) > 0 ? Number(order.maxEntry) : undefined, reference: order.reference || '',
           vaultFlow: 'ostg-native-open', createdAt: Date.now()
         };
         storePredictionOrderRecord(rec);
@@ -5167,7 +5187,12 @@
     const walletAddress = connectedWalletSession.publicKey.toBase58();
     // NET-3: this runs every second; only the VISIBLE faucet card refreshes the
     // server state (throttled to once a minute). Claims and wallet changes force it.
-    if (faucetBtn.offsetParent !== null) syncRewardClaimsFromRemote(walletAddress);
+    // Visible = on screen: on desktop every section is laid out on one long
+    // page, so "laid out" (offsetParent) polled from the markets list too.
+    if (faucetBtn.offsetParent !== null && !document.hidden) {
+      const fr = faucetBtn.getBoundingClientRect();
+      if (fr.bottom > -200 && fr.top < (window.innerHeight || 800) + 200) syncRewardClaimsFromRemote(walletAddress);
+    }
     const state = getRewardClaimForWallet(walletAddress);
     if (state.pendingReservation) {
       faucetBtn.disabled = true;
@@ -6785,13 +6810,16 @@
       const ostEl = item.querySelector('.item-ost');
       if (fiatEl) fiatEl.textContent = formatFiatFromUsd(usd);
       if (ostEl) {
+        // H7: this OST figure uses the display index, not the devnet conversion
+        // rate (1 OST = $0.0118) — say so ("≈", tooltip), never pass it as a price.
         if (ost >= 1e6) {
-          ostEl.textContent = (ost / 1e6).toFixed(1) + 'M OST';
+          ostEl.textContent = '≈ ' + (ost / 1e6).toFixed(1) + 'M OST';
         } else if (ost >= 1000) {
-          ostEl.textContent = (ost / 1000).toFixed(1) + 'K OST';
+          ostEl.textContent = '≈ ' + (ost / 1000).toFixed(1) + 'K OST';
         } else {
-          ostEl.textContent = ost.toFixed(0) + ' OST';
+          ostEl.textContent = '≈ ' + ost.toFixed(0) + ' OST';
         }
+        ostEl.title = 'Estimate at the OST index (display), $' + Number(ostPrice).toFixed(4) + ' — not the devnet conversion rate. Devnet OST has no cash value.';
       }
     });
   }
@@ -7134,7 +7162,7 @@
 
     const ostTotal = total / ostPrice;
     cartBadge.textContent = cart.length;
-    cartTotal.textContent = formatFiatFromUsd(total) + ' - ' + (ostTotal >= 1e6 ? (ostTotal / 1e6).toFixed(1) + 'M' : ostTotal.toFixed(0)) + ' OST';
+    cartTotal.textContent = formatFiatFromUsd(total) + ' - ≈ ' + (ostTotal >= 1e6 ? (ostTotal / 1e6).toFixed(1) + 'M' : ostTotal.toFixed(0)) + ' OST (at the display index)';
     payBtn.disabled = false;
 
     $$('.cart-item-remove', cartItems).forEach(btn => {
@@ -7579,11 +7607,36 @@
     transferResult.textContent = 'Received ' + ostAmount.toFixed(2) + ' OST' + (payoutSig ? ' · sig ' + String(payoutSig).slice(0, 8) + '...' : '');
     setConvertRouteMessage((paidWith || 'Treasury payment') + ' verified and OST delivered to the connected wallet. This event now syncs through the OST API so wallet history survives refreshes and device sync.');
     setConvertTopupStatus('Payment verified and OST delivered.', 'success');
-    toast('✅', 'Purchased ' + ostAmount.toFixed(2) + ' OST');
+    // SOL-post-success: a devnet test-rail conversion, not a purchase — and the
+    // only notice for it (the wallet home no longer echoes the pool payout).
+    // The paid leg names only what was really paid on chain: the settlement's
+    // own payment record, else the order's saved payment, else the typed SOL —
+    // never an amount typed in another currency (EUR 20 is not "20 SOL").
+    let paidAmt = 0, paidAsset = '';
+    const usePaid = (amt, asset) => {
+      if (paidAmt > 0) return;
+      const a = Number(amt || 0), s = String(asset || '').toUpperCase();
+      if (a > 0 && /^(SOL|USDC)$/.test(s)) { paidAmt = a; paidAsset = s; }
+    };
+    const pay = result && result.payment ? result.payment : null;
+    if (pay) usePaid(pay.amount, pay.asset);
+    const ord = convertPendingOrder || null;
+    if (ord) usePaid(ord.paymentAmount, ord.paymentAsset);
+    usePaid(intent.solAmount, 'SOL');
+    if (ord) usePaid(ord.solAmount, 'SOL');
+    if (ord && String(ord.sourceCurrency || '').toUpperCase() === String(ord.settlementAsset || '').toUpperCase()) usePaid(ord.sourceAmount, ord.sourceCurrency);
+    const paidLeg = paidAmt > 0 ? paidAmt.toLocaleString(undefined, { maximumFractionDigits: paidAsset === 'SOL' ? 6 : 2 }) + ' ' + paidAsset + ' → ' : '';
+    toast('✅', 'Converted ' + paidLeg + ostAmount.toFixed(2) + ' OST (devnet)');
     launchConfetti();
     updateWalletBalance(connectedWallet);
     maybePromptConvertBackup();
     clearConvertPendingOrder({ delivered: true });
+    // The typed amount was paid: clear it, so the quote does not re-ask for the
+    // SOL that was just spent ("Need 0.0086 SOL — you have 0.000978").
+    if (transferAmount && transferAmount.value) {
+      transferAmount.value = '';
+      try { transferAmount.dispatchEvent(new Event('input', { bubbles: true })); } catch (_) {}
+    }
     updateConvertProviders();
   }
 
@@ -7656,6 +7709,21 @@
     updateConvertProviders();
   });
 
+  // RNT-1: the first-cash-out minimum from today's SOL price and this wallet's
+  // SOL (same helper the quote uses), worded "about" — the client rounds up.
+  function rentMinimumSentence() {
+    let min = null, haveSol = null;
+    try { if (window.OST_BALANCE && typeof window.OST_BALANCE.sol === 'function') haveSol = window.OST_BALANCE.sol(); } catch (_) {}
+    try {
+      const rs = window.OST_REAL_SWAP;
+      if (rs && typeof rs.minOstFor === 'function') min = rs.minOstFor(haveSol != null && Number.isFinite(Number(haveSol)) ? Math.round(Number(haveSol) * 1e9) : 0);
+    } catch (_) {}
+    if (min === 0) return 'This wallet already holds Solana’s rent minimum (0.00089 SOL), so there is no first-cash-out minimum.';
+    if (Number(min) > 0) return 'Solana keeps at least 0.00089 SOL in a new account, so a first cash-out to a wallet with no SOL is about ' + Number(min).toLocaleString(undefined, { maximumFractionDigits: 1 }) + ' OST or more at today’s SOL price.';
+    return 'Solana keeps at least 0.00089 SOL in a new account, so a first cash-out must cover that rent minimum — the quote shows the exact figure.';
+  }
+  window.OST_RENT_MIN_SENTENCE = rentMinimumSentence;
+
   async function updateConvertProviders() {
     if (!convertProviders || !transferFrom) return;
     const curr = String(transferFrom.value || '').toUpperCase();
@@ -7670,7 +7738,9 @@
     if (curr === 'OST') {
       if (transferBtnLabel) transferBtnLabel.textContent = 'Cash out to SOL';
       convertProviders.style.display = 'none';
-      setConvertRouteMessage('Cash out devnet OST to devnet SOL from the pool. You sign the OST amount; the network fee is paid by OST. Solana keeps at least 0.00089 SOL in a new account, so a first cash-out is at least ~9.2 OST.');
+      // RNT-1: the first-cash-out minimum depends on today's SOL price — compute
+      // it (OST_REAL_SWAP.minOstFor), never a stale hard-coded figure.
+      setConvertRouteMessage('Cash out devnet OST to devnet SOL from the pool. You sign the OST amount; the network fee is paid by OST. ' + rentMinimumSentence());
       return;
     }
     if (transferBtnLabel) {
@@ -7908,12 +7978,25 @@
         const need = Math.round(amount * 1e9);
         if (typeof lamports === 'number' && lamports < need) {
           const have = lamports / 1e9;
+          // getsol-vs-min-order: cash out what actually covers the shortfall
+          // (plus Solana's 0.00089 SOL reserve), not a fixed 10 OST that left the
+          // user eight rounds short.
+          const shortSol = Math.max(0, (need + 890880 - lamports) / 1e9);
+          let ostNeed = 10;
+          try {
+            if (window.OST_GET_SOL && typeof window.OST_GET_SOL.ostFor === 'function') {
+              const n = Number(window.OST_GET_SOL.ostFor(amount, have)); if (n > 0) ostNeed = Math.ceil(n);
+            } else if (convertSolUsd() > 0 && convertOstUsd() > 0) {
+              ostNeed = Math.max(10, Math.ceil(shortSol * convertSolUsd() / convertOstUsd() / 0.995 * 1.01));
+            }
+          } catch (_) {}
+          const shortTxt = shortSol.toLocaleString(undefined, { maximumFractionDigits: 6 });
           transferResult.textContent = 'Need ' + amount + ' SOL';
-          setConvertRouteMessage('Need ' + amount + ' SOL — this wallet has ' + have.toFixed(6) + ' SOL. Nothing was created. OST actions never need SOL; to get devnet SOL, cash out at least 10 OST → SOL.');
+          setConvertRouteMessage('Need ' + amount + ' SOL — this wallet has ' + have.toFixed(6) + ' SOL, so it is ' + shortTxt + ' SOL short (incl. Solana’s 0.00089 SOL reserve). Nothing was created. OST actions never need SOL; to get devnet SOL, cash out about ' + ostNeed + ' OST → SOL.');
           try {
             if (typeof window.OST_NOTIFY === 'function') {
-              window.OST_NOTIFY({ kind: 'warn', title: 'Need ' + amount + ' SOL — you have ' + have.toFixed(4) + ' SOL.', body: 'Nothing was created. Get devnet SOL by cashing out OST.',
-                action: { label: 'Get SOL: cash out 10 OST', run: function () { if (window.OST_GET_SOL && typeof window.OST_GET_SOL.open === 'function') window.OST_GET_SOL.open(10); } } });
+              window.OST_NOTIFY({ kind: 'warn', title: 'Need ' + amount + ' SOL — you have ' + have.toFixed(4) + ' SOL.', body: 'Nothing was created. You are ' + shortTxt + ' SOL short; cashing out ' + ostNeed + ' OST covers it.',
+                action: { label: 'Get SOL: cash out ' + ostNeed + ' OST', run: function () { if (window.OST_GET_SOL && typeof window.OST_GET_SOL.open === 'function') window.OST_GET_SOL.open(ostNeed); } } });
             } else toast('⚠️', 'Need ' + amount + ' SOL — you have ' + have.toFixed(4) + ' SOL. Nothing was created.');
           } catch (_) {}
           resetConvertStepState();
@@ -8229,7 +8312,17 @@
           faucetNotify(walletAddress, { kind: 'info', title: nextMsg + '.', body: 'Daily claims are manual: come back and press the button.' });
           return { ok: false, state: 'cooldown', reason: 'daily_cooldown', nextDailyClaimAt: rewardState.nextDailyClaimAt, message: nextMsg, notified: true };
         }
-
+        // R-late: the last claim's outcome is still unknown (local hold) — never
+        // start a second claim on top of it, whichever button called us (the
+        // hidden journey button calls this directly, not through the faucet card).
+        if (rewardState.hold && !(rewardState.hold.kind === 'welcome' && rewardState.welcomeClaimed)) {
+          const holdMsg = 'We couldn\'t confirm your last claim yet.';
+          const holdBody = 'It may still land — check your balance before claiming again. This unlocks in ' + formatDropCooldown(Number(rewardState.hold.until) - Date.now()) + '.';
+          setFaucetStatus(holdMsg + ' ' + holdBody, 'pending', { result: true });
+          faucetNotify(walletAddress, { kind: 'warn', title: holdMsg, body: holdBody, sig: rewardState.hold.sig || '' });
+          ensureFaucetPendingWatch();
+          return { ok: false, state: 'pending', reason: 'claim_unconfirmed', message: holdMsg, body: holdBody, signature: rewardState.hold.sig || '', notified: true };
+        }
         clearWalletFundingState();
         setFaucetStatus('Checking your claim…', 'pending');
 
@@ -9460,24 +9553,25 @@
             // is not an incoming transfer — don't log it as "recv-ost" (the wallet
             // home shows the real, parsed "Received X OST" for true incoming tx).
             var ownRecent = Date.now() - (window.__ostLastOwnMoneyTxAt || 0) < 90000;
+            // MK-PHANTOM-RECV / SRV-A1: a balance DIFF is not a transfer. It has no
+            // signature, a 2-dp rounded read of the same balance (96.18 vs
+            // 96.184369388) looked like "Received 0.0044 OST" every minute, and a
+            // claim made in ANOTHER tab looked like a +100 receive. Those rows
+            // were shared to the server ledger (POST /wallet/events), echoed back
+            // by realtime and re-fetched by every wallet module. Real incoming
+            // transfers are parsed from the chain, with their signature, by the
+            // wallet home (Activity + "Received X OST from …"). So: no snapshot
+            // from a diff, and only a muted background hint above rounding noise.
             if (dSol > 0.0001) {
-              toast('💰', 'Received ' + dSol.toFixed(4) + ' SOL', { background: true });
-              // Never feed an UNKNOWN OST balance into the portfolio chart. When
-              // the OST read failed (ostBal === undefined), recording it would
-              // plot an undefined point and corrupt the curve — the same
-              // unknown-is-not-zero discipline as the balance display.
-              if (typeof window.recordOstSnapshot === 'function' && ostBal !== undefined) {
-                try { window.recordOstSnapshot({ ts: Date.now(), ostBalance: ostBal, solBalance: solBal, kind: 'recv-sol', amount: dSol }); } catch (_) {}
-              }
+              // SRV-A1: SOL from this wallet's own cash-out (OST → SOL) is not a
+              // receive either — same own-transaction guard as OST below.
+              if (!ownRecent) toast('💰', 'Received ' + dSol.toFixed(4) + ' SOL', { background: true });
               if (walletFundingState.needsManualFunding && walletFundingState.walletAddress === key && solBal >= 0.02) {
                 clearWalletFundingState();
               }
             }
-            if (dOst > 0.0001 && !ownRecent) {
+            if (dOst >= 0.01 && !ownRecent) {
               toast('🟡', 'Received ' + dOst.toFixed(4) + ' OST', { background: true });
-              if (typeof window.recordOstSnapshot === 'function' && ostBal !== undefined) {
-                try { window.recordOstSnapshot({ ts: Date.now(), ostBalance: ostBal, solBalance: solBal, kind: 'recv-ost', amount: dOst }); } catch (_) {}
-              }
             }
           }
           // Preserve the last KNOWN OST balance when the read failed — writing
@@ -10742,8 +10836,12 @@
         if (h === 'moonpay.com' || h === 'buy.moonpay.com' || h === 'buy.sandbox.moonpay.com')
           return 'https://www.moonpay.com/buy/sol';
 
-        // --- Transak → consumer buy page ---
-        if (h === 'global.transak.com') return 'https://global.transak.com/?cryptoCurrencyCode=SOL';
+        // --- Transak → consumer page; the "Transak Sell" card keeps its SELL intent
+        // (it used to be rewritten to the same buy URL as the "Transak" card). ---
+        if (h === 'global.transak.com') {
+          var products = u.searchParams.get('productsAvailed') || '';
+          return 'https://global.transak.com/?cryptoCurrencyCode=SOL' + (products ? '&productsAvailed=' + encodeURIComponent(products) : '');
+        }
 
         // --- Ramp Network → consumer buy page ---
         if (h === 'ramp.network' || h === 'app.ramp.network') return 'https://ramp.network/buy/sol-solana';
@@ -14060,7 +14158,10 @@
         // Only while the launchpad is actually on screen - this polled the worker every
         // minute for the whole session even if the user never opened the launchpad.
         var _lpEl = document.getElementById('launchpad') || document.querySelector('[data-section="launchpad"], .launchpad-section, #launchpadGrid');
-        if (!document.hidden && _lpEl && _lpEl.offsetParent !== null) syncLaunchpadFromRemote();
+        // NET-3: on screen, not merely laid out (desktop lays every section out
+        // on one long page, so this polled from the markets list).
+        var _lpR = _lpEl && _lpEl.offsetParent !== null ? _lpEl.getBoundingClientRect() : null;
+        if (!document.hidden && _lpR && _lpR.bottom > 0 && _lpR.top < (window.innerHeight || 800)) syncLaunchpadFromRemote();
         return;
       }
       launches.forEach(function(l) {
@@ -14198,8 +14299,9 @@
     function updateFees() {
       var v = parseFloat(amtIn.value) || 0;
       feeAmt.textContent = v.toLocaleString() + ' OST';
-      var total = v + v * 0.001;
-      feeTotal.textContent = total.toLocaleString() + ' OST';
+      // No vault or redemption fee is charged (the old 0.1% "satellite fund"
+      // line contradicted OST's zero fees and no such fund exists).
+      feeTotal.textContent = v.toLocaleString() + ' OST';
       mintBtn.disabled = v <= 0;
     }
 
@@ -16712,6 +16814,11 @@
           if (p.line != null) oN.line = p.line;
           if (p.winningSide != null) oN.winningSide = p.winningSide;
           oN.payout = payout; oN.houseFee = Number(p.fee) || 0;
+          // A sale carries what it paid (same fields as the cash-out's
+          // applyServer). Whichever of the two shares the record first, the
+          // server gets sellValue — the digest de-dupe used to drop the second
+          // share, leaving a sold record without it.
+          if (st === 'sold') { oN.sellValue = payout; if (Number(p.sellPrice) > 0) oN.sellPrice = Number(p.sellPrice); }
           // Won / refunded / sold: the server already paid the PLAY balance.
           oN.cashedOut = payout > 0; oN.cashoutOst = payout; oN.paidTo = payout > 0 ? 'play' : '';
           oN.cashoutKind = st === 'sold' ? 'ostg-native-sell' : 'ostg-native-resolve';
@@ -17314,6 +17421,9 @@
             var applyServer = function (st, payout, extra) {
               var oN = Object.assign({}, order, extra || {});
               oN.status = st; oN.outcome = st; oN.payout = payout; oN.cashoutOst = payout; oN.cashedOut = payout > 0;
+              // The shared record carries what the sale paid (the public feed
+              // used to show a native sell as size 0 — MK-LABELS-MINOR).
+              if (st === 'sold') oN.sellValue = payout;
               oN.paidTo = payout > 0 ? 'play' : ''; oN.cashoutKind = st === 'sold' ? 'ostg-native-sell' : 'ostg-native-resolve';
               oN.cashoutAt = Date.now(); oN.resolvedAt = oN.resolvedAt || Date.now(); oN.serverResolvedAt = Date.now();
               oN.rail = 'play'; oN.unit = 'OSTG'; oN.serverSettled = true;
@@ -17333,9 +17443,18 @@
               var ctrlS = typeof AbortController !== 'undefined' ? new AbortController() : null;
               var tmoS = setTimeout(function () { try { if (ctrlS) ctrlS.abort(); } catch (_) {} }, 15000);
               var respS = null, sj = null, sErr = null;
+              // MK-BTC-QUOTE: a slippage floor for the server (it fills at ITS
+              // odds): never more than max(2¢ a share, 3%) below the number the
+              // user tapped. The worker refuses with price_moved below it.
+              var sellBody = { id: pid, marketId: order.marketId, wallet: getPredictionWalletAddress() };
+              if (Number(opts.expectNet) > 0) {
+                var nShares = Number(order.shares) || 0, nExp = Number(opts.expectNet);
+                sellBody.expectNet = Math.round(nExp * 1e6) / 1e6;
+                sellBody.minPayout = Math.max(0, Math.round((nExp - Math.max(0.02 * nShares, 0.03 * nExp)) * 1e6) / 1e6);
+              }
               try {
                 respS = await fetch(baseN + '/play/predict/cashout', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ id: pid, marketId: order.marketId, wallet: getPredictionWalletAddress() }), signal: ctrlS ? ctrlS.signal : undefined });
+                  body: JSON.stringify(sellBody), signal: ctrlS ? ctrlS.signal : undefined });
                 sj = await respS.json().catch(function () { return null; });
               } catch (e) { sErr = e; }
               clearTimeout(tmoS);
@@ -17356,11 +17475,18 @@
               if (sj.ok === false) {
                 btn.disabled = false; btn.textContent = origS;
                 var scode = String(sj.error || '');
+                var nowPay = Number(sj.payout != null ? sj.payout : sj.net);
                 var smsg = scode === 'round_closed' ? 'Too close to the round end — it settles automatically from the BTC close price.'
                   : scode === 'price_unavailable' ? 'No fresh BTC price right now — try again in a moment. It still settles at close.'
                   : (scode === 'wallet_auth_required' || scode === 'unauthorized') ? 'Your wallet sign-in expired — reconnect your wallet and try again.'
+                  : scode === 'price_moved' ? ('The price moved — this sale now pays ' + (nowPay >= 0 && Number.isFinite(nowPay) ? nowPay.toFixed(2) + ' OSTG' : 'less') + ' (you saw ' + Number(opts.expectNet || 0).toFixed(2) + '). Nothing was sold — review the new price and sell again.')
                   : (sj.note || human(sj).title);
                 var se = new Error(smsg); se.code = scode || 'cashout_failed'; se.body = sj;
+                // price_moved: nothing was sold. The caller shows it where the
+                // user is (the market page re-opens its sell sheet with the
+                // new number; the Portfolio shows a notice), so the pending
+                // "Selling…" card is cleared rather than left spinning.
+                if (scode === 'price_moved') { se.net = nowPay; try { if (window.OST_NOTIFY && typeof window.OST_NOTIFY.dismiss === 'function') window.OST_NOTIFY.dismiss(noteId); } catch (_) {} throw se; }
                 notice(scode === 'round_closed' ? 'info' : 'error', scode === 'round_closed' ? 'Round closing' : 'Sell did not go through', smsg);
                 throw se;
               }
@@ -17458,8 +17584,12 @@
               else if (window.OST_ARB && typeof window.OST_ARB.bookSell === 'function' && action.quoteShares > 0 && action.quoteMid > 0) window.OST_ARB.bookSell(action.quoteShares, action.quoteMid, { marketId: order.marketId, side: order.side, kind: 'sell' });
             } catch (_) {}
           };
-          if (opts.expectNet > 0 && payout > 0 && Math.abs(payout - Number(opts.expectNet)) / Number(opts.expectNet) > 0.05) {
-            var pm = new Error('The price moved — you now get ' + payout.toFixed(2) + ' ' + unit + ' (you saw ' + Number(opts.expectNet).toFixed(2) + '). Review and sell again.');
+          // MK-FAST-SOL / PRD-4: opts.expectNet is the number on the button the
+          // user tapped. The sale pays the live quote, and never more than 1%
+          // below that number: otherwise nothing is sent and the new amount is
+          // shown (the caller re-asks). A better price is simply paid.
+          if (opts.expectNet > 0 && payout > 0 && payout < Number(opts.expectNet) * 0.99) {
+            var pm = new Error('The price moved — this sale now pays ' + payout.toFixed(2) + ' ' + unit + ' (you saw ' + Number(opts.expectNet).toFixed(2) + '). Nothing was sold — review the new price and sell again.');
             pm.code = 'price_moved'; pm.net = payout;
             throw pm;
           }
@@ -17541,7 +17671,12 @@
                 title: order.title || '',
                 side: order.side || '',
                 linkedId: order.signature || order.sig || order.id || '',
-                sig: r.sig || ''
+                // MK-RECORD-SERVER: this bookkeeping row is NOT the payout
+                // transaction. Sharing the payout sig as its own made it and
+                // the prediction-sell row one event (deduped by sig/id), so one
+                // replaced the other. Own id; the payout sig rides as payoutSig.
+                id: 'vault-retained-loss:' + String(r.sig || order.signature || order.sig || order.id || Date.now()),
+                payoutSig: r.sig || ''
               });
             }
             // Fresh read-modify-write (a stale snapshot could drop a ticket
@@ -17565,6 +17700,7 @@
                     solBalance: bals[1] / solanaWeb3.LAMPORTS_PER_SOL,
                     kind: action.kind,
                     amount: r.ost,
+                    id: action.kind + ':' + String(r.sig || ''),
                     sig: r.sig
                   });
                 }

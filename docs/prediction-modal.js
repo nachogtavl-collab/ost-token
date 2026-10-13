@@ -256,6 +256,12 @@
     var openAt = Number(market && market.meta && market.meta.openAt);
     if (!base || !Number.isFinite(openAt) || openAt <= 0) return Promise.resolve([]);
     window.__ostBtcTicksByRound = window.__ostBtcTicksByRound || {};
+    // NET-3: one /btc/ticks per round per 10 s across re-opens of this modal
+    // (prediction-pro seeds the same shared ring on the same schedule).
+    var tried = window.__ostBtcTicksTriedAt = window.__ostBtcTicksTriedAt || {};
+    var have = window.__ostBtcTicksByRound[String(openAt)];
+    if (Date.now() - (tried[String(openAt)] || 0) < 10000) return Promise.resolve(Array.isArray(have) ? have.slice() : []);
+    tried[String(openAt)] = Date.now();
     return fetch(base + '/btc/ticks?openAt=' + encodeURIComponent(openAt), { headers: { accept: 'application/json' }, cache: 'no-store' })
       .then(function (r) { return r && r.ok ? r.json() : null; })
       .then(function (j) {
@@ -1529,11 +1535,24 @@
       .catch(function () { return market; });
   }
 
-  function placeBet(market, side, stake, outcomeKey) {
+  function placeBet(market, side, stake, outcomeKey, shownSidePx) {
     var api = window.OST_PREDICTION_API;
     if (isFastBtcMarket(market) && api && typeof api.placeBet === 'function') {
       var sideKey = String(side || 'YES').toUpperCase() === 'NO' ? 'no' : 'yes';
-      return Promise.resolve(api.placeBet({ marketId: market.id, side: sideKey, stake: stake }));
+      var btcReq = { marketId: market.id, side: sideKey, stake: stake };
+      // MK-BTC-QUOTE: the side price this modal SHOWS ("@ x¢", passed in as
+      // shownSidePx — not a re-quote taken at the tap) is the price the user
+      // agrees to; the OST server must not fill above it + max(2¢, 3%) — it
+      // refuses instead (409 price_moved, nothing debited).
+      try {
+        var shownPx = Number(shownSidePx);
+        if (!(shownPx > 0 && shownPx < 1)) { var shownC = getModalTradeContract(market, sideKey === 'no' ? 'NO' : 'YES', outcomeKey || ''); shownPx = Number(shownC && shownC.price); }
+        if (shownPx > 0 && shownPx < 1) {
+          btcReq.quotedPrice = Math.round(shownPx * 10000) / 10000;
+          btcReq.maxEntry = Math.round(Math.min(0.999, shownPx + Math.max(0.02, shownPx * 0.03)) * 10000) / 10000;
+        }
+      } catch (_) {}
+      return Promise.resolve(api.placeBet(btcReq));
     }
     // The pre-bet quote refresh used to run THREE sequential network fetches
     // (fetchCanonicalBtcRound 900ms + btcSpot 700ms + refreshNativeMarketState
@@ -1729,7 +1748,10 @@
             title: order.title || order.marketTitle || (market && market.title) || '',
             side: order.side || '',
             linkedId: order.signature || order.sig || order.id || '',
-            sig: order.cashoutSig || ''
+            // MK-RECORD-SERVER: its own id — the payout sig would make this
+            // bookkeeping row and the prediction-sell row one event.
+            id: 'vault-retained-loss:' + String(order.cashoutSig || order.signature || order.sig || order.id || Date.now()),
+            payoutSig: order.cashoutSig || ''
           });
         } catch (_) {}
       }
@@ -1746,18 +1768,56 @@
       return Promise.resolve({ ost: Number(payout) || 0, sig: order.cashoutSig || '' });
     };
     if (!(Number(payout) > 0)) return doLocal();
-    if (window.OST_TRADE && typeof window.OST_TRADE.predictionCashOut === 'function') {
-      return Promise.resolve(window.OST_TRADE.predictionCashOut(order, Number(payout) || 0))
-        .then(function (r) {
-          if (!r || !r.sig) throw new Error('Payout was not confirmed on-chain.');
-          if (Number(r.ost || 0) + 0.000000001 < Number(payout || 0)) throw new Error('Payout was not fully funded.');
-          order.cashoutSig = r.sig;
-          return doLocal().then(function (loc) {
-            return Object.assign({}, loc, { ost: (r && Number(r.ost)) || loc.ost, sig: order.cashoutSig || loc.sig });
-          });
-        });
+    // R-late: this modal never pays a ticket itself. A positive payout goes
+    // through the app's ONE cash-out routine (ticketTrust + stake verification
+    // + payoutId + pending states) — never a direct OST_TRADE.predictionCashOut.
+    var api = window.OST_PREDICTION_API, ref = String(order.signature || order.sig || order.reference || order.id || '');
+    if (api && typeof api.cashOut === 'function' && ref) {
+      return Promise.resolve(api.cashOut(ref, {})).then(function (r) {
+        if (!r || r.ok === false) throw new Error((r && r.label) || 'This ticket is not sellable here.');
+        return { ost: Number(r.payout) || 0, sig: r.sig || '', pending: !!r.pending };
+      });
     }
-    return Promise.reject(new Error('OST settlement vault is still loading. Try again in a moment.'));
+    return Promise.reject(new Error('Payouts are still loading. Try again in a moment.'));
+  }
+  // In-place repaint of the sell list: same tickets in the same order with the
+  // same kind of action -> update every cell's text and the button's text /
+  // data-net, keep the button element (and its handler). Otherwise false.
+  function patchSellRows(listEl, html) {
+    if (!listEl) return false;
+    var tmp = document.createElement('div'); tmp.innerHTML = html;
+    var oldRows = listEl.querySelectorAll('.ost-modal__sell-row'), newRows = tmp.querySelectorAll('.ost-modal__sell-row');
+    if (!oldRows.length || oldRows.length !== newRows.length) return false;
+    var i, j;
+    for (i = 0; i < oldRows.length; i++) {
+      var a = oldRows[i], b = newRows[i];
+      if (a.getAttribute('data-sell-key') !== b.getAttribute('data-sell-key') || a.children.length !== b.children.length) return false;
+      for (j = 0; j < a.children.length; j++) if ((a.children[j].tagName === 'BUTTON') !== (b.children[j].tagName === 'BUTTON')) return false;
+    }
+    for (i = 0; i < oldRows.length; i++) {
+      var oa = oldRows[i], nb2 = newRows[i];
+      for (j = 0; j < oa.children.length; j++) {
+        var oc = oa.children[j], nc = nb2.children[j];
+        if (oc.tagName === 'BUTTON') {
+          oc.disabled = false;
+          if (oc.textContent !== nc.textContent) oc.textContent = nc.textContent;
+          ['data-net', 'data-sell-idx'].forEach(function (k) { var v = nc.getAttribute(k); if (v != null && oc.getAttribute(k) !== v) oc.setAttribute(k, v); });
+        } else if (oc.outerHTML !== nc.outerHTML) {
+          oa.replaceChild(nc.cloneNode(true), oc);
+        }
+      }
+    }
+    return true;
+  }
+  // The app's ONE ticket classifier (app.js getPredictionOrderAction via
+  // OST_PREDICTION_API.actionFor): canCash only where the cash-out would pay.
+  // Unknown (the API not loaded yet) = not sellable here, never "sellable".
+  function modalTicketAction(o) {
+    try {
+      var api = window.OST_PREDICTION_API;
+      if (api && typeof api.actionFor === 'function') return api.actionFor(o) || null;
+    } catch (_) {}
+    return null;
   }
 
   // Shared positions ticker — every OST user sees every other user's recent bets
@@ -2033,12 +2093,17 @@
       var s = getStake();
       var contract = getActiveContract();
       var px = contract ? Number(contract.price) : NaN;
+      // The price this line SHOWS is the one a BTC bet agrees to (MK-BTC-QUOTE);
+      // the 50¢ placeholder below is never a price anyone agreed to.
+      bodyEl.__shownPx = (px > 0 && px < 1) ? px : NaN;
       if (!Number.isFinite(px) || px <= 0) px = 0.5;
       // Show the true payout NET of the house edge (taken on PROFIT at claim),
       // so the projection matches exactly what a winner receives.
       var gross = s / px;
       var q = (window.OST_HOUSE && window.OST_HOUSE.quote) ? window.OST_HOUSE.quote(gross, s) : { net: gross, fee: 0 };
-      setText(bodyEl, 'projected', 'Win ' + q.net.toFixed(2) + ' OST · risk ' + s.toFixed(2) + ' OST · @ ' + fmtCents(px) + (q.fee > 0 ? ' · house −' + q.fee.toFixed(2) : ''));
+      // A BTC 5-min bet is paid from (and won to) the OSTG play balance.
+      var bu = isFastBtcMarket(market) ? 'OSTG' : 'OST';
+      setText(bodyEl, 'projected', 'Win ' + q.net.toFixed(2) + ' ' + bu + ' · risk ' + s.toFixed(2) + ' ' + bu + ' · @ ' + fmtCents(px) + (q.fee > 0 ? ' · house −' + q.fee.toFixed(2) : ''));
     }
     var stakeInput = bodyEl.querySelector('[data-bind="stake"]');
     if (stakeInput) stakeInput.addEventListener('input', recalcProjected);
@@ -2078,12 +2143,16 @@
       if (!s) { toast('Set a stake first.', 'err'); return; }
       var placeLabel = placeBtn.textContent; placeBtn.disabled = true; placeBtn.textContent = 'Placing…';
       var unlock = function () { placeBtn.disabled = false; placeBtn.textContent = placeLabel; };
-      toast('Submitting ' + selectedSide + ' ' + s + ' OST…', 'ok');
+      // A BTC 5-min bet spends the OSTG play balance, not wallet OST: say so,
+      // and never hint a wallet-OST drop for it.
+      var playBet = isFastBtcMarket(market);
+      var betUnit = playBet ? 'OSTG' : 'OST';
+      toast('Submitting ' + selectedSide + ' ' + s + ' ' + betUnit + '…', 'ok');
       if (window.OST_OPTIMISTIC) {
-        try { window.OST_OPTIMISTIC.toast(selectedSide.toUpperCase() + ' ' + s + ' OST submitted…', 'pending'); } catch (e) {}
-        try { window.OST_OPTIMISTIC.balanceHint({ deltaOst: -Number(s), source: 'prediction-bet', pending: true, side: selectedSide, marketId: market && market.id }); } catch (e) {}
+        try { window.OST_OPTIMISTIC.toast(selectedSide.toUpperCase() + ' ' + s + ' ' + betUnit + ' submitted…', 'pending'); } catch (e) {}
+        if (!playBet) { try { window.OST_OPTIMISTIC.balanceHint({ deltaOst: -Number(s), source: 'prediction-bet', pending: true, side: selectedSide, marketId: market && market.id }); } catch (e) {} }
       }
-      placeBet(market, selectedSide, s, selectedOutcomeKey)
+      placeBet(market, selectedSide, s, selectedOutcomeKey, bodyEl.__shownPx)
         .then(function (rec) {
           toast('✅ Bet recorded' + (rec && rec.sig ? ' (sig ' + String(rec.sig).slice(0, 8) + '…)' : '') + '. Check Open Positions below.', 'ok');
           if (window.OST_OPTIMISTIC) {
@@ -2098,7 +2167,7 @@
           unlock();
           toast('⚠️ ' + (err && err.message ? err.message : 'Bet failed'), 'err');
           if (window.OST_OPTIMISTIC) {
-            try { window.OST_OPTIMISTIC.balanceHint({ deltaOst: +Number(s), source: 'prediction-bet', rollback: true, side: selectedSide, marketId: market && market.id }); } catch (e) {}
+            if (!playBet) { try { window.OST_OPTIMISTIC.balanceHint({ deltaOst: +Number(s), source: 'prediction-bet', rollback: true, side: selectedSide, marketId: market && market.id }); } catch (e) {} }
             try { window.OST_OPTIMISTIC.toast((err && err.message) ? err.message : 'Bet failed', 'error'); } catch (e) {}
           }
         });
@@ -2165,19 +2234,34 @@
         '</div>';
       }).join('');
     }
+    // NET-3: this polled /positions/recent EVERY SECOND while the modal was
+    // open. Fills are pushed over the realtime socket; the poll is a 15 s
+    // catch-up, paused while the tab is hidden. PRD-7: rows synced under a
+    // pseudo-wallet ('credits', 'ostg' → "cred…dits") are not real trades.
     function refreshSharedFeed() {
       var base = (window.OST_API_BASE || '').replace(/\/$/, '');
       if (!base) { applySharedFeed([]); return; }
+      if (document.hidden) return;
       fetch(base + '/positions/recent?marketId=' + encodeURIComponent(market.id || '') + '&limit=120', { cache: 'no-store' })
         .then(function (r) { return r.ok ? r.json() : null; })
-        .then(function (j) { applySharedFeed(j && Array.isArray(j.recent) ? j.recent : []); })
+        .then(function (j) { applySharedFeed((j && Array.isArray(j.recent) ? j.recent : []).filter(function (r) { return r && /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(String(r.wallet || '')); })); })
         .catch(function () { applySharedFeed([]); });
     }
     refreshSharedFeed();
-    liveTimers.push(setInterval(refreshSharedFeed, 1000));
+    liveTimers.push(setInterval(refreshSharedFeed, 15000));
+    var onFillPush = function (e) { var ev = e && e.detail; if (ev && String((ev.payload && ev.payload.marketId) || ev.marketId || '') === String(market.id || '')) refreshSharedFeed(); };
+    window.addEventListener('ost:prediction-update', onFillPush);
+    liveTimers.push({ removeOnClose: function () { window.removeEventListener('ost:prediction-update', onFillPush); } });
 
     // ---- Sell open positions on this market (live mark-to-market) ----
     var sellListEl = bodyEl.querySelector('[data-bind="sellList"]');
+    // NEW-3 parity: on a 5-minute round the sell quote jumps with every spot
+    // tick; a 1 s re-mark left the Sell number up to a second behind it, so
+    // taps were refused ("price moved") more often than in the 250 ms sell
+    // sheet. While this round has a sellable ticket the list re-marks every
+    // 250 ms (patched in place — the button is never replaced); otherwise 1 s.
+    var fastSellMarket = /^ost-(btc|eth|sol)5m-\d+$/.test(String(market.id || ''));
+    var sellFastNow = false;
     function refreshSellList() {
       if (!sellListEl) return;
       if (bodyEl.__selling) return;
@@ -2185,23 +2269,35 @@
       setText(bodyEl, 'sellStatus', positions.length ? (positions.length + ' open') : 'no positions');
       var plBar = bodyEl.querySelector('[data-bind="livePlBar"]');
       if (!positions.length) {
+        sellFastNow = false;
         sellListEl.innerHTML = '<div style="opacity:.55;font-size:12px;padding:8px 0;">No open positions on this market. Buy YES or NO above to open one.</div>';
         if (plBar) plBar.hidden = true;
         return;
       }
-      // ---- Aggregate live P/L across all open positions on this market ----
-      var totalStake = 0, totalValue = 0;
-      positions.forEach(function (o) {
+      // NEW-1: a row's value is what SELLING it pays right now — the same
+      // number the Sell button shows (OST_PREDICTION_API.actionFor: live mid ×
+      // shares minus the market spread). The old mid × shares printed a profit
+      // ("value 2.08 +0.08") next to a loss-making "Sell 1.85". Tickets with no
+      // sell quote keep the mid mark, labelled as such.
+      function markOf(o) {
         var side = String(o.side || 'yes').toLowerCase() === 'no' ? 'NO' : 'YES';
         var stake = Number(o.stake || 0) || 0;
-        var entryPx = Number(o.price || (side === 'NO' ? o.noPrice : o.yesPrice)) || 0;
+        var entryPx = Number(o.fillPrice || o.price || (side === 'NO' ? o.noPrice : o.yesPrice)) || 0;
         var shares = Number(o.shares) > 0 ? Number(o.shares) : (entryPx > 0 ? stake / entryPx : 0);
         var contract = getModalTradeContract(market, side, o.outcomeKey || '');
         var livePx = side === 'NO' ? Number(contract && contract.noPrice) : Number(contract && contract.yesPrice);
+        var act = modalTicketAction(o);
+        if (act && Number(act.livePrice) > 0 && Number(act.livePrice) < 1) livePx = Number(act.livePrice);
         if (!Number.isFinite(livePx) || livePx <= 0) livePx = entryPx;
-        totalStake += stake;
-        totalValue += shares > 0 && livePx > 0 ? shares * livePx : stake;
-      });
+        var exit = (act && act.canCash && Number(act.net) > 0) ? Number(act.net) : NaN;
+        var value = Number.isFinite(exit) ? exit : (shares > 0 && livePx > 0 ? shares * livePx : stake);
+        return { side: side, stake: stake, entryPx: entryPx, shares: shares, contract: contract, livePx: livePx, act: act, exit: Number.isFinite(exit), value: value, pnl: value - stake };
+      }
+      // ---- Aggregate live P/L across all open positions on this market ----
+      var totalStake = 0, totalValue = 0;
+      var marks = positions.map(markOf);
+      sellFastNow = fastSellMarket && marks.some(function (k) { return k.exit; });
+      marks.forEach(function (k) { totalStake += k.stake; totalValue += k.value; });
       var totalPnl = totalValue - totalStake;
       if (plBar) {
         plBar.hidden = false;
@@ -2212,79 +2308,90 @@
         var pnlEl = bodyEl.querySelector('[data-bind="livePlPnl"]');
         if (pnlEl) pnlEl.textContent = (totalPnl >= 0 ? '+' : '−') + Math.abs(totalPnl).toFixed(2) + ' OST';
       }
-      sellListEl.innerHTML = positions.map(function (o, i) {
-        var side = String(o.side || 'yes').toLowerCase() === 'no' ? 'NO' : 'YES';
+      var html = positions.map(function (o, i) {
+        var k = marks[i];
+        var side = k.side;
         var sideColor = side === 'NO' ? '#ff7c8a' : '#7ce6a8';
-        var stake = Number(o.stake || 0) || 0;
-        var entryPx = Number(o.price || (side === 'NO' ? o.noPrice : o.yesPrice)) || 0;
-        var shares = Number(o.shares) > 0 ? Number(o.shares) : (entryPx > 0 ? stake / entryPx : 0);
-        var contract = getModalTradeContract(market, side, o.outcomeKey || '');
-        var livePx = side === 'NO' ? Number(contract && contract.noPrice) : Number(contract && contract.yesPrice);
-        if (!Number.isFinite(livePx) || livePx <= 0) livePx = entryPx;
-        var liveValue = shares > 0 && livePx > 0 ? shares * livePx : stake;
-        var pnl = liveValue - stake;
+        var stake = k.stake, entryPx = k.entryPx, livePx = k.livePx, contract = k.contract;
+        var unit = (k.act && k.act.unit) || 'OST';
+        // NEW-1: value / P&L = what a sale pays now (k.exit) when the ticket
+        // is sellable; otherwise the mid mark, said as such.
+        var liveValue = k.value;
+        var pnl = k.pnl;
         var pnlColor = pnl >= 0 ? '#7ce6a8' : '#ff7c8a';
         var pnlStr = (pnl >= 0 ? '+' : '−') + Math.abs(pnl).toFixed(2);
         var sideLabel = o.outcomeLabel || (contract && contract.label) || side;
         // PRD-1: a play-rail ticket (p_ id / fundedBy ostg-native) is held and
         // sold by the OST server. This legacy modal must never "sell" it through
         // a pool payout - send the user to the market's own Sell instead.
+        // R-late (ticketTrust): every other ticket goes through the app's ONE
+        // classifier — Sell is offered only where OST_PREDICTION_API.actionFor
+        // says the cash-out would really pay it (a forged / unverified / legacy
+        // record shows its label, never a Sell), at the number that routine pays.
+        var act = k.act;
         var sellCell = isPlayRailTicket(o)
           ? '<span style="margin-left:auto;font-size:12px;opacity:.8;">Sell in Markets &rarr; your position</span>'
-          : '<button type="button" data-act="sell" data-sell-idx="' + i + '" style="margin-left:auto;padding:5px 12px;border-radius:6px;border:none;background:#22c55e;color:#031;cursor:pointer;font-weight:700;font-size:12px;">Sell ' + liveValue.toFixed(2) + ' OST</button>';
+          : (act && act.canCash && Number(act.net) > 0)
+            ? '<button type="button" data-act="sell" data-sell-idx="' + i + '" data-net="' + escapeHtml(String(act.net)) + '" style="margin-left:auto;padding:5px 12px;border-radius:6px;border:none;background:#22c55e;color:#031;cursor:pointer;font-weight:700;font-size:12px;">' + (act.kind === 'prediction-settlement' ? 'Claim ' : 'Sell ') + Number(act.net).toFixed(2) + ' ' + escapeHtml(act.unit || 'OST') + '</button>'
+            : '<span style="margin-left:auto;font-size:12px;opacity:.8;">' + escapeHtml((act && (act.label || act.detail)) || 'Not sellable here') + '</span>';
         return '<div class="ost-modal__sell-row" data-sell-key="' + escapeHtml(o.signature || o.sig || o.id || ('idx-' + i)) + '" style="display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid rgba(255,255,255,.06);">' +
           '<span style="font-weight:700;color:' + sideColor + ';min-width:34px;">' + escapeHtml(sideLabel) + '</span>' +
-          '<span style="opacity:.85;font-size:12px;">' + stake.toFixed(2) + ' OST @ ' + (entryPx > 0 ? (entryPx * 100).toFixed(1) + '¢' : '—') + '</span>' +
+          '<span style="opacity:.85;font-size:12px;">' + stake.toFixed(2) + ' ' + escapeHtml(unit) + ' @ ' + (entryPx > 0 ? (entryPx * 100).toFixed(1) + '¢' : '—') + '</span>' +
           '<span style="opacity:.85;font-size:12px;">live ' + (livePx * 100).toFixed(1) + '¢</span>' +
-          '<span style="opacity:.85;font-size:12px;">value <b>' + liveValue.toFixed(2) + '</b></span>' +
-          '<span style="font-size:12px;color:' + pnlColor + ';font-weight:700;">' + pnlStr + ' OST</span>' +
+          '<span style="opacity:.85;font-size:12px;">' + (k.exit ? 'sells for' : 'value at mid') + ' <b>' + (k.exit && act && act.kind === 'ostg-native-sell' ? '≈' : '') + liveValue.toFixed(2) + '</b></span>' +
+          '<span style="font-size:12px;color:' + pnlColor + ';font-weight:700;">' + pnlStr + ' ' + escapeHtml(unit) + '</span>' +
           sellCell +
         '</div>';
       }).join('');
+      // This list repaints every second. Rebuilding it destroyed the Sell
+      // button under the user's finger; when the rows are the same tickets with
+      // the same kind of action, patch the text in place and keep the buttons.
+      if (patchSellRows(sellListEl, html)) return;
+      sellListEl.innerHTML = html;
       sellListEl.querySelectorAll('button[data-act="sell"]').forEach(function (btn) {
         btn.addEventListener('click', function () {
           var idx = Number(btn.getAttribute('data-sell-idx'));
           var positions = ordersForMarket(market);
-          var order = positions[idx];
+          // By the row's ticket key (rows are patched in place; the index is a fallback).
+          var rowEl = btn.closest('.ost-modal__sell-row'), rowKey = rowEl ? String(rowEl.getAttribute('data-sell-key') || '') : '';
+          var order = (rowKey && positions.filter(function (p) { return String(p.signature || p.sig || p.id || '') === rowKey; })[0]) || positions[idx];
           if (!order) return;
           if (isPlayRailTicket(order)) { toast('Sell this position from Markets - the OST server settles it.', 'info'); return; }
-          var side = String(order.side || 'yes').toLowerCase() === 'no' ? 'NO' : 'YES';
-          var entryPx = Number(order.price || (side === 'NO' ? order.noPrice : order.yesPrice)) || 0;
-          var shares = Number(order.shares) > 0 ? Number(order.shares) : (entryPx > 0 ? Number(order.stake || 0) / entryPx : 0);
-          var contract = getModalTradeContract(market, side, order.outcomeKey || '');
-          // Unified live price for the fill.
-          var livePx = (window.OST_PRICES && market && window.OST_PRICES.mid(market.id, side))
-            ? window.OST_PRICES.mid(market.id, side)
-            : (side === 'NO' ? Number(contract && contract.noPrice) : Number(contract && contract.yesPrice));
-          if (!Number.isFinite(livePx) || livePx <= 0) livePx = entryPx;
-          // OST is the counterparty: it buys the user's shares BELOW market
-          // (the arbitrage spread / bid), banking the spread on the sell.
-          var payout;
-          if (window.OST_ARB && typeof window.OST_ARB.bookSell === 'function') {
-            payout = window.OST_ARB.bookSell(shares, livePx, { marketId: market.id, side: side, kind: 'sell' }).proceeds;
-          } else {
-            payout = Math.max(0, shares * livePx);
-          }
-          if (!(payout > 0)) { toast('Cannot sell at 0¢', 'err'); return; }
+          // R-late: re-check with the ONE classifier at the tap, and pay ONLY
+          // through the app's ONE cash-out routine (OST_PREDICTION_API.cashOut):
+          // ticketTrust, on-chain stake verification of imported records, the
+          // deterministic payoutId, "Paying…" on a lost answer, every notice.
+          // This modal used to price its own payout and POST /wallet/payout
+          // directly for whatever ticket it found — including forged ones.
+          var act = modalTicketAction(order);
+          var api = window.OST_PREDICTION_API;
+          var ref = String(order.signature || order.sig || order.reference || order.id || '');
+          if (!(act && act.canCash && Number(act.net) > 0) || !ref) { toast((act && (act.detail || act.label)) || 'This ticket is not sellable here.', 'info'); refreshSellList(); return; }
+          if (!(api && typeof api.cashOut === 'function')) { toast('Payouts are still loading - try again in a moment.', 'info'); return; }
+          var shownNet = Number(btn.getAttribute('data-net'));
           var orig = btn.textContent;
           btn.disabled = true; btn.textContent = '…';
           bodyEl.__selling = true;
-          sellOrder(order, payout, 'prediction-sell-modal', market, { sellPrice: livePx, sellValue: payout, shares: shares })
+          Promise.resolve(api.cashOut(ref, shownNet > 0 ? { expectNet: shownNet } : {}))
             .then(function (r) {
               bodyEl.__selling = false;
-              toast('✅ Sold ' + (Number(r.ost) || payout).toFixed(2) + ' OST' + (r.sig ? ' (' + String(r.sig).slice(0, 8) + '…)' : ''), 'ok');
+              btn.disabled = false;
+              // cashOut reports paid / "Paying…" / refused itself (OST_NOTIFY).
+              if (r && r.ok === false && r.label) toast(r.label, 'info');
               refreshSellList();
             })
             .catch(function (e) {
               bodyEl.__selling = false;
               btn.disabled = false; btn.textContent = orig;
-              toast('Sell failed: ' + (e && e.message || 'unknown'), 'err');
+              if (!(e && e.notified)) toast((e && e.code === 'price_moved' ? '' : 'Sell did not go through: ') + (e && e.message || 'try again in a moment.'), e && e.code === 'price_moved' ? 'info' : 'err');
+              refreshSellList();
             });
         });
       });
     }
     refreshSellList();
-    liveTimers.push(setInterval(refreshSellList, 1000));
+    var sellTicks = 0;
+    liveTimers.push(setInterval(function () { sellTicks++; if ((sellFastNow && !document.hidden) || sellTicks % 4 === 0) refreshSellList(); }, 250));
     bodyEl.__refreshSell = refreshSellList;
     window.addEventListener('ost:prediction:order-changed', refreshSellList);
 

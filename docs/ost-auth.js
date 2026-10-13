@@ -19,14 +19,16 @@
   'use strict';
   if (window.OST_AUTH) return;
 
-  var API = ((window.OST_API_BASE) || 'https://ost-api.nachogtavl.workers.dev').replace(/\/+$/, '');
+  // Read the API base at CALL time: this file now loads before the Mesh module
+  // (L-regression-M11), i.e. before ost-console.js may apply a saved override.
+  function apiBase() { return ((window.OST_API_BASE) || 'https://ost-api.nachogtavl.workers.dev').replace(/\/+$/, ''); }
   var SESSION_KEY = 'ost.auth.session.v1';
   var enc = new TextEncoder();
 
   function isProtected(url, method) {
     if (!/^(POST|PUT|DELETE)$/i.test(method || 'GET')) return false;
     var u; try { u = new URL(url, location.href); } catch (_) { return false; }
-    if ((u.origin + '') !== new URL(API).origin) return false;
+    if ((u.origin + '') !== new URL(apiBase()).origin) return false;
     var p = u.pathname;
     // SRV-3: the worker requires wallet auth on POST /positions (ticket sync).
     return /^\/play\//.test(p) || /^\/loans\//.test(p) || /^\/faucet\/v1\/(reserve|commit|cancel)$/.test(p) ||
@@ -82,7 +84,7 @@
   }
   function learnOffsetFromHealth() {
     var sent = Date.now();
-    return nativeFetch.call(window, API + '/health', { cache: 'no-store' })
+    return nativeFetch.call(window, apiBase() + '/health', { cache: 'no-store' })
       .then(function (r) { var recv = Date.now(); return r.json().then(function (j) { var ms = serverMsFrom({ serverTime: j && (j.serverTime || j.ts) }, r); return setOffset(ms, sent, recv); }); })
       .catch(function () { return false; });
   }
@@ -136,7 +138,7 @@
         var ts = nowMs(), n = nonce();
         var sig = await signWithProvider('OST-SESSION|v1|' + w + '|' + ts + '|' + n);
         var sentAt = Date.now();
-        r = await fetch(API + '/auth/session', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ wallet: w, ts: ts, nonce: n, sig: b64(sig) }) });
+        r = await fetch(apiBase() + '/auth/session', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ wallet: w, ts: ts, nonce: n, sig: b64(sig) }) });
         j = await r.json().catch(function () { return null; });
         // C11: a skewed device clock — learn the server's time and sign once more.
         var stale = j && !j.ok && (j.reason === 'stale_timestamp' || j.error === 'stale_timestamp');
@@ -193,7 +195,7 @@
           } else T.push('shared ' + url.slice(-32));
           return hit.p.then(function (r) { return r.clone(); });
         }
-        if (url && url.indexOf(API) === 0) {
+        if (url && url.indexOf(apiBase()) === 0) {
           var sentP = Date.now();
           return nativeFetch.apply(this, arguments).then(function (r) { learnFromResponse(r, sentP, Date.now()); return r; });
         }

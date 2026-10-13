@@ -242,6 +242,9 @@
     document.addEventListener('click', function (e) {
       var a = e.target.closest && e.target.closest('a[href^="#"]');
       if (!a) return;
+      // A wallet GATE link (data-ost-gate) runs OST_WALLET.requireWallet itself,
+      // which records the section to come back to — switching first erased it.
+      if (a.hasAttribute('data-ost-gate')) return;
       var href = a.getAttribute('href') || '';
       var target = href.replace(/^#/, '').split('?')[0].split('/')[0];
       if (!target) return;

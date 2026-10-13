@@ -636,7 +636,7 @@
         tx = await session.provider.signTransaction(tx);
       } else if (session.provider && typeof session.provider.signAndSendTransaction === 'function') {
         // Signs AND submits in one call; the pool's signature is already on it.
-        if (poolSig) rememberPendingCosign({ sig: poolSig, cosignId: built.cosignId, kind: kind, amount: params && params.amount, to: params && params.to, mint: params && params.mint, wallet: walletStr, lastValidBlockHeight: built.lastValidBlockHeight });
+        if (poolSig) rememberPendingCosign({ sig: poolSig, cosignId: built.cosignId, kind: kind, purpose: purposeOf(kind, params), amount: params && params.amount, to: params && params.to, mint: params && params.mint, wallet: walletStr, lastValidBlockHeight: built.lastValidBlockHeight });
         var res;
         try { res = await session.provider.signAndSendTransaction(tx); }
         catch (sendErr) {
@@ -658,7 +658,7 @@
     }
 
     var sig = providerSig || firstSig(tx) || poolSig;
-    var rec = { sig: sig, cosignId: built.cosignId, kind: kind, amount: params && params.amount, to: params && params.to, mint: params && params.mint, wallet: walletStr, lastValidBlockHeight: built.lastValidBlockHeight };
+    var rec = { sig: sig, cosignId: built.cosignId, kind: kind, purpose: purposeOf(kind, params), amount: params && params.amount, to: params && params.to, mint: params && params.mint, wallet: walletStr, lastValidBlockHeight: built.lastValidBlockHeight };
     // SOL-4 / C4: save the signature BEFORE anything is sent.
     if (sig) rememberPendingCosign(rec);
     if (opts.onSigned) { try { opts.onSigned(sig, built); } catch (_) {} }
@@ -744,6 +744,21 @@
   // NOTHING is ever re-signed or re-sent here (SOL-6).
   // -----------------------------------------------------------------------
   var watching = Object.create(null);
+  // What the person was doing, from the memo they signed (a payment INTO the
+  // OST pool is a stake or a purchase, not a "send"): a market stake resolved
+  // after a reload used to be announced as "Your send of 2 OST went through".
+  function purposeOf(kind, params) {
+    var memo = String((params && params.memo) || '');
+    var k = '';
+    try { var brace = memo.indexOf('{'); if (brace >= 0) { var j = JSON.parse(memo.slice(brace)); k = String((j && (j.k || j.kind)) || ''); } } catch (_) {}
+    if (memo.indexOf('OST|prediction|') === 0 || /^(ost-bet|prediction-stake|prediction-buy)$/.test(k)) return 'market-stake';
+    if (k === 'mesh-game-stake') return 'game-stake';
+    if (k === 'memecoin-buy') return 'memecoin-buy';
+    if (kind === 'peer-transfer' && params && window.OST_SWAP_POOL && String(params.to || '') === String(window.OST_SWAP_POOL.publicKey)) return 'pool-payment';
+    if (kind === 'peer-transfer') return 'send';
+    if (kind === 'sol-to-ost' || kind === 'ost-to-sol') return 'conversion';
+    return kind === 'fee-only' ? 'transaction' : '';
+  }
   function assetOfRec(rec) {
     var ostMint = (window.OST_SWAP_POOL && window.OST_SWAP_POOL.mint) || '';
     if (rec.kind === 'peer-transfer') return (rec.mint && rec.mint !== ostMint) ? (rec.mint === OSTG_MINT ? 'OSTG' : 'TOKEN') : 'OST';
@@ -754,20 +769,36 @@
   function describeRec(rec) {
     var amt = Number(rec.amount);
     var asset = assetOfRec(rec);
+    var purpose = rec.purpose || purposeOf(rec.kind, { to: rec.to });
+    var amtTxt = Number.isFinite(amt) && amt > 0 && asset ? amt + ' ' + asset : '';
+    // Stakes and purchases are named as what they are, never as a "send".
+    var noun = { 'market-stake': 'market stake', 'game-stake': 'game stake', 'memecoin-buy': 'memecoin buy', 'pool-payment': 'payment to the OST pool' }[purpose];
+    if (noun) return 'Your ' + (amtTxt ? amtTxt + ' ' : '') + noun;
     var what = rec.kind === 'peer-transfer' ? 'send' : (rec.kind === 'fee-only' ? 'transaction' : 'conversion');
-    return 'Your ' + what + (Number.isFinite(amt) && amt > 0 && asset ? ' of ' + amt + ' ' + asset : '') +
+    return 'Your ' + what + (amtTxt ? ' of ' + amtTxt : '') +
       (rec.kind === 'peer-transfer' && rec.to && rec.to !== (window.OST_SWAP_POOL && window.OST_SWAP_POOL.publicKey) ? ' to ' + String(rec.to).slice(0, 4) + '…' + String(rec.to).slice(-4) : '');
+  }
+  function resolutionText(rec, ok, expired) {
+    var purpose = rec.purpose || purposeOf(rec.kind, { to: rec.to });
+    var d = describeRec(rec);
+    if (purpose === 'market-stake' || purpose === 'game-stake') {
+      if (ok) return d + ' was placed.';
+      return d + (expired ? ' was never sent, so the ticket was not placed. Nothing moved — you can try again.' : ' failed on chain, so the ticket was not placed. Nothing moved — you can try again.');
+    }
+    if (ok) return d + ' went through.';
+    return d + (expired ? ' was never sent. Nothing moved — you can try again.' : ' failed on chain. Nothing moved — you can try again.');
   }
   function announceResolution(rec, c, fromReload) {
     var ok = c.ok && !c.pending;
     var asset = assetOfRec(rec);
+    var purpose = rec.purpose || purposeOf(rec.kind, { to: rec.to });
     if (rec.kind !== 'fee-only' || asset) {
-      walletTx({ sig: rec.sig, asset: asset, amount: Number(rec.amount) || 0, direction: rec.kind === 'peer-transfer' ? 'out' : 'convert', to: rec.to, kind: rec.kind, status: ok ? 'confirmed' : 'failed', source: 'cosign:' + rec.kind, resolved: true, cosignId: rec.cosignId });
+      walletTx({ sig: rec.sig, asset: asset, amount: Number(rec.amount) || 0, direction: rec.kind === 'peer-transfer' ? 'out' : 'convert', to: rec.to, kind: rec.kind, purpose: purpose, status: ok ? 'confirmed' : 'failed', source: 'cosign:' + rec.kind, resolved: true, cosignId: rec.cosignId });
     } else {
-      walletTx({ sig: rec.sig, asset: '', amount: 0, direction: 'out', kind: rec.kind, status: ok ? 'confirmed' : 'failed', source: 'cosign:fee-only', resolved: true, cosignId: rec.cosignId });
+      walletTx({ sig: rec.sig, asset: '', amount: 0, direction: 'out', kind: rec.kind, purpose: purpose, status: ok ? 'confirmed' : 'failed', source: 'cosign:fee-only', resolved: true, cosignId: rec.cosignId });
     }
-    var title = ok ? (fromReload ? 'Earlier transaction confirmed' : 'Confirmed') : 'It didn’t go through';
-    var body = ok ? describeRec(rec) + ' went through.' : describeRec(rec) + (c.expired ? ' was never sent. Nothing moved — you can try again.' : ' failed on chain. Nothing moved — you can try again.');
+    var title = ok ? (fromReload ? (purpose === 'market-stake' || purpose === 'game-stake' ? 'Earlier stake confirmed' : 'Earlier transaction confirmed') : 'Confirmed') : 'It didn’t go through';
+    var body = resolutionText(rec, ok, !!c.expired);
     try {
       if (typeof window.OST_NOTIFY === 'function') window.OST_NOTIFY({ id: 'cosign-' + rec.sig, kind: ok ? 'ok' : 'warn', title: title, body: body, sig: ok ? rec.sig : undefined });
       else if (typeof window.toast === 'function') window.toast(ok ? '✅' : '⚠️', title + ' — ' + body);
@@ -882,22 +913,58 @@
   // { code:'state_unknown', pending:true, payoutId, sig? } when the outcome is
   // unknown (show "Paying…", reconcile with OST_RESCUE.payoutStatus).
   // -----------------------------------------------------------------------
+  // Tickets the OST server settles itself (play-rail / server-ledger p_<openAt>_…
+  // ids, OSTG-native funding) are paid to the play balance by the server.
+  // A wallet payout for them would be a second payment: refuse it here, for
+  // every caller, before anything is built (the worker also answers 403
+  // server_settled).
+  function isServerSettledTicket(o) {
+    if (!o || typeof o !== 'object') return false;
+    if (o.serverSettled === true) return true;
+    var f = String(o.fundedBy || '').toLowerCase(), rail = String(o.rail || '').toLowerCase();
+    if (f === 'ostg-native' || f === 'play' || rail === 'play') return true;
+    return [o.serverPositionId, o.signature, o.sig, o.remoteId, o.id, o.orderId].some(function (x) {
+      return /^(desk-)?p_\d+_/.test(String(x == null ? '' : x));
+    });
+  }
   async function predictionCashOut(orderRecord, payoutAmount) {
+    if (isServerSettledTicket(orderRecord)) {
+      throw moneyError('server_settled', 'The OST server settles this ticket to your play balance — no wallet payout is made.', { stage: 'build', nothingSent: true });
+    }
     var w = window.OST_WALLET;
     if (!w || !w.session || !w.session.publicKey) throw moneyError('no_wallet', 'Connect a wallet first');
     var orderId = orderRecord && (orderRecord.signature || orderRecord.sig || orderRecord.remoteId || orderRecord.id || '');
     return payoutOst(w.session.publicKey, payoutAmount,
-      JSON.stringify({
-        k: orderRecord && orderRecord.cashoutKind === 'prediction-sell' ? 'prediction-sell' : 'prediction-settlement',
-        id: orderId,
-        market: orderRecord && orderRecord.marketId,
-        side: orderRecord && orderRecord.side,
-        stake: orderRecord && Number(orderRecord.stake || 0),
-        payout: Number(payoutAmount),
-        t: Date.now()
-      }),
+      predictionPayoutMemo(orderRecord, orderId, payoutAmount),
       { idempotencyKey: 'prediction-cashout:' + (orderId || stableHash(JSON.stringify(orderRecord || {}))) }
     );
+  }
+  // The worker keeps the first 200 characters of a payout memo and reads it as
+  // JSON. With the full 88-character ticket id, a market id and a timestamp
+  // the memo ran past 200, was cut mid-number, no longer parsed: the worker
+  // could not check the ticket and the on-chain record read as a plain
+  // "Received OST from <pool>" instead of "Market sell". So: never more than
+  // 200, always valid JSON. The ticket id (what the worker verifies) is kept
+  // whole; the market id is shortened or dropped to fit; no timestamp.
+  var PAYOUT_MEMO_MAX = 200;
+  function predictionPayoutMemo(orderRecord, orderId, payoutAmount) {
+    var r6 = function (n) { n = Number(n); return Number.isFinite(n) ? Math.round(n * 1e6) / 1e6 : 0; };
+    var m = {
+      k: orderRecord && orderRecord.cashoutKind === 'prediction-sell' ? 'prediction-sell' : 'prediction-settlement',
+      id: String(orderId || '')
+    };
+    if (orderRecord && orderRecord.side) m.side = String(orderRecord.side).slice(0, 8);
+    m.stake = r6(orderRecord && orderRecord.stake || 0);
+    m.payout = r6(payoutAmount);
+    var market = String((orderRecord && orderRecord.marketId) || '');
+    if (market) {
+      var room = PAYOUT_MEMO_MAX - JSON.stringify(m).length - ',"market":""'.length;
+      if (room >= 8) m.market = market.slice(0, room);
+    }
+    var s = JSON.stringify(m);
+    // A market id with characters JSON escapes could still overflow: drop it.
+    if (s.length > PAYOUT_MEMO_MAX && m.market) { delete m.market; s = JSON.stringify(m); }
+    return s;
   }
 
   // -----------------------------------------------------------------------

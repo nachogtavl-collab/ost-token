@@ -286,8 +286,17 @@
     var hEl = $('nxOstHist');
     if (hEl) hEl.textContent = hist.length < 2 ? 'Collecting price history…' : hist.length + ' readings since ' + new Date(hist[0][0]).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
     renderAge();
+    renderRate();
     drawSpark();
     renderDock();
+  }
+  // H7 / C7: the devnet CONVERSION rate, shown next to the display index so the
+  // ~20x gap is explained on screen (touch users never see a title tooltip).
+  function renderRate() {
+    var el = $('nxOstRateVal'); if (!el) return;
+    var v;
+    try { if (window.OST_CONVERT_PRICE && typeof OST_CONVERT_PRICE.ostUsd === 'function') v = Number(OST_CONVERT_PRICE.ostUsd()); } catch (_) {}
+    el.textContent = Number.isFinite(v) && v > 0 ? '$' + (v < 0.1 ? v.toFixed(4) : v.toFixed(2)) : '—';
   }
   function renderAge() {
     var el = $('nxOstAge'); if (!el) return;
@@ -685,7 +694,7 @@
     dock.setAttribute('aria-label', 'OST dock');
     var btn = function (k, ico, tip) { return '<button type="button" class="nx-dock__btn" data-dk="' + k + '" data-tip="' + tip + '" aria-label="' + tip + '">' + svg(ico) + '</button>'; };
     dock.innerHTML =
-      '<button type="button" class="nx-dock__chip" data-dk="home" title="OST model price — FX-anchored index, devnet"><span class="k">OST</span><span class="v" id="nxDkPx">—</span></button>' +
+      '<button type="button" class="nx-dock__chip" data-dk="home" title="OST index (display) — an FX-anchored model, not a price you can trade at. The devnet conversion rate is shown on the home card and in Wallet → Convert. No cash value."><span class="k">OST index</span><span class="v" id="nxDkPx">—</span></button>' +
       '<button type="button" class="nx-dock__chip" data-dk="wallet" title="Your on-chain OST"><span class="k">Balance</span><span class="v" id="nxDkBal">—</span></button>' +
       '<span class="nx-dock__sep" aria-hidden="true"></span>' +
       btn('markets', 'trend', 'Markets') + btn('trade', 'ticket', 'Trade ticket') + btn('parlay', 'layers', 'Parlay') +
@@ -701,8 +710,35 @@
     document.documentElement.classList.add('nx-dock-on');
     renderDock();
     paintMeshBadge();
+    dockAvoid();
     requestAnimationFrame(function () { requestAnimationFrame(function () { dock.classList.add('in'); }); });
   }
+  // The dock never sits on the hero's buttons: in a short desktop window
+  // (1024x768) "Get OST Now" / "Explore Commerce" landed under it. While a hero
+  // button is inside the dock's zone, the dock tucks away below the screen; it
+  // comes back as soon as they scroll clear.
+  var avoidRaf = 0;
+  function dockAvoid() {
+    avoidRaf = 0;
+    if (!dock) return;
+    var w = dock.offsetWidth, h = dock.offsetHeight;
+    if (!w || !h) return;
+    var vw = window.innerWidth, vh = window.innerHeight;
+    var zl = (vw - w) / 2 - 4, zr = (vw + w) / 2 + 4, zt = vh - 16 - h;
+    var hit = false, els = document.querySelectorAll('.hero-actions > *');
+    for (var i = 0; i < els.length && !hit; i++) {
+      var e = els[i]; if (e.offsetParent === null) continue;
+      var r = e.getBoundingClientRect();
+      if (r.width && r.height && r.right > zl && r.left < zr && r.bottom > zt && r.top < vh) hit = true;
+    }
+    dock.classList.toggle('nx-dock--tuck', hit);
+  }
+  function scheduleDockAvoid() { if (dock && !avoidRaf) avoidRaf = requestAnimationFrame(dockAvoid); }
+  window.addEventListener('scroll', scheduleDockAvoid, { passive: true });
+  window.addEventListener('resize', scheduleDockAvoid);
+  window.addEventListener('hashchange', function () { setTimeout(scheduleDockAvoid, 120); });
+  // Sections open/close without a scroll (compartments): re-check now and then.
+  setInterval(function () { if (!document.hidden) scheduleDockAvoid(); }, 1500);
   function renderDock() {
     if (!dock) return;
     var meta = null; try { meta = OST.getMeta(); } catch (_) {}
@@ -791,8 +827,10 @@
     // Price
     try { if (window.OST && OST.onPrice) OST.onPrice(function () { renderPrice(); }); } catch (_) {}
     window.addEventListener('ost:price', renderPrice);
-    renderPrice(); drawSpark();
-    setInterval(function () { if (!document.hidden && homeVisible) renderAge(); }, 30000);
+    renderPrice(); drawSpark(); renderRate();
+    // OST_CONVERT_PRICE (wallet-extras.js) may load after this module.
+    setTimeout(renderRate, 1500); setTimeout(renderRate, 5000);
+    setInterval(function () { if (!document.hidden && homeVisible) { renderAge(); renderRate(); } }, 30000);
     var rt = 0; window.addEventListener('resize', function () { clearTimeout(rt); rt = setTimeout(function () { drawSpark(); syncDockForViewport(); }, 150); });
     if (dockMq.addEventListener) dockMq.addEventListener('change', syncDockForViewport);
 

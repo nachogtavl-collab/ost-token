@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" role="img" aria-label="Cast-iron pot">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2a1b16"/><stop offset="1" stop-color="#120c0a"/></linearGradient>
+    <linearGradient id="pot" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f97316"/><stop offset="1" stop-color="#c2410c"/></linearGradient>
+  </defs>
+  <rect width="120" height="120" rx="18" fill="url(#bg)"/>
+  <rect x="54" y="30" width="12" height="7" rx="3" fill="#e5e7eb"/>
+  <path d="M26 46c0-6 15-10 34-10s34 4 34 10z" fill="url(#pot)"/>
+  <path d="M28 50h64v28c0 11-10 18-32 18S28 89 28 78z" fill="url(#pot)"/>
+  <path d="M28 52h64" stroke="#7c2d12" stroke-width="3"/>
+  <rect x="14" y="56" width="16" height="8" rx="4" fill="#c2410c"/>
+  <rect x="90" y="56" width="16" height="8" rx="4" fill="#c2410c"/>
+  <path d="M36 62c4 12 14 20 30 22" fill="none" stroke="#fed7aa" stroke-opacity=".45" stroke-width="3" stroke-linecap="round"/>
+</svg>
