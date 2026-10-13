@@ -151,12 +151,23 @@
   }
 
   /* ---------- on-chain activity ---------- */
+  // Memo kind -> human label (On-chain tab and incoming notices).
+  var KIND = { 'ost-topup': 'Top-up delivered (SOL → OST)', 'topup-payment': 'Top-up payment (SOL → OST)', 'ost-bet': 'Market ticket', 'prediction-settlement': 'Market payout', 'prediction-sell': 'Market sell', 'ost-new-here': 'Faucet claim', 'faucet-hub-cashout': 'Credits cash-out', 'memecoin-buy': 'Memecoin buy', 'memecoin-sell': 'Memecoin sell', 'sol-to-ost': 'Converted SOL → OST', 'converter-sol-to-ost': 'Converted SOL → OST', 'ost-to-sol': 'Converted OST → SOL', 'converter-ost-to-sol': 'Converted OST → SOL', 'peer-transfer': 'Peer transfer', 'treasury-deposit': 'Treasury deposit' };
+  var SOL_LEG_KINDS = /^(sol-to-ost|ost-to-sol|converter-sol-to-ost|converter-ost-to-sol)$/;
+  // Pool payouts for the user's OWN action: the action already announced its
+  // result ("Sold — 3.57 OST", "Converted…"), so the chain echo is not a second
+  // "Received … from <pool address>" notice (MK-DUP-TOAST, SOL-post-success).
+  var OWN_ACTION_KINDS = /^(ost-new-here|prediction-sell|prediction-settlement|ost-to-sol|sol-to-ost|converter-sol-to-ost|converter-ost-to-sol|faucet-hub-cashout|memecoin-sell|ost-topup|topup-payment)$/;
+  // Parser version stamped on every cached row. Rows parsed by an older version
+  // ("Received OST · from <pool>", one-leg conversions, unlabelled top-up
+  // payments) are re-read from the chain a few per refresh (activity-sol-rails).
+  var PARSE_V = 3;
   function actKey() { return ACT_KEY + (pubkey() || ''); }
   function loadAct() { try { var r = JSON.parse(localStorage.getItem(actKey()) || 'null'); return r && Array.isArray(r.rows) ? r.rows : []; } catch (_) { return []; } }
   function saveAct(rows) { try { localStorage.setItem(actKey(), JSON.stringify({ at: Date.now(), rows: rows.slice(0, 60) })); } catch (_) {} }
   function keyStr(k) { try { return k && k.pubkey ? (k.pubkey.toBase58 ? k.pubkey.toBase58() : String(k.pubkey)) : (k && k.toBase58 ? k.toBase58() : String(k)); } catch (_) { return ''; } }
   function parseTx(sig, tx, pk) {
-    var row = { sig: sig, ts: 0, label: 'Program activity', amt: null, unit: '', dir: 0, ok: true, memo: '', from: '', legs: null };
+    var row = { sig: sig, ts: 0, label: 'Program activity', amt: null, unit: '', dir: 0, ok: true, memo: '', from: '', legs: null, pv: PARSE_V };
     if (!tx) return row;
     row.ts = tx.blockTime ? tx.blockTime * 1000 : 0; row.ok = !(tx.meta && tx.meta.err);
     var meta = tx.meta || {}, msg = (tx.transaction && tx.transaction.message) || {};
@@ -190,10 +201,27 @@
     // read the JSON from its first "{", and recognise the faucet payout id.
     var kind = '';
     try { var brace = row.memo.indexOf('{'); if (brace >= 0) { var mj = JSON.parse(row.memo.slice(brace)); kind = String((mj && (mj.k || mj.kind)) || ''); } } catch (_) {}
+    // MK-DUP-TOAST: the worker cuts a client memo to 200 chars, so a payout
+    // memo can be unterminated JSON ('…"payout":2.8230985'). Read the kind
+    // field directly, then fall back to the payout id the pool wrote.
+    if (!kind) { var km = /"k(?:ind)?"\s*:\s*"([a-z0-9-]{2,40})"/i.exec(row.memo); if (km) kind = km[1].toLowerCase(); }
+    if (!kind && /payoutId:prediction-cashout:/.test(row.memo)) kind = 'prediction-sell';
+    if (!kind && /payoutId:topup-/.test(row.memo)) kind = 'ost-topup';
     if (!kind && /payoutId:faucet-/.test(row.memo)) kind = 'ost-new-here';
+    // activity-sol-rails: the Convert-tab SOL payment carries the top-up memo
+    // "OST-XXXXXX" (its OST arrives in a separate "Top-up delivered" tx).
+    if (!kind && /^OST-[A-Z0-9]{6,}$/.test(row.memo.trim())) kind = 'topup-payment';
     row.memo = row.memo.slice(0, 160);
-    var KIND = { 'ost-topup': 'Top-up delivered', 'ost-bet': 'Market ticket', 'prediction-settlement': 'Market payout', 'prediction-sell': 'Market sell', 'ost-new-here': 'Faucet claim', 'faucet-hub-cashout': 'Credits cash-out', 'memecoin-buy': 'Memecoin buy', 'memecoin-sell': 'Memecoin sell', 'sol-to-ost': 'Converted SOL → OST', 'ost-to-sol': 'Converted OST → SOL', 'peer-transfer': 'Peer transfer', 'treasury-deposit': 'Treasury deposit' };
     if (/^faucet-/.test(kind)) kind = 'ost-new-here';
+    // Both legs of a SOL ⇄ OST conversion in ONE tx (hub SOL→OST, OST→SOL
+    // cash-out): "−0.0003 SOL · +2.95 OST", never "Received OST from <pool>".
+    if (SOL_LEG_KINDS.test(kind) && Math.abs(ds) > 0.000001 && Math.abs(dc) > 1e-9) {
+      row.kind = kind;
+      row.label = (row.ok ? '' : 'Failed · ') + (KIND[kind] || (dc > 0 ? 'Converted SOL → OST' : 'Converted OST → SOL'));
+      row.legs = dc > 0 ? [{ unit: 'SOL', amt: ds }, { unit: 'OST', amt: dc }] : [{ unit: 'OST', amt: dc }, { unit: 'SOL', amt: ds }];
+      row.amt = Math.abs(dc); row.unit = 'OST'; row.dir = 0; row.convert = true;
+      return row;
+    }
     // BRG-6: an OST ⇄ OSTG bridge conversion shows BOTH legs, never "Sent OSTG".
     if (viaBridge && (Math.abs(dg) > 1e-9 || Math.abs(dc) > 1e-9)) {
       row.label = dc < 0 || dg > 0 ? 'Converted OST → OSTG' : 'Converted OSTG → OST';
@@ -209,6 +237,9 @@
     var ataLabel = '';
     if (ataCreated && !row.unit) ataLabel = (ataCreated === OSTG_MINT ? 'OSTG' : (ataCreated === ostc ? 'OST' : 'Token')) + ' account created · fee paid by OST';
     row.label = KIND[kind] || ataLabel || (row.unit ? (row.dir > 0 ? 'Received ' : 'Sent ') + row.unit : (idx === 0 ? 'Transaction' : 'Program activity'));
+    // A known pool payout (market sell, top-up, faucet…) names its source by
+    // the label: "· from <pool address>" only for plain transfers.
+    if (KIND[kind] && kind !== 'peer-transfer') row.from = '';
     if (!row.ok) row.label = 'Failed · ' + row.label;
     return row;
   }
@@ -230,9 +261,11 @@
   function announceIncoming(rows) {
     rows.forEach(function (r) {
       if (!r || !r.ok || r.dir <= 0 || r.convert || !(r.unit === 'OST' || r.unit === 'OSTG')) return;
-      if (r.kind === 'ost-new-here') return;              // the faucet flow already said "100 OST arrived"
+      if (OWN_ACTION_KINDS.test(r.kind || '')) return;   // the action itself already announced it (faucet, sell, cash-out, top-up)
       if (r.ts && r.ts < S.mountedAt - 30000) return;    // only what arrived while this page is open
-      toast('Received ' + fmt(r.amt, 4) + ' ' + r.unit + (r.from ? ' from ' + short(r.from) : (r.label && !/^Received/.test(r.label) ? ' · ' + r.label : '')), 'ok', { sig: r.sig });
+      // A known memo kind names the source; "from <address>" only for plain transfers.
+      var lbl = KIND[r.kind];
+      toast(lbl && r.kind !== 'peer-transfer' ? lbl + ' · +' + fmt(r.amt, 4) + ' ' + r.unit : 'Received ' + fmt(r.amt, 4) + ' ' + r.unit + (r.from ? ' from ' + short(r.from) : ''), 'ok', { sig: r.sig });
     });
   }
   function refreshActivity(force) {
@@ -249,13 +282,33 @@
       [].concat.apply([], lists).forEach(function (s) { if (s && s.signature && !bySig[s.signature]) bySig[s.signature] = s; });
       var sigs = Object.keys(bySig).map(function (k) { return bySig[k]; }).sort(function (a, b) { return (b.blockTime || 0) - (a.blockTime || 0); });
       var fresh = sigs.filter(function (s) { return !known[s.signature]; }).slice(0, 12);
-      var p = fresh.length ? W().rpcCall(function (c) { return c.getParsedTransactions(fresh.map(function (s) { return s.signature; }), { maxSupportedTransactionVersion: 0 }); }) : Promise.resolve([]);
+      // Rows cached by an older parser: re-read them in the same batch, newest
+      // first, within the same 12-transaction budget. Never announced again.
+      var redo = Object.keys(known).map(function (k) { return known[k]; })
+        .filter(function (r) { return r && r.sig && r.pv !== PARSE_V; })
+        .sort(function (a, b) { return (b.ts || 0) - (a.ts || 0); })
+        .slice(0, Math.max(0, 12 - fresh.length)).map(function (r) { return r.sig; });
+      var ask = fresh.map(function (s) { return s.signature; }).concat(redo);
+      var p = ask.length ? W().rpcCall(function (c) { return c.getParsedTransactions(ask, { maxSupportedTransactionVersion: 0 }); }) : Promise.resolve([]);
       return p.then(function (txs) {
         var newRows = [];
         fresh.forEach(function (s, i) { var r = parseTx(s.signature, txs && txs[i], pk); if (!r.ts && s.blockTime) r.ts = s.blockTime * 1000; if (s.err) r.ok = false; known[s.signature] = r; if (!S.seen[s.signature]) newRows.push(r); S.seen[s.signature] = 1; });
+        redo.forEach(function (sig, j) {
+          var old = known[sig], tx = txs && txs[fresh.length + j];
+          if (!old) return;
+          if (!tx) { old.pv = PARSE_V; return; }   // pruned / unknown: keep the old row, stop asking
+          var r = parseTx(sig, tx, pk); if (!r.ts && old.ts) r.ts = old.ts; if (old.ok === false) r.ok = false;
+          known[sig] = r;
+        });
         var rows = Object.keys(known).map(function (k) { return known[k]; }).sort(function (a, b) { return (b.ts || 0) - (a.ts || 0); });
         S.act = rows; saveAct(rows);
         if (!firstLoad || Date.now() - S.mountedAt > 5000) announceIncoming(newRows);
+        // S22: a new transaction for this wallet moved its balance. Read it now,
+        // so "Received 1 OST" never sits next to the old total for a minute.
+        if (newRows.length && !firstLoad) {
+          try { if (window.OST_BALANCE) { if (OST_BALANCE.refreshNow) OST_BALANCE.refreshNow(); else OST_BALANCE.refresh(true); } } catch (_) {}
+          readSol(true);
+        }
         return newRows.length;
       });
     })
@@ -284,13 +337,39 @@
   // loop and logs "ws error: undefined". After 2 socket errors, drop the
   // subscriptions and stay on the 60 s refresh for 5 minutes.
   var wsErrors = 0, wsBackoffUntil = 0, wsHooked = null;
+  // S22: removing the listeners alone left web3.js's socket reconnecting every
+  // second (pending subscriptions are never pruned while disconnected): ~1
+  // refused handshake + 2 console errors per second against a provider that is
+  // already rate-limiting us. The push watcher therefore runs on its OWN
+  // Connection (the shared one keeps serving every other module), and on
+  // backoff its socket is stopped for good; a fresh one is built afterwards.
+  var ownConn = null;
+  function pushConnection() {
+    if (ownConn) return ownConn;
+    var shared = null; try { shared = W().getConnection(); } catch (_) {}
+    if (!shared || !w3() || typeof w3().Connection !== 'function') return shared;
+    try { ownConn = new (w3().Connection)(shared.rpcEndpoint, { commitment: 'confirmed', wsEndpoint: shared._rpcWsEndpoint || undefined }); }
+    catch (_) { ownConn = null; return shared; }
+    return ownConn;
+  }
+  function stopSocket(conn) {
+    if (!conn || conn !== ownConn) return;   // never touch the shared connection
+    try { var s = conn._rpcWebSocket; if (s) { s.reconnect = false; s.max_reconnects = 0; clearTimeout(s.reconnect_timer_id); try { s.close(); } catch (_) {} } } catch (_) {}
+  }
   function hookWsErrors(conn) {
     try {
       var sock = conn && conn._rpcWebSocket;
       if (!sock || wsHooked === sock || typeof sock.on !== 'function') return;
       wsHooked = sock;
       sock.on('error', function () {
-        if (++wsErrors >= 2) { wsErrors = 0; wsBackoffUntil = Date.now() + 5 * 60000; unwatch(); }
+        if (++wsErrors >= 2) {
+          wsErrors = 0; wsBackoffUntil = Date.now() + 5 * 60000;
+          var c = subConn; unwatch(); stopSocket(c);
+          if (c === ownConn) { ownConn = null; wsHooked = null; }
+          // S22: push is down for 5 minutes. OST_BALANCE then reads every 15 s
+          // while the tab is visible (instead of the 60 s heartbeat).
+          try { if (window.OST_BALANCE && OST_BALANCE.pushDown) OST_BALANCE.pushDown(5 * 60000); } catch (_) {}
+        }
       });
     } catch (_) {}
   }
@@ -304,7 +383,7 @@
     if (Date.now() < wsBackoffUntil) return;
     if (subPk === pk && subs.length) return;
     unwatch();
-    var conn = null; try { conn = W().getConnection(); } catch (_) {}
+    var conn = null; try { conn = pushConnection(); } catch (_) {}
     if (!conn || typeof conn.onAccountChange !== 'function') return;
     subConn = conn; subPk = pk;
     hookWsErrors(conn);
@@ -383,12 +462,15 @@
     return '<div class="owh-card owh-backup">' +
       '<div class="owh-kicker">' + (S.onboarding ? 'Step 2 of 3 · ' : '') + 'Save your key</div><h3>Back up your wallet</h3>' +
       '<p>Your wallet <b>' + esc(short(pk)) + '</b> exists only in this browser. Anyone with this key controls the wallet — and clearing site data or losing this device loses it unless you keep a copy. Save it now, or later from ⋯.</p>' +
-      '<div class="owh-row2"><button class="owh-primary" data-act="dl-backup">Download backup</button>' + (b58 ? '<button class="owh-ghost" data-act="copy-b58">Copy key (Phantom format)</button>' : '') + '</div>' +
+      // J-07: once a backup exists the forward button is the primary action
+      // (a second download no longer looks like the next step).
+      '<div class="owh-row2"><button class="' + (done ? 'owh-ghost' : 'owh-primary') + '" data-act="dl-backup">' + (done ? 'Download again' : 'Download backup') + '</button>' + (b58 ? '<button class="owh-ghost" data-act="copy-b58">Copy key (Phantom format)</button>' : '') + '</div>' +
       '<div class="owh-links"><button data-act="reveal">' + (S.reveal ? 'Hide secret key' : 'Show secret key') + '</button></div>' +
       (S.reveal ? '<textarea class="owh-secret" readonly>' + esc(b58 || secret) + '</textarea><div class="owh-note">' + (b58 ? 'Base58 (Phantom/Solflare import format).' : 'JSON array of 64 numbers.') + '</div>' : '') +
-      (done ? '<div class="owh-ok">✓ Backup saved ' + esc(ago(done)) + ' ago. Keep it offline.</div>' : '') +
+      // J-08: ago() says "now" under a minute — never "now ago".
+      (done ? '<div class="owh-ok">✓ Backup saved ' + (ago(done) === 'now' ? 'just now' : esc(ago(done)) + ' ago') + '. Keep it offline.</div>' : '') +
       '<div class="owh-note">Never share this key. OST will never ask you for it.</div>' +
-      '<button class="owh-ghost" data-act="backup-next">' + (S.onboarding ? (done ? 'Continue' : 'Skip for now (you\'ll be reminded)') : 'Done') + '</button>' +
+      '<button class="' + (done ? 'owh-primary' : 'owh-ghost') + '" data-act="backup-next">' + (S.onboarding ? (done ? 'Continue to free OST' : 'Skip for now (you\'ll be reminded)') : 'Done') + '</button>' +
       '</div>';
   }
   function getOstHtml() {
@@ -443,10 +525,11 @@
         '</div>' +
         '<div class="owh-confirm" id="owhConfirm" hidden></div>' +
         (needBackup ? '<div class="owh-warn">No backup yet — this browser wallet is lost if site data is cleared. <button data-act="backup">Back up now</button></div>' : '') +
-        '<div class="owh-total"><span>Total</span><strong id="owhTotal">—</strong><em id="owhTotalUsd"></em></div>' +
+        '<div class="owh-total"><span>Total balance</span><strong id="owhTotal">—</strong><em id="owhTotalUsd"></em></div>' +
         '<div class="owh-bals" id="owhBals"></div>' +
         '<div class="owh-actions">' +
-          '<button data-act="send"><b>↑</b>Send</button><button data-act="receive"><b>↓</b>Receive</button><button data-act="topup"><b>＋</b>Top up</button><button data-act="faucet" id="owhFaucetBtn"><b>💧</b><span>Get OST</span></button><button data-act="convert"><b>⇄</b>Convert</button>' +
+          // S21: every label is its own span (nowrap; never broken mid-word).
+          '<button data-act="send"><b>↑</b><span>Send</span></button><button data-act="receive"><b>↓</b><span>Receive</span></button><button data-act="topup"><b>＋</b><span>Top up</span></button><button data-act="faucet" id="owhFaucetBtn"><b>💧</b><span>Get OST</span></button><button data-act="convert"><b>⇄</b><span>Convert</span></button>' +
         '</div>' +
         '<div class="owh-status" id="owhStatus" hidden></div>' +
       '</div>' +
@@ -472,17 +555,21 @@
     rows.push({ k: 'SOL', v: sol, d: 4, note: 'not needed for OST', sol: true });
     el.innerHTML = rows.map(function (r) {
       return '<div class="owh-bal' + (r.sol ? ' owh-bal-sol' : '') + '"><span>' + r.k + '</span><strong>' + fmt(r.v, r.d) + '</strong><em>' + esc(r.note) + '</em>' +
-        (r.sol ? '<button class="owh-getsol" data-act="get-sol" title="Cash out 10 OST to devnet SOL">Get SOL</button>' : '') + '</div>';
+        (r.sol ? '<button class="owh-getsol" data-act="get-sol" title="Cash out OST to devnet SOL (at least 10 OST)">Get SOL</button>' : '') + '</div>';
     }).join('');
     // C6: the total is known only when BOTH on-chain balances are known — a sum
     // of whatever happened to load (e.g. Play 0) read as "Total 0 OST".
-    var tot = 0, known = ostc != null && isFinite(ostc) && ostg != null && isFinite(ostg);
-    if (known) [ostc, ostg, play, sess].forEach(function (v) { if (v != null && isFinite(v)) tot += Number(v); });
+    var tot = 0, gTot = 0, known = ostc != null && isFinite(ostc) && ostg != null && isFinite(ostg);
+    if (known) [ostg, play, sess].forEach(function (v) { if (v != null && isFinite(v)) gTot += Number(v); });
+    if (known) tot = Number(ostc) + gTot;
     var t = $('owhTotal'), tu = $('owhTotalUsd');
-    if (t) t.textContent = known ? fmt(tot) + ' OST' : '—';
+    // S10 / C6: "OST" is only the OST mint (383p…). OSTG (wallet + play + 1-tap)
+    // is a different token, so the total names both units instead of adding them
+    // under one "OST" label (that 16 "OST" could not be sent as OST).
+    if (t) t.textContent = !known ? '—' : (gTot > 1e-9 ? fmt(ostc) + ' OST · ' + fmt(gTot) + ' OSTG' : fmt(ostc) + ' OST');
     // WAL-9 / C7: only the fixed devnet conversion rate, labelled — never the
-    // display index (that 20x gap read as a real price).
-    if (tu) tu.textContent = !known ? 'reading balances…' : (rate ? '≈ ' + usd(tot * rate) + ' at the devnet conversion rate (1 OST = $' + rate + ') · no cash value' : 'devnet · no cash value');
+    // display index (that 20x gap read as a real price). OST ⇄ OSTG is 1:1.
+    if (tu) tu.textContent = !known ? 'reading balances…' : (rate ? '≈ ' + usd(tot * rate) + (gTot > 1e-9 ? ' combined' : '') + ' at the devnet conversion rate (1 OST = ' + (gTot > 1e-9 ? '1 OSTG = ' : '') + '$' + rate + ') · no cash value' : 'devnet · no cash value');
   }
   function paintSession() {
     var el = $('owhSess'); if (!el) return;
@@ -495,16 +582,52 @@
   function paintFaucetBtn() {
     var b = $('owhFaucetBtn'); if (!b) return;
     var lbl = b.querySelector('span'); var f = faucetInfo() || {};
-    // Short tile labels: the five action tiles are ~60 px wide on a 390 px phone.
-    if (S.faucetBusy) { b.disabled = true; if (lbl) lbl.textContent = S.faucetStage === 'sending' ? 'Sending…' : (S.faucetStage === 'confirming' ? 'Pending…' : 'Checking…'); return; }
-    if (f.pending) { b.disabled = true; b.title = f.hold ? 'We could not confirm your last claim yet — check your balance' : 'Your claim is confirming'; if (lbl) lbl.textContent = f.hold ? 'Checking…' : 'Pending…'; return; }
+    // Short tile labels: the five action tiles are ~57 px wide on a 360 px phone.
+    var wait = function (on, aria) { b.classList.toggle('owh-wait', !!on); if (on) b.setAttribute('aria-disabled', 'true'); else b.removeAttribute('aria-disabled'); if (aria) b.setAttribute('aria-label', aria); else b.removeAttribute('aria-label'); };
+    if (S.faucetBusy) { b.disabled = true; wait(true, 'Claiming free OST'); if (lbl) lbl.textContent = S.faucetStage === 'sending' ? 'Sending' : (S.faucetStage === 'confirming' ? 'Pending' : 'Checking'); return; }
+    // J-17: pending / hold / cooldown tiles stay TAPPABLE (dimmed, aria-disabled):
+    // a tap explains why in #owhStatus instead of being silently dropped. The
+    // claim flow itself refuses a second claim (cooldown / hold), with no network.
+    if (f.pending) { b.disabled = false; var pt = f.hold ? 'We could not confirm your last claim yet — check your balance' : 'Your claim is confirming'; b.title = pt; wait(true, pt); if (lbl) lbl.textContent = f.hold ? 'Checking' : 'Pending'; return; }
     var now = srvNow();
-    if (f.welcomeClaimed && f.nextAt > now) { b.disabled = true; b.title = 'Next free OST in ' + countdown(f.nextAt - now); if (lbl) lbl.textContent = 'In ' + countdown(f.nextAt - now); return; }
-    b.disabled = false; b.title = f.welcomeClaimed ? 'Claim today\'s 1 OST' : 'Claim 100 free devnet OST'; if (lbl) lbl.textContent = 'Get OST';
+    if (f.welcomeClaimed && f.nextAt > now) { var cd = countdown(f.nextAt - now); b.disabled = false; b.title = 'Next free OST in ' + cd; wait(true, 'Next free OST in ' + cd); if (lbl) lbl.textContent = cd; return; }
+    b.disabled = false; wait(false); b.title = f.welcomeClaimed ? 'Claim today\'s 1 OST' : 'Claim 100 free devnet OST'; if (lbl) lbl.textContent = 'Get OST';
   }
+  // J-17: a tap on a waiting faucet tile says why, in visible text (touch users
+  // never see the title tooltip). Cooldown goes through the claim flow (it
+  // answers locally, no network); a pending/hold claim is explained here.
+  function faucetTap() {
+    var f = faucetInfo() || {};
+    if (S.faucetBusy) return;
+    if (f.pending) {
+      setStatus(f.hold ? 'We couldn\'t confirm your last claim yet — it may still land. Check your balance before claiming again.' : 'Your free-OST claim is still confirming — it usually lands in a few seconds. Don\'t claim again.', 'pending');
+      return;
+    }
+    runFaucet(false);
+  }
+  // SRV-A1: human copy for app-ledger kinds (no raw "Recv Ost" / "Faucet Welcome").
+  var LEDGER_KIND = { 'faucet-welcome': 'Free OST · welcome', 'faucet-daily': 'Free OST · daily', 'recv-ost': 'Received OST', 'recv-sol': 'Received SOL', 'send': 'Sent', 'ost-to-sol': 'Converted OST → SOL', 'sol-to-ost': 'Converted SOL → OST', 'prediction-buy': 'Market ticket', 'prediction-sell': 'Market sell', 'vault-retained-loss': 'Market sell · loss kept by vault', 'games-deposit': 'Games deposit', 'game-loss': 'Game loss', 'ost-topup': 'Top-up delivered' };
+  function ledgerLabel(kind) { var k = String(kind || ''); if (LEDGER_KIND[k]) return LEDGER_KIND[k]; var t = k.replace(/[-_]+/g, ' ').trim(); return t ? t.charAt(0).toUpperCase() + t.slice(1) : 'Activity'; }
   function appLedger() {
     var out = [];
-    try { var snaps = JSON.parse(localStorage.getItem('ost.wallet.balanceHistory.v1') || '[]'); (Array.isArray(snaps) ? snaps : []).forEach(function (s) { if (s && s.kind && s.kind !== 'tick') out.push({ ts: Number(s.ts) || 0, label: String(s.kind).replace(/[-_]/g, ' '), amt: Number(s.amount) || null, unit: /sol/i.test(s.kind) && !/ost/i.test(s.kind) ? 'SOL' : 'OST', dir: /^(send|prediction-buy|game-loss|games-deposit|launchpad-buy|ost-to-sol|perp-open|stock-buy|parlay-stake)/.test(s.kind) ? -1 : 1, ok: true, sig: s.sig && /^[1-9A-HJ-NP-Za-km-z]{60,100}$/.test(String(s.sig)) ? String(s.sig) : '' }); }); } catch (_) {}
+    try {
+      var snaps = JSON.parse(localStorage.getItem('ost.wallet.balanceHistory.v1') || '[]');
+      var bySig = {};
+      (Array.isArray(snaps) ? snaps : []).forEach(function (s) {
+        if (!s || !s.kind || s.kind === 'tick') return;
+        var sig = s.sig && /^[1-9A-HJ-NP-Za-km-z]{60,100}$/.test(String(s.sig)) ? String(s.sig) : '';
+        var kindKey = /^vault-retained-loss$/.test(s.kind) ? 'loss' : 'main';
+        // SRV-A1: one on-chain event = one row. The same claim stored under the
+        // reservation id AND under its signature showed as "+100 OST" twice.
+        if (sig) { var k = sig + '|' + kindKey; if (bySig[k]) return; bySig[k] = 1; }
+        out.push({ ts: Number(s.ts) || 0, kind: String(s.kind), label: ledgerLabel(s.kind), amt: Number(s.amount) || null, unit: /sol/i.test(s.kind) && !/ost/i.test(s.kind) ? 'SOL' : 'OST', dir: /^(send|prediction-buy|game-loss|games-deposit|launchpad-buy|ost-to-sol|perp-open|stock-buy|parlay-stake|vault-retained-loss)/.test(s.kind) ? -1 : 1, ok: true, sig: sig });
+      });
+      // A sig-less "recv-ost"/"recv-sol" is a balance DIFF, not a transfer: the
+      // claim seen from another tab, or a 2-dp rounding echo (MK-PHANTOM-RECV).
+      // app.js no longer records them; older ones are not shown either. Real
+      // receives are in the On-chain tab, with their signature.
+      out = out.filter(function (r) { return r.sig || !/^recv-/.test(r.kind); });
+    } catch (_) {}
     try { var orders = JSON.parse(localStorage.getItem('ost.prediction.orders.v1') || '[]'); (Array.isArray(orders) ? orders : []).slice(-40).forEach(function (o) { if (!o) return; out.push({ ts: Number(o.placedAt || o.ts || o.createdAt) || 0, label: 'Market ' + (o.status || 'open') + (o.marketTitle || o.title ? ' · ' + String(o.marketTitle || o.title).slice(0, 48) : ''), amt: Number(o.amount || o.stake) || null, unit: o.unit || 'OST', dir: o.status === 'won' ? 1 : -1, ok: true, sig: '' }); }); } catch (_) {}
     return out.sort(function (a, b) { return b.ts - a.ts; }).slice(0, 60);
   }
@@ -516,7 +639,7 @@
     el.innerHTML = rows.map(function (r) {
       var cls = r.dir > 0 ? 'in' : (r.dir < 0 ? 'out' : 'neu');
       var amt;
-      if (r.legs) amt = r.legs.filter(function (l) { return Math.abs(l.amt) > 1e-9; }).map(function (l) { return (l.amt > 0 ? '+' : '−') + fmt(Math.abs(l.amt), 4) + ' ' + esc(l.unit); }).join(' · ');
+      if (r.legs) amt = r.legs.filter(function (l) { return Math.abs(l.amt) > 1e-9; }).map(function (l) { return (l.amt > 0 ? '+' : '−') + fmt(Math.abs(l.amt), l.unit === 'SOL' ? 6 : 4) + ' ' + esc(l.unit); }).join(' · ');
       else amt = r.amt != null ? (r.dir > 0 ? '+' : (r.dir < 0 ? '−' : '')) + fmt(r.amt, r.unit === 'SOL' ? 4 : 2) + ' ' + esc(r.unit) : '';
       var sub = (r.ts ? ago(r.ts) : '') + (r.from ? ' · from ' + esc(short(r.from)) : '') + (r.sig ? ' · <a href="' + esc(explorer('tx', r.sig)) + '" target="_blank" rel="noopener">' + esc(short(r.sig)) + '</a>' : '');
       return '<div class="owh-tx ' + cls + (r.ok === false ? ' bad' : '') + '"><b>' + (r.legs ? '⇄' : (r.dir > 0 ? '↓' : (r.dir < 0 ? '↑' : '•'))) + '</b><div class="owh-txmain"><span>' + esc(r.label) + '</span><em>' + sub + '</em></div><strong>' + amt + '</strong></div>';
@@ -582,20 +705,51 @@
     var tb = document.querySelector('[data-wallet-panel-target="convert"]'); if (tb) { tb.click(); tb.scrollIntoView({ block: 'start', behavior: 'smooth' }); return true; }
     return false;
   }
+  // MK-TILE (plan §8 tap 5): "Try a 5-minute market" lands ON the BTC 5-min
+  // market — the same call as the Nexus "flagship" launcher — not the list.
+  function openFiveMinMarket() {
+    try { location.hash = '#markets'; } catch (_) {}
+    var tries = 0;
+    (function go() {
+      var P = window.OST_PREDICT_MOBILE;
+      if (!(P && typeof P.openFlagship === 'function')) { if (tries++ < 30) setTimeout(go, 200); return; }
+      setTimeout(function () {
+        try { P.openFlagship(); } catch (_) {}
+        // The market list may still be loading: one retry if no market opened.
+        setTimeout(function () { try { if (/^#markets/.test(location.hash) && P.current && !P.current()) P.openFlagship(); } catch (_) {} }, 1600);
+      }, 200);
+    })();
+  }
   function goBridge() {
     try { if (window.OST_BRIDGE_UI && typeof OST_BRIDGE_UI.open === 'function') { OST_BRIDGE_UI.open(); return; } } catch (_) {}
     goConvert();
     setTimeout(function () { var b = document.querySelector('.ostb-wrap'); if (b) b.scrollIntoView({ block: 'center', behavior: 'smooth' }); }, 300);
   }
   // SOL-1 / C8: "Get SOL" = cash out at least 10 OST -> devnet SOL on the Convert tab.
+  // RNT-1: the rent minimum is computed from today's SOL price and this
+  // wallet's SOL (OST_REAL_SWAP.minOstFor, the quote's own helper) — never a
+  // stale hard-coded "~9.2 OST". null = unknown (price not loaded).
+  function rentMinOst() {
+    try {
+      var rs = window.OST_REAL_SWAP; if (!rs || typeof rs.minOstFor !== 'function') return null;
+      var s = bal('sol'); if (s == null) s = S.sol;
+      var m = rs.minOstFor(s != null && isFinite(s) ? Math.round(Number(s) * 1e9) : 0);
+      return m == null || !isFinite(m) ? null : Number(m);
+    } catch (_) { return null; }
+  }
   function getSol() {
-    try { if (window.OST_GET_SOL && typeof OST_GET_SOL.open === 'function') { OST_GET_SOL.open(10); toast('Cash out 10 OST → devnet SOL: review the quote, then confirm. A first cash-out must be at least ~9.2 OST (Solana rent minimum).', 'info'); return; } } catch (_) {}
+    var min = rentMinOst();
+    var preset = Math.max(10, min > 0 ? Math.ceil(min) : 0);
+    var rent = min > 0 ? ' Solana keeps at least 0.00089 SOL in a new account, so this first cash-out must be about ' + fmt(min, 1) + ' OST or more at today\'s SOL price.'
+      : (min === 0 ? '' : ' A first cash-out must cover Solana\'s 0.00089 SOL rent minimum — the quote shows the exact figure.');
+    var msg = 'Cash out ' + preset + ' OST → devnet SOL: review the quote, then confirm.' + rent;
+    try { if (window.OST_GET_SOL && typeof OST_GET_SOL.open === 'function') { OST_GET_SOL.open(preset); toast(msg, 'info'); return; } } catch (_) {}
     goConvert();
     setTimeout(function () {
       var sel = $('transferFrom'), amt = $('transferAmount');
       if (sel && sel.querySelector('option[value="OST"]')) { sel.value = 'OST'; sel.dispatchEvent(new Event('change', { bubbles: true })); }
-      if (amt) { amt.value = '10'; amt.dispatchEvent(new Event('input', { bubbles: true })); }
-      toast('Cash out 10 OST → devnet SOL: review the quote, then confirm. Solana needs ≥ 0.00089 SOL in a new account, so the first cash-out is at least ~9.2 OST.', 'info');
+      if (amt) { amt.value = String(preset); amt.dispatchEvent(new Event('input', { bubbles: true })); }
+      toast(msg, 'info');
     }, 350);
   }
 
@@ -645,6 +799,12 @@
     if (f.welcomeClaimed) { finishOnboarding(); return; }
     S.view = 'getost'; S.status = ''; S.statusKind = ''; render();
   }
+  var advTimer = 0;
+  function advanceAfterBackup() {
+    if (!S.onboarding) return;
+    clearTimeout(advTimer);
+    advTimer = setTimeout(function () { if (S.onboarding && S.view === 'backup' && backedUpAt()) afterBackupStep(); }, 800);
+  }
   function runFaucet(fromStep) {
     if (typeof window.runOstFaucetFlow !== 'function') { toast('The faucet is still loading — try again in a second.', 'err'); return; }
     if (S.faucetBusy) return;
@@ -668,13 +828,14 @@
       } else {
         // FCT-3: human message, never a raw reason code ('error', 'daily-cooldown').
         var msg = r.message ? r.message + (r.body ? ' ' + r.body : '') : 'The faucet is not available right now.';
-        if (r.state === 'cooldown') msg = r.message || 'Already claimed today.';
+        if (r.state === 'cooldown') msg = (r.message || 'Already claimed today') + '. Daily claims are manual — come back then and tap Get OST.';
         S.awaitClaim = r.state === 'pending';   // the watcher moves Step 3 on when it lands
         setStatus(msg, r.state === 'pending' ? 'pending' : (r.state === 'cooldown' ? '' : 'err'));
         if (!r.notified) toast(msg, r.state === 'cooldown' ? 'info' : 'err');
         render();
       }
-      refresh(true);
+      // A local cooldown answer moved nothing: no balance refresh (no network).
+      if (r.state !== 'cooldown') refresh(true);
     }, function (e) {
       S.faucetBusy = false; S.faucetStage = '';
       setStatus('The faucet is not available right now. Check your balance before trying again.', 'err');
@@ -767,14 +928,16 @@
         break;
       }
       case 'backup': S.view = 'backup'; S.reveal = false; S.onboarding = false; render(); break;
-      case 'dl-backup': { var r2 = storedLocal(); if (!r2) return; download(backupFileName(pk), JSON.stringify(r2.secretKey)); markBackedUp(); toast('Backup downloaded — keep it offline.', 'ok'); render(); break; }
-      case 'copy-b58': { var k = base58Secret(); if (k) copy(k, 'Secret key copied (Phantom format)', function () { markBackedUp(); render(); }); break; }
+      // J-07 (plan §8 tap 3): during onboarding, Download / Copy IS the step —
+      // show the ✓ for a moment, then go straight to Step 3 (free OST).
+      case 'dl-backup': { var r2 = storedLocal(); if (!r2) return; download(backupFileName(pk), JSON.stringify(r2.secretKey)); markBackedUp(); toast('Backup downloaded — keep it offline.', 'ok'); render(); advanceAfterBackup(); break; }
+      case 'copy-b58': { var k = base58Secret(); if (k) copy(k, 'Secret key copied (Phantom format)', function () { markBackedUp(); render(); advanceAfterBackup(); }); break; }
       case 'reveal': S.reveal = !S.reveal; render(); break;
       case 'backup-next': afterBackupStep(); break;
       case 'getost-go': runFaucet(true); break;
       case 'finish': finishOnboarding(); break;
       case 'resume': clearTimeout(autoTimer); finishOnboarding(); break;
-      case 'tile-market': S.view = 'home'; render(); try { location.hash = '#markets'; } catch (_) {} break;
+      case 'tile-market': S.view = 'home'; render(); openFiveMinMarket(); break;
       case 'tile-bridge': S.view = 'home'; render(); goBridge(); break;
       case 'copy-addr': if (pk) copy(pk, 'Address copied'); break;
       case 'share-addr': if (pk && navigator.share) navigator.share({ title: 'My OST wallet', text: pk }).catch(function () {}); break;
@@ -805,7 +968,7 @@
       case 'receive': toggleReceive(); break;
       case 'receive-close': toggleReceive(false); break;
       case 'topup': if (typeof window.openTopUpModal === 'function') window.openTopUpModal(); else toast('Top-up is loading — try again in a second.', 'err'); break;
-      case 'faucet': runFaucet(false); break;
+      case 'faucet': faucetTap(); break;
       case 'get-sol': getSol(); break;
       case 'convert': goConvert(); break;
       case 'sess-end':
@@ -894,11 +1057,20 @@
       }
     });
     ['ost:money:change', 'ost:play:balance', 'ost:prediction:order-changed', 'ost-tx-history-update'].forEach(function (ev) { window.addEventListener(ev, function () { paintBalances(); if (S.actTab === 'app') paintActivity(); }); });
-    window.addEventListener('ost:wallet-tx', function () { setTimeout(function () { refresh(true); }, 2500); refreshUntilNew([2500, 6000, 12000]); });
+    // OST_BALANCE itself reads fresh the moment ost:wallet-tx fires (and again
+    // after any in-flight read): no extra delay here.
+    window.addEventListener('ost:wallet-tx', function () { refresh(true); refreshUntilNew([2500, 6000, 12000]); });
+    // S22: while push is down, a balance rise is the only early sign of an
+    // incoming transfer — look for it in Activity now, not at the 60 s poll.
+    window.addEventListener('ost:balance-rise', function () {
+      try { if (window.OST_BALANCE && OST_BALANCE.pushIsDown && OST_BALANCE.pushIsDown()) refreshUntilNew([1500, 4000, 9000]); } catch (_) {}
+    });
     // NET-3: at most one refresh a minute, only while visible and not idle.
     // Activity (3 getSignaturesForAddress) only while the wallet home is on
     // screen; push (account change) and ost:wallet-tx cover the rest.
-    setInterval(function () { if (!document.hidden && !idle() && pubkey()) { refresh(false); if (root && root.offsetParent !== null && S.view === 'home') refreshActivity(false); } }, 60000);
+    // watch() is a no-op while subscribed; after a 5-minute WS backoff it
+    // re-opens push (nothing else would until the tab is hidden and shown).
+    setInterval(function () { if (!document.hidden && !idle() && pubkey()) { refresh(false); watch(); if (root && root.offsetParent !== null && S.view === 'home') refreshActivity(false); } }, 60000);
     // The faucet countdown label (no network).
     setInterval(function () { if (!document.hidden && S.view === 'home') paintFaucetBtn(); }, 30000);
     document.addEventListener('visibilitychange', function () { if (!document.hidden) { refresh(false); watch(); } else unwatch(); });

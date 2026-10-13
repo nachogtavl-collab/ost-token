@@ -695,12 +695,20 @@
       var connected = !!(w && w.session && w.session.publicKey);
       if (!connected) {
         dot.dataset.state = 'off';
-        text.innerHTML = '<a href="#wallet" id="ostgConnectLink" style="color:#bfdbfe;text-decoration:underline;">Create a free wallet or connect one</a> to deposit devnet OST';
+        // J-23: data-ost-gate keeps the compartment router (compartments.js,
+        // capture phase) from switching to #wallet BEFORE requireWallet records
+        // where to come back to — "You'll come straight back" must hold.
+        text.innerHTML = '<a href="#wallet" data-ost-gate="games" id="ostgConnectLink" style="color:#bfdbfe;text-decoration:underline;">Create a free wallet or connect one</a> to deposit devnet OST';
         if (depBtn) { depBtn.disabled = false; depBtn.title = 'Create or connect a wallet first'; }
         var link = document.getElementById('ostgConnectLink');
         if (link) link.addEventListener('click', function (e) {
           e.preventDefault();
-          requireGamesWallet('deposit OST to play', refresh);
+          // Back on Games with the (now enabled) Deposit button on screen.
+          requireGamesWallet('deposit OST to play', function () {
+            refresh();
+            var d = document.getElementById('ostgDepositBtn') || document.getElementById('ostgWalletLine');
+            try { if (d) d.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (_) {}
+          });
         });
         return;
       }

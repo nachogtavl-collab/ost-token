@@ -163,6 +163,9 @@
     try { if (window.OST_OPTIMISTIC && OST_OPTIMISTIC.toast) { OST_OPTIMISTIC.toast(msg, kind === 'ok' ? 'success' : kind); return; } } catch (_) {}
     try { console.log('[predict]', msg); } catch (_) {}
   }
+  // Clear a notice card by id (C2 OST_NOTIFY.dismiss) when the same result is
+  // shown in the sheet instead.
+  function dismissNotice(id) { try { if (id && typeof window.OST_NOTIFY === 'function' && typeof window.OST_NOTIFY.dismiss === 'function') window.OST_NOTIFY.dismiss(id); } catch (_) {} }
   // Plain-English error copy (contract C3) when the module is present.
   function human(err, stage, asset) {
     try { if (window.OST_MONEY_ERRORS && typeof OST_MONEY_ERRORS.humanize === 'function') { var h = OST_MONEY_ERRORS.humanize(err, { stage: stage || 'build', asset: asset || 'OST' }); if (h && h.title) return h; } } catch (_) {}
@@ -255,7 +258,11 @@
     // No wallet = no balance to show ("—"), never a made-up 0.
     var b = walletAddr() ? playBal() : undefined;
     setBalDisplay(b);
-    var f = ''; try { if (window.OST_CCY && OST_CCY.fiat && b != null) f = OST_CCY.fiat(b) || ''; } catch (_) {}
+    // The fiat hint covers BOTH numbers on the chip (OST and OSTG are 1:1 in
+    // unit of account) — it used to price only the OSTG, so 100 OST read $0.00.
+    var bo = walletAddr() ? balances().ost : undefined;
+    var tot = (b == null && bo == null) ? undefined : (Number(b) || 0) + (Number(bo) || 0);
+    var f = ''; try { if (window.OST_CCY && OST_CCY.fiat && tot != null) f = OST_CCY.fiat(tot) || ''; } catch (_) {}
     document.querySelectorAll('#ostPredictMobile .opm-balf').forEach(function (e) { e.textContent = f; });
   }
   // Repaint the fiat hint when the user changes currency (it used to keep whatever currency
@@ -292,7 +299,7 @@
   /* ===================================================================== */
   function browseTemplate() {
     return '' +
-    '<div class="opm-tb"><div><h2 class="opm-htitle">Predictions</h2><div class="opm-hsub">Real-world markets · devnet OSTG (no cash value)</div></div><div class="opm-sp"></div><button class="opm-tickets-btn" id="opmTicketsBtn">' + icon('ticket') + 'Portfolio</button>' + balChip() + '</div>' +
+    '<div class="opm-tb"><div><h2 class="opm-htitle">Predictions</h2><div class="opm-hsub">Real-world markets · devnet OST &amp; OSTG (no cash value)</div></div><div class="opm-sp"></div><button class="opm-tickets-btn" id="opmTicketsBtn">' + icon('ticket') + 'Portfolio</button>' + balChip() + '</div>' +
     '<div class="opm-scroll">' +
       '<div class="opm-search">' + icon('search') + '<input id="opmQ" type="search" placeholder="Search Bitcoin, Trump, NBA, inflation…" autocomplete="off"></div>' +
       '<div class="opm-chips" id="opmChips">' + CATS.map(function (c) { return '<button class="opm-chip' + (c.k === 'all' ? ' on' : '') + '" data-c="' + c.k + '">' + icon(c.ic) + c.label + '</button>'; }).join('') + '</div>' +
@@ -619,23 +626,37 @@
   // matter what BTC did. Now: logistic on deltaPct/scale, sqrt-time band, clamped
   // to [0.1%,99.9%] exactly like the worker (BTC_PROB_MIN/MAX). Display-only; the
   // real fill price still comes from the server/chain at buy time.
-  function updateLiveOdds() {
-    if (!(beat > 0) || !(price > 0)) return;
+  // Implied Yes (cents, 0.1 precision) for a BTC price `p` against the beat.
+  function btcYesAt(p) {
+    if (!(beat > 0) || !(p > 0)) return NaN;
     var FIVE = 300000;
     var msLeft = round ? Math.max(0, Math.min(FIVE, Number(round.closeAt) - Date.now())) : FIVE;
     var timeLeftRatio = msLeft / FIVE;
-    var deltaPct = (price - beat) / beat * 100;
+    var deltaPct = (p - beat) / beat * 100;
     var scale = 0.15 * Math.sqrt(Math.max(timeLeftRatio, 0.04));
     var z = Math.max(-8, Math.min(8, deltaPct / Math.max(scale, 0.001)));
     var yes = 1 / (1 + Math.exp(-z));
     yes = Math.max(0.001, Math.min(0.999, yes));            // BTC_PROB_MIN / MAX -> full 0.1c..99.9c range
     // EXACT cents at 0.1 precision (was rounded+clamped to [1,99], which hid the
     // extremes). So a near-certain outcome shows 99.9c / 0.1c, not a flat 99 / 1.
-    var implied = Math.round(yes * 1000) / 10;
-    if (implied === midYes) return;
+    return Math.round(yes * 1000) / 10;
+  }
+  function updateLiveOdds() {
+    var implied = btcYesAt(price);
+    if (!(implied > 0) || implied === midYes) return;
     midYes = implied;
     renderOddsLive();
   }
+  // MK-BTC-QUOTE: the number a BUY / SELL sheet quotes. The chart and the big
+  // Yes/No buttons glide on the display price, which plays back DELAY ms
+  // (1.2–4 s) in the past; the OST server fills at its CURRENT canonical tick.
+  // So the sheet quotes from the newest real tick (headPrice), the price the
+  // server will use. Every other market quotes its live mid.
+  function quoteYes() {
+    if (currentMarket && isBtcLive(currentMarket)) { var q = btcYesAt(headPrice > 0 ? headPrice : price); if (q > 0) return q; }
+    return midYes;
+  }
+  function sideCents(s, yesC) { var y = yesC == null ? quoteYes() : yesC; return s === 'no' ? (100 - y) : y; }
   var _posDomAt = 0;
   // TRADE GATE. With no fresh SETTLEMENT price the round cannot be priced: the desk used
   // to keep quoting 50c/50c off a frozen number and still let people buy. Now: no settlement
@@ -684,29 +705,39 @@
       var cfs = el('opmCfSell');
       if (!cfs) return;   // "not sellable" sheet: nothing live to patch
       if (/Processing|Selling/.test(cfs.textContent)) return;
-      // Live ESTIMATE (PRD-5: nothing is "locked" — the cash-out re-checks the
-      // price and asks again if it moved > 5%). Patches text only, so the Sell
-      // button under the user's finger is never replaced.
+      // Live quote (PRD-5: nothing is "locked"). Patches text only, so the Sell
+      // button under the user's finger is never replaced. The exact number on
+      // the button rides along as data-net: that is what the sale must pay
+      // (MK-FAST-SOL — the cash-out refuses if it would pay > 1% less).
       var q = sellQuote(), u = q.unit;
       var px = el('opmSellPx'); if (px) px.textContent = fmtc(q.c) + '¢';
       var fe = el('opmSellFee'); if (fe) fe.textContent = q.fee.toFixed(2);
       var pl = el('opmSellPnl'); if (pl) { pl.textContent = (q.up ? '+' : '−') + Math.abs(q.pnl).toFixed(2) + ' ' + u; pl.style.color = 'var(--opm-' + (q.up ? 'yes' : 'no') + ')'; }
       var nt = el('opmSellNet'); if (nt) nt.textContent = '≈' + q.realNet + ' ' + u;
       cfs.textContent = 'Sell for ≈' + q.realNet + ' ' + u;
+      cfs.setAttribute('data-net', String(q.net));
       return;
     }
     var inp = el('opmAmtIn'); var a = inp ? (parseFloat(inp.value) || 0) : amt;
-    var ty = t.querySelector('.opm-tkout .y .px'); if (ty) ty.textContent = fmtc(midYes) + '¢';
-    var tn = t.querySelector('.opm-tkout .n .px'); if (tn) tn.textContent = fmtc(100 - midYes) + '¢';
-    var bd = el('opmBuyBd'); if (bd) bd.innerHTML = buyBdHtml(buyEstimate(a));   // patch the breakdown; the confirm button below is untouched
+    var qy = quoteYes();
+    var ty = t.querySelector('.opm-tkout .y .px'); if (ty) ty.textContent = fmtc(qy) + '¢';
+    var tn = t.querySelector('.opm-tkout .n .px'); if (tn) tn.textContent = fmtc(100 - qy) + '¢';
+    var est = buyEstimate(a);
+    var bd = el('opmBuyBd'), bdh = buyBdHtml(est);
+    if (bd && bd.__h !== bdh) { bd.__h = bdh; bd.innerHTML = bdh; }   // patch the breakdown (only when it changed); the confirm button below is untouched
     // The funding plan (what this buy spends, PRD-2) follows the amount + balance.
     var plan = fundingPlan(a), r = railOf(currentMarket), u2 = plan.unit || unitOfRail(r);
     var pe = el('opmPlan'); if (pe) pe.textContent = (plan.needWallet || plan.short || plan.empty) ? '' : plan.text;
     var cur = el('opmAmtCur'); if (cur) cur.textContent = u2;
     var key = planKey();
     var ctaBox = el('opmCta');
-    if (ctaBox && t.__planKey !== key) { t.__planKey = key; ctaBox.innerHTML = ctaHtml(plan, r, u2); wireCta(); return; }   // CTA shape changed: swap only the CTA box
-    var cf = el('opmCf'); if (cf && !/Bought|Placing/.test(cf.textContent)) cf.textContent = 'Buy ' + (side === 'yes' ? 'Yes' : 'No') + ' · ' + fmtAmt(a) + ' ' + u2;
+    if (ctaBox && t.__planKey !== key) { t.__planKey = key; ctaBox.innerHTML = ctaHtml(plan, r, u2, est.c); wireCta(); return; }   // CTA shape changed: swap only the CTA box
+    var cf = el('opmCf');
+    if (cf && !cf.getAttribute('data-busy')) {
+      if (!/Bought|Placing/.test(cf.textContent)) cf.textContent = 'Buy ' + (side === 'yes' ? 'Yes' : 'No') + ' · ' + fmtAmt(a) + ' ' + u2;
+      // The price the sheet now shows is the price a tap agrees to (MK-BTC-QUOTE).
+      if (est.c > 0) cf.setAttribute('data-c', String(est.c));
+    }
   }
 
   function paintOdds() {
@@ -913,9 +944,20 @@
     tween(el('opmBeat'), beat, usd); applyDir(); draw();
     loadOnchain();
   }
+  // NET-3: ONE /btc/round fetcher for the page. prediction-pro owns it
+  // (in-flight de-dupe + a 4 s window that the realtime round push refreshes),
+  // so the 5-minute boundary no longer fires a burst of identical requests
+  // from every module. A direct fetch only when that module is missing.
+  function fetchRound() {
+    try {
+      var api = window.OST_PREDICTION_API;
+      if (api && typeof api.refreshCanonicalRound === 'function') return Promise.resolve(api.refreshCanonicalRound());
+    } catch (_) {}
+    return fetch(API + '/btc/round', { cache: 'no-store' }).then(function (r) { return r.json(); });
+  }
   function loadRound() {
-    return fetch(API + '/btc/round', { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (d) {
-      if (!d || d.ok === false) throw new Error('bad round');
+    return fetchRound().then(function (d) {
+      if (!d || d.ok === false || !isFinite(Number(d.openAt))) throw new Error('bad round');
       saveRoundCache(d); applyRound(d);
     }).catch(function () {
       // HONEST: no fabricated round. Use the last REAL round only while it is
@@ -923,7 +965,7 @@
       var c = null; try { c = JSON.parse(localStorage.getItem('ost.btc5m.round.lk') || 'null'); } catch (_) {}
       if (c && Number(c.closeAt) > Date.now()) { applyRound(c); return; }
       try { var cf = el('opmCf'); if (cf) { cf.disabled = true; cf.setAttribute('data-blocked', 'round unavailable'); } } catch (_) {}
-      toast('Live round unavailable — reconnecting to the price feed.');
+      if (Date.now() - (loadRound._toldAt || 0) > 30000) { loadRound._toldAt = Date.now(); toast('Live round unavailable — reconnecting to the price feed.'); }
     });
   }
 
@@ -1016,11 +1058,17 @@
     });
   }
 
+  // PRD-7: legacy records synced under pseudo-wallets ('credits', 'ostg',
+  // 'wallet' → "cred…dits", "ostg…ostg") are not trades by a real wallet —
+  // they never reach the tape, the holders list or the pool.
+  var REAL_WALLET_RE = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+  function realWalletRow(r) { return !!(r && REAL_WALLET_RE.test(String(r.wallet || ''))); }
   var _tradesGen = 0;
   function loadTrades() {
     var fid = feedTradeId(); if (!fid) return;
+    loadTrades._at = Date.now();
     var gen = ++_tradesGen, m = currentMarket;
-    var ostP = fetchJsonT(API + '/positions/recent?marketId=' + encodeURIComponent(fid) + '&limit=60', 9000).then(function (d) { return (d && d.recent) || []; });
+    var ostP = fetchJsonT(API + '/positions/recent?marketId=' + encodeURIComponent(fid) + '&limit=60', 9000).then(function (d) { return ((d && d.recent) || []).filter(realWalletRow); });
     var venP = venueTrades(m).catch(function () { return null; });
     return Promise.all([ostP.then(function (a) { return { ok: true, a: a }; }, function () { return { ok: false, a: [] }; }), venP]).then(function (res) {
       if (gen !== _tradesGen || view !== 'detail') return;
@@ -1160,6 +1208,7 @@
       entry: Number(o.fillPrice) || Number(o.entry) || Number(o.price) || 0,
       unit: orderUnit(o), rail: orderRail(o),
       pending: o.fundingState === 'confirming' || o.fundingState === 'submitting' || !!o.pending,
+      sending: o.fundingState === 'submitting',   // no signature yet: the stake is still being sent
       paying: !!o.cashoutPending,
       selling: !!(_sellingRef && (_sellingRef === orderKey(o) || _sellingRef === sig)),
       justFilled: prev && prev.justFilled
@@ -1185,7 +1234,7 @@
     if (!myPos.native && !myPos.placing) {
       try { var api = window.OST_PREDICTION_API; if (api && api.quoteCashOut && myPos.ref) { var q = api.quoteCashOut(myPos.ref); if (q) return q; } } catch (_) {}
     }
-    var c = myPos.side === 'yes' ? midYes : (100 - midYes);
+    var c = sideCents(myPos.side);   // the fresh head-tick quote the server sells at (MK-BTC-QUOTE)
     var gross = Math.min(myPos.shares, myPos.shares * (c / 100));
     var fee = Math.max(0, gross - posCost()) * 0.02;
     return { kind: myPos.native ? 'ostg-native-sell' : 'prediction-sell', canCash: gross > 0, gross: gross, net: Math.max(0, gross - fee), fee: fee, mid: c / 100, unit: myPos.unit, rail: myPos.rail, estimate: true };
@@ -1201,13 +1250,13 @@
     var sideCls = myPos.side === 'yes' ? 'y' : 'n', sideLab = myPos.side === 'yes' ? 'Yes' : 'No';
     var action;
     var pendTag = myPos.placing ? '<span class="opm-pend">placing…</span>'
-      : myPos.pending ? '<span class="opm-pend">confirming stake…</span>'
+      : myPos.pending ? '<span class="opm-pend">' + (myPos.sending ? 'sending stake…' : 'confirming stake…') + '</span>'
       : myPos.paying ? '<span class="opm-pend">paying…</span>'
       : (myPos.justFilled && Date.now() - myPos.justFilled < 4000 ? '<span class="opm-pend ok">✓ filled</span>' : '');
     if (myPos.selling) action = '<div class="opm-locked">' + (myPos.rail === 'wallet' ? 'Selling… paying OST to your wallet' : 'Selling… the OST server is filling at its current odds') + '</div>';
     else if (myPos.paying) action = '<div class="opm-locked">Paying… checking whether the payout landed. Check your wallet balance before retrying.</div>';
     else if (myPos.placing) action = '<div class="opm-locked">' + esc(myPos.placingText || 'Placing your ticket…') + '</div>';
-    else if (myPos.pending) action = '<div class="opm-locked">Confirming your stake on chain — you can sell once it lands.</div>';
+    else if (myPos.pending) action = '<div class="opm-locked">' + (myPos.sending ? 'Sending your stake to the OST pool — the ticket goes live when it lands.' : 'Confirming your stake on chain — you can sell once it lands.') + '</div>';
     else if (q && q.canCash === false) action = '<div class="opm-locked">' + esc(q.detail || q.label || 'Not sellable right now') + '</div>';
     else action = '<div class="opm-pcbtns"><button class="addmore" id="opmAddMore">Add more</button><button class="sell" id="opmSellBtn">Sell · ≈' + val.toFixed(2) + ' ' + esc(u) + '</button></div>';
     wrap.innerHTML = '<div class="opm-poscard"><div class="pch">Your position <span class="side ' + sideCls + '">' + sideLab + '</span>' + pendTag + '<span class="sp"></span><span class="pnl ' + (up ? 'up' : 'down') + '">' + esc(pnlTxt) + '</span></div>' +
@@ -1260,12 +1309,14 @@
 
   /* ---- buy / sell sheet ---- */
   var amt = 5, mode = 'buy';
-  function openSheet(m, s) {
-    mode = m; if (s) side = s;
+  // A "price moved" re-quote shown at the top of a re-opened buy sheet.
+  var _requote = '';
+  function openSheet(m, s, requote) {
+    mode = m; if (s) side = s; _requote = requote ? String(requote) : '';
     syncYnSel(); paintTicket(); el('opmSheet').classList.add('open'); el('opmScrim').classList.add('open');
     if (m === 'buy') { try { if (window.OST_BALANCE && OST_BALANCE.refresh) Promise.resolve(OST_BALANCE.refresh(false)).then(function () { refreshOpenSheet(true); }).catch(function () {}); } catch (_) {} }
   }
-  function closeSheet() { var sh = el('opmSheet'), sc = el('opmScrim'); if (sh) sh.classList.remove('open'); if (sc) sc.classList.remove('open'); }
+  function closeSheet() { _requote = ''; var sh = el('opmSheet'), sc = el('opmScrim'); if (sh) sh.classList.remove('open'); if (sc) sc.classList.remove('open'); }
   function maxBal() { var b = spendableFor(currentMarket); return b > 0 ? Math.floor(b * 100) / 100 : 5; }
   function syncYnSel() { document.querySelectorAll('#opmYn button').forEach(function (b) { b.classList.toggle('sel', b.getAttribute('data-s') === side); }); }
   // When the on-chain arb is active, part of the stake is the market-maker
@@ -1277,7 +1328,7 @@
   //   play / on-chain: the server / program fills at its own odds — an estimate.
   function buyEstimate(stake) {
     var r = railOf(currentMarket);
-    var c = side === 'yes' ? midYes : (100 - midYes), px = Math.max(0.001, Math.min(0.999, c / 100));
+    var c = sideCents(side), px = Math.max(0.001, Math.min(0.999, c / 100));
     if (r === 'wallet') {
       var q = null; try { q = (window.OST_ARB && OST_ARB.buyQuote) ? OST_ARB.buyQuote(stake, px) : null; } catch (_) { q = null; }
       var shares = q && q.shares > 0 ? q.shares : (stake / px);
@@ -1336,18 +1387,23 @@
   // The sheet's call to action (buy button, wallet gate, or "not enough" with
   // the two ways out). Lives in its own box so a live refresh can swap it
   // without touching the amount input the user is typing in.
-  function ctaHtml(plan, r, u) {
+  // `c` = the side price (cents) the sheet is SHOWING right now. It rides on the
+  // Buy button as data-c and is re-stamped on every repaint, so confirmBuy
+  // agrees to the number the user saw — never a re-quote taken at the tap
+  // (MK-BTC-QUOTE review: the old limit compared the tap's own quote with itself).
+  function ctaHtml(plan, r, u, c) {
     if (plan.needWallet) return '<div class="opm-short">' + esc(plan.text) + '</div><button class="opm-confirm" id="opmCfWallet">Create free wallet / Connect</button>';
     // "Convert" only helps when there is wallet OST to convert.
     var canConvert = r !== 'wallet' && Number(balances().ost) > 0;
     if (plan.short) return '<div class="opm-short" id="opmShort">' + esc(plan.text) + '</div><div class="opm-pcbtns"><button class="addmore" id="opmGetOst">Get free OST</button>' + (canConvert ? '<button class="addmore" id="opmConvert">Convert OST ⇄ OSTG</button>' : '') + '</div>';
-    return '<button class="opm-confirm' + (side === 'no' ? ' no' : '') + '" id="opmCf"' + (plan.empty ? ' disabled' : '') + '>Buy ' + (side === 'yes' ? 'Yes' : 'No') + ' · ' + fmtAmt(amt) + ' ' + esc(u) + '</button>';
+    return '<button class="opm-confirm' + (side === 'no' ? ' no' : '') + '" id="opmCf"' + (Number(c) > 0 ? ' data-c="' + esc(String(c)) + '"' : '') + (plan.empty ? ' disabled' : '') + '>Buy ' + (side === 'yes' ? 'Yes' : 'No') + ' · ' + fmtAmt(amt) + ' ' + esc(u) + '</button>';
   }
   function buyTicket() {
-    var e = buyEstimate(amt), r = railOf(currentMarket), plan = fundingPlan(amt), u = plan.unit || unitOfRail(r);
+    var e = buyEstimate(amt), r = railOf(currentMarket), plan = fundingPlan(amt), u = plan.unit || unitOfRail(r), qy = quoteYes();
     return '<h3>' + icon('ticket') + ' Buy</h3>' +
-      '<div class="opm-tkout"><button class="y' + (side === 'yes' ? ' sel' : '') + '" data-t="yes"><span class="lab">Yes</span><span class="px">' + fmtc(midYes) + '¢</span></button>' +
-      '<button class="n' + (side === 'no' ? ' sel' : '') + '" data-t="no"><span class="lab">No</span><span class="px">' + fmtc(100 - midYes) + '¢</span></button></div>' +
+      (_requote ? '<div class="opm-short" id="opmRequote">' + esc(_requote) + '</div>' : '') +
+      '<div class="opm-tkout"><button class="y' + (side === 'yes' ? ' sel' : '') + '" data-t="yes"><span class="lab">Yes</span><span class="px">' + fmtc(qy) + '¢</span></button>' +
+      '<button class="n' + (side === 'no' ? ' sel' : '') + '" data-t="no"><span class="lab">No</span><span class="px">' + fmtc(100 - qy) + '¢</span></button></div>' +
       '<div class="opm-amt"><input id="opmAmtIn" inputmode="decimal" value="' + amt + '"><span class="cur" id="opmAmtCur">' + esc(u) + '</span></div>' +
       '<div class="opm-quick">' + [5, 10, 25, 'Max'].map(function (q) { return '<button data-q="' + String(q).toLowerCase() + '">' + q + '</button>'; }).join('') + '</div>' +
       '<div class="opm-src"><span class="l"><span class="d"></span> ' + esc(railLine(r)) + '</span></div>' +
@@ -1355,7 +1411,7 @@
       // PRD-5 / D4: 1-tap only exists with a LIVE on-chain round market.
       (r === 'onchain' ? '<div class="opm-sess" id="opmSess"></div>' : '') +
       '<div class="opm-bd" id="opmBuyBd">' + buyBdHtml(e) + '</div>' +
-      '<div id="opmCta">' + ctaHtml(plan, r, u) + '</div>' +
+      '<div id="opmCta">' + ctaHtml(plan, r, u, e.c) + '</div>' +
       '<div class="opm-fine">' + icon('lock') + ' ' + esc(settleLine()) + (e.estimate ? ' · the share count is an estimate — the server fills at its current odds' : '') +
         (isBtcLive(currentMarket) && !onchainActive ? '<br>On-chain betting program: offline (devnet R&amp;D)' : '') + '</div>';
   }
@@ -1364,7 +1420,7 @@
   function sellQuote() {
     var q = posQuote() || {};
     var cost = posCost(), net = Number(q.net) || 0, gross = Number(q.gross) || 0;
-    var c = myPos ? (myPos.side === 'yes' ? midYes : (100 - midYes)) : 0;
+    var c = myPos ? sideCents(myPos.side) : 0;
     if (!(myPos && myPos.native) && Number(q.mid) > 0) c = Number(q.mid) * 100;
     var pnl = net - cost;
     return { c: c, shares: myPos ? myPos.shares : 0, fee: Number(q.fee) || 0, gross: gross, net: net, realNet: net.toFixed(2), pnl: pnl, up: pnl >= 0,
@@ -1376,8 +1432,12 @@
     var dest = q.rail === 'wallet' ? 'Proceeds go to your wallet as OST (on-chain payout from the OST pool, ~2 s).'
       : q.rail === 'onchain' ? 'Proceeds go to your wallet as OSTG.' : 'Proceeds go to your play balance (OSTG).';
     // PRD-5: no "exit price locked" — BTC sells fill at the SERVER's odds.
-    var est = q.native ? 'Estimated — the server fills at its current odds.' : 'Estimate at the live price. If the price moves more than 5% before you tap, you are asked again.';
+    // MK-FAST-SOL: the wallet-rail sale pays the live quote, and refuses (nothing
+    // is sold, the new number is shown) if that is more than 1% below the
+    // number on the button at the moment of the tap.
+    var est = q.native ? 'Estimated — the server fills at its current odds.' : 'Live price. If the sale would pay more than 1% less than the button shows when you tap, nothing is sold and you see the new price.';
     return '<h3>' + icon('coin') + ' Sell your ' + (myPos && myPos.side === 'yes' ? 'Yes' : 'No') + ' position</h3>' +
+      (_requote ? '<div class="opm-short" id="opmRequote">' + esc(_requote) + '</div>' : '') +
       '<div class="opm-fine" style="text-align:left;color:var(--opm-ink2)">' + esc(est) + '</div>' +
       '<div class="opm-bd">' +
         '<div class="opm-tl"><span class="k">Selling</span><span class="v">' + q.shares.toFixed(2) + ' shares</span></div>' +
@@ -1386,7 +1446,7 @@
         '<div class="opm-tl"><span class="k">Realized P&amp;L</span><span class="v" id="opmSellPnl" style="color:var(--opm-' + (q.up ? 'yes' : 'no') + ')">' + (q.up ? '+' : '−') + Math.abs(q.pnl).toFixed(2) + ' ' + esc(u) + '</span></div>' +
         '<div class="opm-tl big"><span class="k">You receive</span><span class="v" id="opmSellNet" style="color:var(--opm-gold)">≈' + q.realNet + ' ' + esc(u) + '</span></div>' +
       '</div>' +
-      (q.canCash ? '<button class="opm-confirm sellc" id="opmCfSell">Sell for ≈' + q.realNet + ' ' + esc(u) + '</button>' : '<div class="opm-short">' + esc(q.detail || 'Not sellable right now.') + '</div>') +
+      (q.canCash ? '<button class="opm-confirm sellc" id="opmCfSell" data-net="' + esc(String(q.net)) + '">Sell for ≈' + q.realNet + ' ' + esc(u) + '</button>' : '<div class="opm-short">' + esc(q.detail || 'Not sellable right now.') + '</div>') +
       '<div class="opm-fine">' + icon('lock') + ' ' + esc(dest) + '</div>';
   }
   // One-tap betting (session key). Only on a LIVE on-chain round (PRD-5 / D4).
@@ -1477,12 +1537,30 @@
     if (plan.short) { notify('warn', 'Not enough balance', plan.text); paintTicket(); return; }
     if (isFastRound(m) && Number(m.closeAtMs) - Date.now() < 15000) { notify('info', 'Round closing', 'This 5-minute round closes in a few seconds — buy in the next round.'); return; }
     var e = buyEstimate(stake), u = plan.unit || unitOfRail(r);
+    // MK-BTC-QUOTE (review): a BTC buy agrees to the side price the sheet
+    // SHOWED (data-c, re-stamped on every repaint) — not to a fresh quote taken
+    // at the tap, which made the limit compare a number with itself. If the
+    // quote has already risen more than 2¢ above what the user saw, nothing is
+    // started: the sheet repaints at the new price and asks again. (A LOWER
+    // price only buys more shares — like the server's maxEntry, it is not a
+    // reason to refuse.)
+    var agreed = e.c;
+    if (isBtcLive(m)) {
+      var shownC = Number(cf.getAttribute('data-c'));
+      if (shownC > 0 && shownC < 100) agreed = shownC;
+      if (e.c > 0 && e.c - agreed > 2) {
+        amt = stake;
+        openSheet('buy', bSide, 'The price rose to ' + fmtc(e.c) + '¢ (you saw ' + fmtc(agreed) + '¢) — nothing was opened. At ' + fmtc(e.c) + '¢ your ' + fmtAmt(stake) + ' ' + u + ' buys ≈' + (stake / Math.max(0.001, e.c / 100)).toFixed(2) + ' shares — tap Buy to open at the new price.');
+        return;
+      }
+    }
     // Wallet-rail orders: build the order now so this notice shares its id
     // with app.js's background stake notices ('stake-<ref>'), which then
     // update the SAME card to "Ticket live" or "Ticket not placed".
     var direct = !isBtcLive(m) ? buildDirectOrder(m, bSide, stake) : null;
     var nid = direct ? 'stake-' + String(direct.reference).slice(0, 18) : 'buy-' + Date.now().toString(36);
-    myPos = { order: {}, sig: '', ref: '', side: bSide, shares: e.shares, stake: stake, entry: e.fill / 100, unit: r === 'wallet' ? 'OST' : 'OSTG', rail: r, native: r === 'play', placing: true, placingText: 'Placing your ticket…' };
+    var shownEntry = isBtcLive(m) ? Math.max(0.001, agreed / 100) : e.fill / 100;
+    myPos = { order: {}, sig: '', ref: '', side: bSide, shares: isBtcLive(m) ? stake / shownEntry : e.shares, stake: stake, entry: shownEntry, unit: r === 'wallet' ? 'OST' : 'OSTG', rail: r, native: r === 'play', placing: true, placingText: 'Placing your ticket…' };
     renderPosition(); closeSheet();
     notify('pending', 'Placing your ' + (bSide === 'yes' ? 'Yes' : 'No') + ' ticket…', plan.text || '', { id: nid });
     var api = window.OST_PREDICTION_API || {};
@@ -1507,18 +1585,46 @@
     } else {
       // BTC 5-min: fund the play balance (convert OST → OSTG 1:1 if needed),
       // then the OST server opens the position.
-      run = ensurePlayFunds(stake, step).then(function () { step('Opening your position…'); return api.placeBet({ marketId: mid, side: bSide, stake: stake }); });
+      // MK-BTC-QUOTE: the user agreed to `agreed` (the side price the sheet
+      // showed when they tapped). If the price ROSE more than 2¢ while the
+      // funds moved, nothing is opened: the sheet re-opens with the new price
+      // and share count (the OSTG stays in the play balance, so the next Buy
+      // skips the conversion). A lower price is not refused (more shares).
+      // The order carries a limit for the server (maxEntry = agreed +
+      // max(2¢, 3%)): it refuses rather than fill above it.
+      run = ensurePlayFunds(stake, step).then(function (fund) {
+        var nowC = sideCents(bSide);
+        if (nowC > 0 && nowC - agreed > 2) {
+          var nowSh = stake / Math.max(0.001, nowC / 100);
+          var moved = fundErr('price_moved', 'The price rose to ' + fmtc(nowC) + '¢ (you saw ' + fmtc(agreed) + '¢) — nothing was opened. ' +
+            ((fund && fund.moved > 0) ? 'Your ' + fmtAmt(fund.moved) + ' OSTG is in your play balance. ' : '') +
+            'At ' + fmtc(nowC) + '¢ your ' + fmtAmt(stake) + ' OSTG buys ≈' + nowSh.toFixed(2) + ' shares — tap Buy to open at the new price.');
+          moved.requote = true;
+          throw moved;
+        }
+        var agreedPx = Math.max(0.001, Math.min(0.999, agreed / 100));
+        var maxEntry = Math.min(0.999, agreedPx + Math.max(0.02, agreedPx * 0.03));
+        step('Opening your position…');
+        return Promise.resolve(api.placeBet({ marketId: mid, side: bSide, stake: stake, quotedPrice: agreedPx, maxEntry: Math.round(maxEntry * 10000) / 10000 })).catch(function (pe) {
+          // The server refused above the limit (409 price_moved, nothing
+          // debited): say where the OSTG this buy just moved is.
+          if (pe && pe.code === 'price_moved' && fund && fund.moved > 0 && pe.message && !pe.fundNoted) { pe.fundNoted = true; pe.message += ' Your ' + fmtAmt(fund.moved) + ' OSTG is in your play balance.'; }
+          throw pe;
+        });
+      });
     }
     run.then(function (res) {
       releaseBuy();
       var rec = (res && res.record) || res || {};
-      if (myPos && myPos.placing) { myPos.placing = false; myPos.justFilled = Date.now(); }
-      refreshPosition(); refreshBalance(true);
       var walletPending = !!(res && res.pending) || rec.fundingState === 'submitting' || rec.fundingState === 'confirming' || !!rec.pending;
+      if (myPos && myPos.placing) { myPos.placing = false; if (!walletPending) myPos.justFilled = Date.now(); }
+      refreshPosition(); refreshBalance(true);
       if (walletPending) {
-        // The wallet stake confirms in the background; app.js reports the
-        // final outcome (stake-<ref>) and clears this ticket if it is refused.
-        notify('pending', 'Ticket placed — confirming your stake', fmtAmt(stake) + ' ' + (rec.unit || u) + ' is moving on-chain.', { id: nid });
+        // MK-FAIL-COPY: nothing is confirmed yet (the cosign may still be
+        // refused) — say what is happening, not "Ticket placed". app.js turns
+        // this SAME card (stake-<ref>) into "Confirming your stake…" once a
+        // signature exists, then "Ticket live" or "Ticket not placed".
+        notify('pending', 'Sending your stake…', fmtAmt(stake) + ' ' + (rec.unit || u) + ' to the OST pool — your ticket goes live when it lands.', { id: nid });
       } else {
         notify('ok', 'Position open · ' + (bSide === 'yes' ? 'Yes' : 'No') + ' · ' + (Number(rec.shares) || e.shares).toFixed(2) + ' shares',
           'Paid ' + fmtAmt(stake) + ' ' + (rec.unit || (r === 'wallet' ? 'OST' : 'OSTG')) + (rec.fundedBy === 'ostg-native' ? ' from your play balance · settled by the OST server' : ''), { id: nid });
@@ -1530,7 +1636,20 @@
       renderPosition(); refreshPosition(); refreshBalance(true);
       var code = String((err && err.code) || '');
       if (code === 'no_wallet') { requireWallet('buy', function () { openSheet('buy', bSide); }); }
-      if (code === 'price_moved' && err.livePrice > 0) { midYes = Math.max(0.1, Math.min(99.9, Math.round(err.livePrice * 1000) / 10)); renderOddsLive(); }
+      if (code === 'price_moved') {
+        // err.livePrice is the SIDE price (No buys used to repaint the Yes
+        // price with the No number). BTC odds follow the live feed by themselves.
+        if (err.livePrice > 0 && !isBtcLive(m)) { var lc = err.livePrice * 100; midYes = Math.max(0.1, Math.min(99.9, Math.round((bSide === 'no' ? 100 - lc : lc) * 10) / 10)); renderOddsLive(); }
+        var msg = errText(err, 'build', u);
+        // Ask again at the new price: the sheet re-opens with the fresh quote
+        // and the explanation on top. That banner IS the visible result, so
+        // the pending card is cleared instead of being turned into a floating
+        // notice (on a phone it sat over the sheet's Buy button).
+        if (view === 'detail' && currentMarket && String(currentMarket.id) === String(m.id)) {
+          amt = stake; openSheet('buy', bSide, msg); dismissNotice(nid);
+        } else notify('warn', 'Price moved — nothing was opened', msg, { id: nid });
+        return;
+      }
       var unknown = code === 'state_unknown';
       notify(unknown ? 'warn' : 'error', unknown ? 'Checking your ticket' : 'Ticket not placed', errText(err, 'build', u), { id: nid });
     });
@@ -1627,9 +1746,14 @@
     // The sale goes through the ONE cash-out routine (app.js): wallet tickets
     // pay OST on chain, BTC server tickets sell back to the server. Every
     // outcome is reported there (OST_NOTIFY); this card just follows it.
-    var q = sellQuote();
+    // MK-FAST-SOL: expectNet is the number WRITTEN ON THE BUTTON the user
+    // tapped (data-net), not a re-quote taken now — re-quoting at the tap made
+    // the "price moved" guard compare a value with itself. The cash-out refuses
+    // (nothing sold, the new number shown) if it would pay > 1% less.
+    var shownNet = cfs ? Number(cfs.getAttribute('data-net')) : NaN;
+    if (!(shownNet > 0)) shownNet = sellQuote().net;
     var sellingPos = myPos; sellingPos.selling = true; _sellingRef = ref; closeSheet(); renderPosition();
-    api.cashOut(ref, sellingPos.native ? {} : { expectNet: q.net }).then(function (r) {
+    api.cashOut(ref, { expectNet: shownNet }).then(function (r) {
       sellingPos.selling = false; _sellingRef = '';
       if (r && r.pending) { refreshPosition(); setTimeout(function () { refreshBalance(true); refreshPosition(); }, 1500); return; }
       if (!r || r.ok === false) {
@@ -1641,7 +1765,14 @@
       setTimeout(function () { refreshBalance(true); refreshPosition(); loadTrades(); }, 600);
     }).catch(function (e) {
       sellingPos.selling = false; _sellingRef = ''; renderPosition(); refreshPosition(); refreshBalance(true);
-      if (e && e.code === 'price_moved') notify('warn', 'Price moved', String(e.message || 'Review the new price and sell again.'));
+      if (e && e.code === 'price_moved') {
+        // Ask again: the sell sheet re-opens on the new live number, with the
+        // explanation on top (the visible result — a floating notice covered
+        // the Sell button on a phone).
+        var mmsg = String(e.message || 'The price moved — nothing was sold. Review the new price and sell again.');
+        if (myPos && view === 'detail') openSheet('sell', null, mmsg);
+        else if (!e.notified) notify('warn', 'Price moved — nothing was sold', mmsg);
+      }
       else if (!(e && e.notified)) notify('error', 'Sell did not go through', errText(e, 'submit', sellingPos.unit || 'OST'));
     });
   }
@@ -1763,6 +1894,13 @@
     return p;
   }
   function signed(v, dp) { v = Number(v) || 0; return (v > 0.005 ? '+' : v < -0.005 ? '−' : '') + Math.abs(v).toFixed(dp == null ? 2 : dp); }
+  // The row's value line (value + P&L) — the same number the Sell button pays.
+  function ticketValHtml(t) {
+    var st = t.st, u = esc(t.unit);
+    return (st === 'open' || st === 'paying') ? ('<b class="' + (t.pnl >= 0 ? 'up' : 'down') + '">' + t.value.toFixed(2) + ' ' + u + '</b> <i>' + signed(t.pnl) + (t.stake > 0 ? ' (' + signed(t.pnl / t.stake * 100, 0) + '%)' : '') + (t.live ? '' : ' · at entry') + '</i>')
+      : st === 'claim' ? ('<b class="up">won · ' + t.net.toFixed(2) + ' ' + u + '</b>')
+      : st === 'settle' ? '<i>Settled by the OST server from the BTC close price</i>' : '';
+  }
   function ticketRow(t) {
     var o = t.o, st = t.st, side = o.side === 'no' ? 'no' : 'yes', u = esc(t.unit);
     var ref = orderKey(o), isParlay = String(o.source || '') === 'ost-parlay';
@@ -1780,7 +1918,7 @@
     } else if (st === 'confirming') {
       actionHtml = '<span class="opm-tbadge">Confirming stake…</span>';
     } else if (st === 'open') {
-      if (t.canCash && t.net > 0) actionHtml = '<button class="opm-tbtn" data-ref="' + esc(ref) + '">Sell · ≈' + t.net.toFixed(2) + ' ' + u + '</button>';
+      if (t.canCash && t.net > 0) actionHtml = '<button class="opm-tbtn" data-ref="' + esc(ref) + '" data-net="' + esc(String(t.net)) + '">Sell · ≈' + t.net.toFixed(2) + ' ' + u + '</button>';
       else actionHtml = '<span class="opm-tbadge">' + esc(t.label && !/^sell/i.test(t.label) ? t.label : 'Open') + '</span>';
     } else if (st === 'paid') {
       actionHtml = '<span class="opm-tres" style="color:' + (t.pnl >= 0 ? 'var(--opm-yes)' : 'var(--opm-no)') + '">' + signed(t.pnl) + ' ' + u + '</span>';
@@ -1805,9 +1943,7 @@
     if (!badge && o.cashoutFailedAt && (st === 'claim' || st === 'open') && Date.now() - Number(o.cashoutFailedAt) < 86400000) badge = 'Last payout failed · nothing was paid';
     var title = o.title || o.marketTitle || o.marketId || 'Ticket';
     var when = o.cashoutAt || o.resolvedAt || o.ts || o.createdAt;
-    var valTxt = (st === 'open' || st === 'paying') ? ('<b class="' + (t.pnl >= 0 ? 'up' : 'down') + '">' + t.value.toFixed(2) + ' ' + u + '</b> <i>' + signed(t.pnl) + (t.stake > 0 ? ' (' + signed(t.pnl / t.stake * 100, 0) + '%)' : '') + (t.live ? '' : ' · at entry') + '</i>')
-      : st === 'claim' ? ('<b class="up">won · ' + t.net.toFixed(2) + ' ' + u + '</b>')
-      : st === 'settle' ? '<i>Settled by the OST server from the BTC close price</i>' : '';
+    var valTxt = ticketValHtml(t);
     // Meta line: each piece is its own no-wrap chip, so a phone wraps BETWEEN
     // pieces, never mid-word (PRD-6).
     var meta = ['<span class="opm-tside ' + (side === 'yes' ? 'y' : 'n') + '">' + esc(o.outcomeLabel && !isParlay ? o.outcomeLabel : (side === 'yes' ? 'Yes' : 'No')) + '</span>',
@@ -1864,6 +2000,7 @@
     var order = { claim: 0, paying: 1, settle: 1, confirming: 1, open: 2, paid: 3, lost: 3, legacy: 4 };
     if (posFilter === 'all') rows.sort(function (a, b) { return (order[a.st] - order[b.st]) || (Number(b.o.ts || 0) - Number(a.o.ts || 0)); });
     if (!rows.length) {
+      list.__shaped = '';
       list.innerHTML = '<div class="opm-empty">' + (orders.length ? 'Nothing in this filter yet.' : (_pfStatus.syncing ? 'Loading your positions…' : 'No positions yet. Open a market and take a side — your tickets, wins and history show up here.')) + '</div>';
       return;
     }
@@ -1873,17 +2010,54 @@
       if (posFilter === 'all' && g !== lastGroup) { html += '<div class="opm-sec2">' + g + '</div>'; lastGroup = g; }
       html += ticketRow(t);
     });
+    // NEW-3 (pfv): this full rebuild ran every 15 s and on every balance /
+    // order event, replacing the Sell button under the user's finger (a tap
+    // landed on a detached button). When the list has the SAME rows, states and
+    // buttons, only the text moves: patch it in place and keep every button.
+    // (keyed by the filter too: the same rows under another chip have other headers)
+    if (list.__shaped === posFilter && patchPositionRows(list, html)) return;
+    list.__shaped = posFilter;
     list.innerHTML = html;
     try { if (window.OST_MARKET_ART) OST_MARKET_ART.apply(); } catch (_) {}
     list.querySelectorAll('.opm-tbtn[data-parlay-sell]').forEach(function (b) {
       b.onclick = function (e) { e.stopPropagation(); b.disabled = true; b.textContent = '…'; try { OST_PARLAY.sell(b.getAttribute('data-parlay-sell')); } catch (_) {} setTimeout(function () { refreshBalance(true); renderPositions(); }, 300); };
     });
     list.querySelectorAll('.opm-tbtn[data-ref]').forEach(function (b) {
-      b.onclick = function (e) { e.stopPropagation(); cashOutTicket(b.getAttribute('data-ref'), b); };
+      // A Sell pays at most 1% less than the number on this button, or refuses (MK-FAST-SOL).
+      b.onclick = function (e) { e.stopPropagation(); var n = Number(b.getAttribute('data-net')); cashOutTicket(b.getAttribute('data-ref'), b, n > 0 ? { expectNet: n } : {}); };
     });
     list.querySelectorAll('.opm-trow').forEach(function (r) {
       r.onclick = function () { var m = marketForOrderId(r.getAttribute('data-mid')); if (m) openMarket(m); else notify('info', 'Market closed', 'That market is no longer in the live list.'); };
     });
+  }
+  // In-place update of an unchanged list: same rows in the same order, same
+  // state and the same kind of action (same Sell / Claim button for the same
+  // ticket). Text, data-net and the value line move; the buttons (and their
+  // handlers) stay. Anything structural -> false (the caller rebuilds).
+  function patchPositionRows(list, html) {
+    var tmp = document.createElement('div'); tmp.innerHTML = html;
+    var oldRows = list.querySelectorAll('.opm-trow'), newRows = tmp.querySelectorAll('.opm-trow');
+    if (!oldRows.length || oldRows.length !== newRows.length) return false;
+    var shape = function (r) {
+      var a = r.querySelector('.opm-tact'), c = a && a.firstElementChild;
+      return r.className + '|' + (r.getAttribute('data-mid') || '') + '|' + (c ? c.tagName + '.' + c.className + '.' + (c.getAttribute('data-ref') || c.getAttribute('data-parlay-sell') || '') : '');
+    };
+    var i;
+    for (i = 0; i < oldRows.length; i++) if (shape(oldRows[i]) !== shape(newRows[i])) return false;
+    for (i = 0; i < oldRows.length; i++) {
+      var o = oldRows[i], n = newRows[i];
+      var om = o.querySelector('.opm-tmain'), nm = n.querySelector('.opm-tmain');
+      if (om && nm && om.innerHTML !== nm.innerHTML) om.innerHTML = nm.innerHTML;
+      var oa = o.querySelector('.opm-tact'), na = n.querySelector('.opm-tact');
+      var ob = oa && oa.querySelector('button'), nb = na && na.querySelector('button');
+      if (ob && nb) {
+        if (ob.disabled || ob.getAttribute('data-busy')) continue;   // a tap in flight: leave it alone
+        if (ob.textContent !== nb.textContent) ob.textContent = nb.textContent;
+        var nn = nb.getAttribute('data-net');
+        if (nn != null && ob.getAttribute('data-net') !== nn) ob.setAttribute('data-net', nn);
+      } else if (oa && na && oa.innerHTML !== na.innerHTML) oa.innerHTML = na.innerHTML;
+    }
+    return true;
   }
   function num2(v) { return (Number(v) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
   // Sell / claim one ticket through the ONE cash-out routine (app.js). It shows
@@ -1899,8 +2073,14 @@
     }
     return Promise.resolve(api.cashOut(ref, opts || {}))
       .then(function (r) { if (r && r.ok === false && r.label) notify('info', 'Nothing to pay yet', r.label); })
-      .catch(function (err) { if (!(err && err.notified)) notify('error', 'Payout did not go through', errText(err, 'submit', 'OST')); })
-      .then(function () { refreshBalance(true); renderPositions(); });
+      .catch(function (err) {
+        if (err && err.code === 'price_moved') { if (!err.notified) notify('warn', 'Price moved — nothing was sold', String(err.message || 'Review the new price and sell again.')); return; }
+        if (!(err && err.notified)) notify('error', 'Payout did not go through', errText(err, 'submit', 'OST'));
+      })
+      // The list is patched in place now (the button survives a re-render), so
+      // the tap's busy state is released here; a ticket still open gets its
+      // fresh number, a sold / paying one is rebuilt with its new state.
+      .then(function () { if (b) b.disabled = false; refreshBalance(true); renderPositions(); });
   }
   function claimAll(list) {
     var chain = Promise.resolve();
@@ -1937,8 +2117,54 @@
   }
   var _pfRender = 0;
   function schedulePositions() { if (view !== 'positions') return; clearTimeout(_pfRender); _pfRender = setTimeout(renderPositions, 250); }
-  ['ost:prediction-orders-synced', 'ost:prediction-resolutions-refreshed', 'ost:prediction-markets', 'ost:parlay-won', 'ost:btc-round'].forEach(function (n) { window.addEventListener(n, schedulePositions); });
-  setInterval(function () { if (view === 'positions' && !document.hidden) renderPositions(); }, 15000);   // live re-mark
+  ['ost:prediction-orders-synced', 'ost:prediction-resolutions-refreshed', 'ost:prediction-markets', 'ost:parlay-won'].forEach(function (n) { window.addEventListener(n, schedulePositions); });
+  // 'ost:btc-round' arrives with EVERY BTC price tick (~1/s). Rebuilding the
+  // whole list on each one swapped the Sell buttons out from under a tap; only
+  // a round ROLLOVER changes what the Portfolio shows (settling states).
+  var _pfRoundId = '';
+  window.addEventListener('ost:btc-round', function (e) {
+    var d = e && e.detail, id = String((d && (d.marketId || d.openAt)) || '');
+    if (!id || id === _pfRoundId) return;
+    _pfRoundId = id; schedulePositions();
+  });
+  // Live re-mark (local only, no network). NEW-3 (pfv): a 2 s re-mark left the
+  // ETH/SOL 5-min Sell number up to 4–16 % behind the live quote, so taps were
+  // refused ("Price moved") far more often than in the 250 ms sell sheet. Now,
+  // while the Portfolio is on screen with an open 5-minute ticket (BTC, ETH or
+  // SOL), every Sell button — text, data-net and its row's value line — follows
+  // the quote every 250 ms; other tickets every 2 s. Patched in place: the
+  // button under the finger is never replaced. The full render (totals, states)
+  // still runs every 15 s, and it too patches in place when nothing moved rows.
+  var _pfMarkAt = 0, _pfRemarkAt = 0, _pfFast = false;
+  function isLiveRoundTicket(o, now) {
+    return !!(o && !o.cashedOut && !o.cashoutPending && /^ost-(btc|eth|sol)5m-\d+$/.test(String(o.marketId || '')) && Number(o.closeAtMs || o.closeAt || 0) > now);
+  }
+  function remarkSellButtons(orders) {
+    var list = el('opmPosList'); if (!list) return;
+    var btns = list.querySelectorAll('.opm-tbtn[data-ref][data-net]'); if (!btns.length) return;
+    var byRef = {}; (orders || ledgerOrders()).forEach(function (o) { var k = orderKey(o); if (k) byRef[k] = o; });
+    btns.forEach(function (b) {
+      if (b.disabled || b.getAttribute('data-busy')) return;
+      var o = byRef[b.getAttribute('data-ref')]; if (!o) return;
+      var t = markTicket(o); if (!(t.st === 'open' && t.canCash && t.net > 0)) return;
+      var txt = 'Sell · ≈' + t.net.toFixed(2) + ' ' + t.unit;
+      if (b.textContent !== txt) b.textContent = txt;
+      if (b.getAttribute('data-net') !== String(t.net)) b.setAttribute('data-net', String(t.net));
+      var row = b.closest('.opm-trow'), tv = row && row.querySelector('.opm-tval');
+      if (tv) { var h = ticketValHtml(t); if (tv.__h !== h) { tv.__h = h; tv.innerHTML = h; } }
+    });
+  }
+  setInterval(function () {
+    if (view !== 'positions' || document.hidden) return;
+    var pv = el('opmPositions'); if (!pv || !pv.getClientRects().length) return;   // panel not on screen
+    var now = Date.now();
+    if (now - _pfMarkAt >= 15000) { _pfMarkAt = now; renderPositions(); return; }
+    if (!_pfFast && now - _pfRemarkAt < 2000) return;
+    _pfRemarkAt = now;
+    var orders = ledgerOrders();
+    try { _pfFast = orders.some(function (o) { return isLiveRoundTicket(o, now); }); } catch (_) { _pfFast = false; }
+    remarkSellButtons(orders);
+  }, 250);
 
   /* ===================================================================== */
   /* VIEW SWITCHING + MOUNT                                                 */
@@ -2015,7 +2241,9 @@
     // All polling pauses when the tab is hidden (was hammering the network even
     // in the background — a big part of the request storm).
     setInterval(function () { if (view === 'detail' && isBtcLive(currentMarket) && !document.hidden && Date.now() - lastPushRoundAt > 20000) loadRound(); }, 6000);   // push-first: poll only when the socket is stale
-    setInterval(function () { if (view === 'detail' && !document.hidden) { if (Date.now() - _lastFillPushAt > 60000) loadTrades(); refreshPosition(); if (!isBtcLive(currentMarket)) paintStandard(); } }, 30000);   // push-first   // was 13s
+    // NET-3: fills are pushed over the realtime socket; the tape re-reads
+    // /positions/recent at most once a minute as a catch-up (was every 30 s).
+    setInterval(function () { if (view === 'detail' && !document.hidden) { if (Date.now() - _lastFillPushAt > 60000 && Date.now() - (loadTrades._at || 0) > 55000) loadTrades(); refreshPosition(); if (!isBtcLive(currentMarket)) paintStandard(); } }, 30000);   // push-first   // was 13s
     // NET-3 / C6: idle re-reads only while this page is on screen, ≥ 60 s apart
     // (OST_BALANCE throttles itself; no play / session poll from here).
     setInterval(function () { var host = el('ostPredictMobile'); if (!document.hidden && host && host.offsetParent !== null) refreshBalance(); }, 60000);
@@ -2023,13 +2251,36 @@
     // open buy sheet) follows OST_PRICES — the SAME source the fill checks — so
     // the quote the user taps is the price the order is filled at. Local only
     // (no network): OST_PRICES derives the odds from the cached spot feed.
+    // MK-FAST-SOL: the sell quote jumps with every spot tick (up to 35%), and
+    // the sheet used to follow 1.0–1.4 s later. While a buy / sell sheet is
+    // open it now repaints from the price source every 250 ms (text patches
+    // only — the button under the finger is never rebuilt); the page itself
+    // still repaints at most every 1.5 s.
+    var _fastPaintAt = 0, _sheetPaintAt = 0;
     setInterval(function () {
-      if (view !== 'detail' || document.hidden || !isFastRound(currentMarket)) return;
-      var cur = currentFastRound(currentMarket);
-      if (cur && cur.id !== currentMarket.id) { paintStandard(); return; }
-      var fc = fastMidCents(currentMarket);
-      if (fc > 0 && Math.abs(fc - midYes) >= 0.1) { midYes = fc; paintOdds(); renderOddsLive(); }
-    }, 1500);
+      if (view !== 'detail' || document.hidden || !currentMarket) return;
+      var open = sheetOpen(), now = Date.now();
+      if (isBtcLive(currentMarket)) {
+        // MK-BTC-QUOTE (review): the BTC sheet quotes the newest server tick
+        // (headPrice), which moves between display-price frames. Keep the
+        // sheet's price — and the data-c / data-net its buttons agree to —
+        // at most 250 ms behind it (text patches only, never a rebuild).
+        if (open) refreshOpenSheet(true);
+        return;
+      }
+      if (isFastRound(currentMarket)) {
+        if (!open && now - _fastPaintAt < 1500) return;
+        _fastPaintAt = now;
+        var cur = currentFastRound(currentMarket);
+        if (cur && cur.id !== currentMarket.id) { paintStandard(); return; }
+        var fc = fastMidCents(currentMarket);
+        if (fc > 0 && Math.abs(fc - midYes) >= 0.1) { midYes = fc; paintOdds(); renderOddsLive(); }
+        if (open) refreshOpenSheet(true);
+      } else if (open && mode === 'sell' && now - _sheetPaintAt >= 1000) {
+        // Venue sells: the cash-out quote follows the live mid; keep the button on it.
+        _sheetPaintAt = now; refreshOpenSheet(true);
+      }
+    }, 250);
     // autonomous autopay: claim resolved on-chain wins to the wallet OSTG.
     // Runs only while visible; it no-ops immediately when there are no open
     // on-chain tickets, so it isn't network churn most of the time.

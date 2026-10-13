@@ -23,7 +23,8 @@
 
   var state = {
     usdPerOst: DEFAULT_OST_USD,
-    ostBalance: 0,
+    ostBalance: null,      // C6: unknown until read; renders as "—", never 0.00
+    balanceAddr: '',       // the wallet ostBalance was read for
     refreshing: false,
     bound: false
   };
@@ -157,17 +158,23 @@
   // null and renders as "—", never as "0.00 OST".
   async function loadBalance() {
     var address = walletAddress();
-    if (!address) { state.ostBalance = null; return; }
+    if (!address) { state.ostBalance = null; state.balanceAddr = ''; return; }
+    // R-C6: a value read for ANOTHER wallet (or never read) is unknown here.
+    if (state.balanceAddr !== address) { state.ostBalance = null; state.balanceAddr = address; }
+    var got = null;
     try {
       if (window.OST_BALANCE && typeof window.OST_BALANCE.onchainOstc === 'function') {
         var b0 = window.OST_BALANCE.onchainOstc();
-        if (b0 != null && isFinite(b0)) { state.ostBalance = Math.max(0, Number(b0)); return; }
+        if (b0 != null && isFinite(b0)) got = Number(b0);
       }
-      if (window.OST_WALLET && typeof window.OST_WALLET.getOstBalance === 'function') {
+      if (got == null && window.OST_WALLET && typeof window.OST_WALLET.getOstBalance === 'function') {
         var bal = await window.OST_WALLET.getOstBalance(address);
-        if (bal != null && isFinite(bal)) state.ostBalance = Math.max(0, Number(bal));
+        if (bal != null && isFinite(bal)) got = Number(bal);
       }
     } catch (_) {}
+    // Both reads unknown: keep the last value KNOWN for this same wallet, or
+    // null ("—"). Never a made-up 0.00.
+    if (got != null && walletAddress() === address) state.ostBalance = Math.max(0, got);
   }
   function ostKnown() { return state.ostBalance != null && isFinite(state.ostBalance); }
 
@@ -204,8 +211,8 @@
       +     '<img id="ostCardQr" alt="OST Card QR" style="width:96px;height:96px;border-radius:14px;background:#fff;padding:6px;" />'
       +     '<div style="flex:1;min-width:180px;display:grid;gap:6px;">'
       +       '<div style="font-size:.72rem;text-transform:uppercase;letter-spacing:.1em;color:rgba(226,232,240,0.6);">Balance</div>'
-      +       '<div id="ostCardBalance" style="font-size:1.32rem;font-weight:800;">0.00 OST</div>'
-      +       '<div id="ostCardBalanceUsd" style="font-size:.86rem;color:#bbf7d0;">~ $0.00 USD</div>'
+      +       '<div id="ostCardBalance" style="font-size:1.32rem;font-weight:800;">— OST</div>'
+      +       '<div id="ostCardBalanceUsd" style="font-size:.86rem;color:#bbf7d0;"></div>'
       +     '</div>'
       +   '</div>'
       +   '<div id="ostCardWalletRow" style="font-size:.78rem;color:rgba(226,232,240,0.78);word-break:break-all;font-family:\'SFMono-Regular\',Consolas,Menlo,monospace;">Connect a wallet to mint card</div>'
@@ -818,6 +825,13 @@
     state.bound = true;
     window.addEventListener('ost:wallet-changed', function () { ensureProfile(); reload(); });
     window.addEventListener('ost:topup-ready', reload);
+    // C6: repaint from the shared balance as soon as it is known (no RPC here).
+    window.addEventListener('ost:balance', function () {
+      try {
+        var a = walletAddress(); var b = window.OST_BALANCE && OST_BALANCE.onchainOstc ? OST_BALANCE.onchainOstc() : null;
+        if (a && b != null && isFinite(b)) { state.ostBalance = Math.max(0, Number(b)); state.balanceAddr = a; refresh(); }
+      } catch (_) {}
+    });
     window.addEventListener('ost:network-changed', reload);
     // Re-price + re-render the card the instant the user changes their currency,
     // so the card value tracks the wallet.

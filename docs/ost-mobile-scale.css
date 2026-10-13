@@ -129,3 +129,19 @@
   h2:not(:where(#ostMeshApp, #ostMeshApp *, #oslSheet, #oslSheet *, #oslLight, #oslLight *, #oslStory, #oslStory *, #omxCall, #omxCall *, #omxSheet, #omxSheet *, .omx-toasts, .omx-toasts *)) { font-size: 1.22rem !important; }
   .section-title { font-size: 1.22rem !important; }
 }
+
+/* Convert terminal at 360-430 px: the Pay / Verify / Deliver steps and the
+   button sat in one row about 40 px wider than the card, so the card
+   (overflow:hidden) cut off its right side, and scrollIntoView on the amount
+   field (Get SOL -> cash out) scrolled that hidden overflow, which shifted the
+   whole panel left. The row now wraps (steps centred above a full-width
+   button) and the card clips instead of being a scroll box. */
+@media (max-width: 768px) {
+  .convert-terminal { overflow: hidden; overflow: clip; }
+  .convert-terminal .ct-body > * { min-width: 0; }
+  .convert-terminal .ct-middle { flex-wrap: wrap; justify-content: center; min-width: 0; }
+  .convert-terminal .ct-flow-steps { flex-wrap: wrap; justify-content: center; gap: 6px; }
+  .convert-terminal .ct-flow { flex: 1 1 100%; min-width: 0; }
+  .convert-terminal .ct-step { padding: 6px 9px; gap: 6px; }
+  .convert-terminal .ct-convert-btn { flex: 1 1 100%; justify-content: center; }
+}

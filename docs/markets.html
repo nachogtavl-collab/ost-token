@@ -278,7 +278,7 @@
   <link rel="stylesheet" href="compartments.css?v=4">
   <link rel="stylesheet" href="prediction-extras.css?v=6">
   <link rel="stylesheet" href="ost-predict-mobile.css?v=15">
-  <link rel="stylesheet" href="ost-wallet-home.css?v=2">
+  <link rel="stylesheet" href="ost-wallet-home.css?v=3">
   <link rel="stylesheet" href="ost-mesh-tokens.css?v=1">
   <link rel="stylesheet" href="ost-mesh-app.css?v=2">
   <link rel="stylesheet" href="ost-mesh-chat.css?v=1">
@@ -299,13 +299,13 @@
   <link rel="stylesheet" href="stock-market.css?v=2">
   <link rel="stylesheet" href="ost-perps.css?v=1">
   <link rel="stylesheet" href="live-watch.css?v=5">
-  <link rel="stylesheet" href="mobile-shell.css?v=21">
-  <link rel="stylesheet" href="ost-mobile-scale.css?v=4">
+  <link rel="stylesheet" href="mobile-shell.css?v=22">
+  <link rel="stylesheet" href="ost-mobile-scale.css?v=5">
   <link rel="stylesheet" href="ost-scroll-fix.css?v=1">
   <link rel="stylesheet" href="prediction-modal-redesign.css?v=2">
   <link rel="stylesheet" href="ost-mobile-fit.css?v=1">
   <link rel="stylesheet" href="ost-appbar.css?v=5">
-  <link rel="stylesheet" href="predict-mobile.css?v=3">
+  <link rel="stylesheet" href="predict-mobile.css?v=4">
   <link rel="stylesheet" href="ost-markets-desk.css?v=4">
   <link rel="stylesheet" href="ost-markets-pro.css?v=3">
   <link rel="stylesheet" href="ost-market-chart.css?v=1">
@@ -314,7 +314,7 @@
   <link rel="stylesheet" href="ost-mesh-desk.css?v=2">
   <link rel="stylesheet" href="ost-microfx.css?v=1">
   <link rel="stylesheet" href="ost-instant.css?v=1">
-  <link rel="stylesheet" href="ost-nexus.css?v=5">
+  <link rel="stylesheet" href="ost-nexus.css?v=6">
   <!-- Not deferred on purpose: presses must be acknowledged from the first
        frame. It is ~2KB and only adds document-level listeners. -->
   <script src="ost-instant.js?v=1"></script>
@@ -467,13 +467,25 @@
           <span class="hero-free-badge" data-i18n="hero.free">&#128176; FREE TO TRY</span>
           <span class="hero-free-text" data-i18n="hero.freetext">Devnet test network: OST pays every network fee, so trying it costs you nothing. No real money.</span>
         </div>
+        <!-- J-27: the CTA row sits ABOVE the Nexus cards. Below them it landed at
+             y≈813 — under the floating dock at 1440x900 and below the fold at
+             1366x768. Phones keep their old order (mobile-shell.css `order`). -->
+        <p class="hero-try-line" data-i18n="hero.trynote" style="margin:14px 0 10px;font-weight:700;font-size:1rem;color:var(--text,#e4e7f1);">Try OST free &mdash; devnet wallet in 2 taps</p>
+        <div class="hero-actions">
+          <button type="button" class="btn btn-primary btn-glow btn-pulse" data-ost-start="start" data-i18n="hero.createwallet">Start free</button>
+          <button type="button" class="btn btn-outline" data-ost-start="start" data-i18n="hero.havewallet">I already have Phantom / Solflare / Backpack</button>
+          <a href="#new-here" class="btn btn-outline" data-i18n="hero.cta2">Get OST Now</a>
+          <a href="#commerce" class="btn btn-outline" data-i18n="hero.cta1">Explore Commerce</a>
+          <button class="btn btn-transmit" id="transmitBtn" type="button" data-i18n="transmit.button">&#x13087; Transmit to Space</button>
+        </div>
+        <p class="hero-devnet-note" style="margin:10px 0 18px;font-size:.8rem;color:var(--text-muted);">Devnet test network &mdash; OST here has no cash value. A free wallet takes two taps; OST pays every network fee.</p>
         <!-- OST Nexus: the living currency. Static skeleton (no layout shift); ost-nexus.js
              fills it from real sources only - unknown values stay "—". -->
         <div class="nx-live" id="nxLive">
           <div class="nx-card nx-coin">
             <div class="nx-coin__head">
               <span class="nx-coin__sym">OST</span>
-              <span class="nx-tag" title="OST's price is a model: an FX-anchored index moved by real network activity and BTC mood. OST runs on Solana devnet and has no cash value yet.">model price</span>
+              <span class="nx-tag" title="A display index: an FX-anchored model moved by real network activity and BTC mood. It is not a price you can buy or sell at. OST runs on Solana devnet and has no cash value.">OST index (display)</span>
               <span class="nx-live-dot" id="nxOstDot" aria-hidden="true"></span>
             </div>
             <div class="nx-coin__row">
@@ -482,6 +494,9 @@
             </div>
             <canvas class="nx-spark" id="nxOstSpark" aria-hidden="true"></canvas>
             <div class="nx-foot"><span id="nxOstHist">Collecting price history&hellip;</span><span id="nxOstAge"></span></div>
+            <!-- H7: the visible label for the 20x gap (plan §7): the index above is
+                 for display; the devnet rails convert at this fixed rate. -->
+            <div class="nx-rate" id="nxOstRate">Conversion rate on the devnet rails: 1 OST = <span id="nxOstRateVal">&mdash;</span> &middot; no cash value</div>
           </div>
           <div class="nx-side">
             <div class="nx-card">
@@ -517,15 +532,6 @@
           </div>
           <div class="ost-mobile-home__status"><span>Live devnet app</span><p>Touch targets, popouts, and bottom navigation are managed as one mobile shell.</p></div>
         </div>
-        <p class="hero-try-line" data-i18n="hero.trynote" style="margin:0 0 10px;font-weight:700;font-size:1rem;color:var(--text,#e4e7f1);">Try OST free &mdash; devnet wallet in 2 taps</p>
-        <div class="hero-actions">
-          <button type="button" class="btn btn-primary btn-glow btn-pulse" data-ost-start="start" data-i18n="hero.createwallet">Start free</button>
-          <button type="button" class="btn btn-outline" data-ost-start="start" data-i18n="hero.havewallet">I already have Phantom / Solflare / Backpack</button>
-          <a href="#new-here" class="btn btn-outline" data-i18n="hero.cta2">Get OST Now</a>
-          <a href="#commerce" class="btn btn-outline" data-i18n="hero.cta1">Explore Commerce</a>
-          <button class="btn btn-transmit" id="transmitBtn" type="button" data-i18n="transmit.button">&#x13087; Transmit to Space</button>
-        </div>
-        <p class="hero-devnet-note" style="margin:10px 0 0;font-size:.8rem;color:var(--text-muted);">Devnet test network &mdash; OST here has no cash value. A free wallet takes two taps; OST pays every network fee.</p>
         <div class="hero-stats">
           <div class="stat"><span class="stat-num">0</span><span class="stat-label" data-i18n="hero.premine">Pre-mine</span></div>
           <div class="stat-divider"></div>
@@ -632,7 +638,7 @@
           <div class="vision-pills">
             <span class="vision-pill" data-i18n="vision.p1">&#128274; ZK Private</span>
             <span class="vision-pill" data-i18n="vision.p2">&#9889; 0.4s Settlement</span>
-            <span class="vision-pill" data-i18n="vision.p3">&#128176; Zero Fees Forever</span>
+            <span class="vision-pill" data-i18n="vision.p3">&#128176; OST pays network fees</span>
             <span class="vision-pill" data-i18n="vision.p4">&#128295; Own Matching Engine</span>
             <span class="vision-pill" data-i18n="vision.p5">&#127757; Own DEX &amp; Bridges</span>
             <span class="vision-pill" data-i18n="vision.p6">&#128752; Satellite Internet</span>
@@ -640,8 +646,8 @@
         </div>
         <div class="vision-spacex">
           <div class="vision-sx-icon">&#128640;</div>
-          <h4 data-i18n="vision.spacex.title">OST &times; SpaceX</h4>
-          <p data-i18n="vision.spacex.text">Partnering to bring uncensored internet and payments to 2.6 billion people without connectivity via low-earth orbit satellites.</p>
+          <h4 data-i18n="vision.spacex.title">Space vision &middot; R&amp;D</h4>
+          <p data-i18n="vision.spacex.text">An R&amp;D vision: uncensored internet and payments for the 2.6 billion people offline, via low-earth-orbit satellites. Not a SpaceX partnership &mdash; nothing is funded or launched yet.</p>
           <a href="#spacex" class="btn btn-outline btn-sm" style="margin-top:8px;" data-i18n="vision.spacex.btn">Explore the Journey &#8594;</a>
         </div>
       </div>
@@ -1128,7 +1134,7 @@
 
         <div class="store-products" id="storeProducts">
           <div class="store-item" data-price="6.45" data-name="Starbucks Caramel Macchiato" data-link="https://www.starbucks.com/menu/drinks/espresso-drinks/caramel-macchiato" data-merchant="Starbucks" data-category="food" data-currency="USD">
-            <img class="item-img" src="https://globalassets.starbucks.com/digitalassets/products/bev/SBX20190617_CaffeMocha.jpg" alt="Starbucks Coffee" loading="lazy">
+            <img class="item-img" src="assets/shop/coffee.svg" alt="Coffee (illustration)" loading="lazy">
             <div class="item-details"><span class="item-name">Caramel Macchiato</span><span class="item-desc">Espresso, vanilla, steamed milk &amp; caramel drizzle</span><div class="item-tags"><span class="item-tag">Food</span><span class="item-tag">Cafe</span></div><span class="item-source">Starbucks <a href="https://www.starbucks.com" target="_blank" rel="noopener" class="item-link">starbucks.com</a></span><span class="item-price"><span class="item-usd">$6.45</span> &middot; <span class="item-ost">-- OST</span></span></div>
             <button class="btn-add" aria-label="Add">+</button>
           </div>
@@ -1153,7 +1159,7 @@
             <button class="btn-add" aria-label="Add">+</button>
           </div>
           <div class="store-item" data-price="398.00" data-name="Delta Airlines Round Trip" data-link="https://www.delta.com" data-merchant="Delta Airlines" data-category="travel flight" data-currency="USD">
-            <img class="item-img" src="https://images.unsplash.com/photo-1436491865332-7a61a109db05?w=120&h=120&fit=crop&q=80" alt="Delta Airlines Flight" loading="lazy">
+            <img class="item-img" src="assets/shop/flight.svg" alt="Flight (illustration)" loading="lazy">
             <div class="item-details"><span class="item-name">Round Trip NYC → Miami</span><span class="item-desc">Economy, nonstop, 3h 15m each way</span><div class="item-tags"><span class="item-tag">Flights</span><span class="item-tag">Travel</span></div><span class="item-source">Delta Airlines <a href="https://www.delta.com" target="_blank" rel="noopener" class="item-link">delta.com</a></span><span class="item-price"><span class="item-usd">$398.00</span> &middot; <span class="item-ost">-- OST</span></span></div>
             <button class="btn-add" aria-label="Add">+</button>
           </div>
@@ -1885,7 +1891,7 @@
           </div>
         </div>
 
-        <div class="fuel2-note">&#9888; Global partnerships expanding. Pay at any supported station via OST NFC or QR. Cashback settled on Solana.</div>
+        <div class="fuel2-note">&#9888; R&amp;D preview: no fuel-station partners yet, and NFC/QR pay at stations is not live. Prices are illustrative; devnet only.</div>
       </div>
 
     </div>
@@ -2337,7 +2343,7 @@
                   <button type="button" class="btn btn-outline btn-sm" data-ost-wallet-home="restore">Restore from a backup</button>
                 </span>
               </div>
-              <p class="ct-rate" id="convertRateLine" style="margin:0 0 14px;font-size:.82rem;color:var(--text-muted);">Conversion rate: <strong>1 OST = $0.0118</strong> (fixed, devnet &middot; no cash value). The hero price is a display index, not this rate.</p>
+              <p class="ct-rate" id="convertRateLine" style="margin:0 0 14px;font-size:.82rem;color:var(--text-muted);">Conversion rate: <strong>1 OST = $0.0118</strong> (fixed, devnet &middot; no cash value). The &ldquo;OST index (display)&rdquo; on the home page is a display model, not this rate.</p>
               <div class="ct-body">
                 <div class="ct-side ct-from">
                   <label class="ct-label" data-i18n="wallet.convert.from">From</label>
@@ -3640,7 +3646,7 @@
             <div class="cc-source">Source: Freedom House "Freedom on the Net 2024"</div>
           </div>
           <div class="censorship-case sr">
-            <img src="https://images.unsplash.com/photo-1564475228765-f0c3292f3e5e?w=600&h=250&fit=crop" alt="Iran protests" loading="lazy" class="cens-case-img">
+            <img src="assets/censorship/shutdown.svg" alt="Internet shutdown (illustration)" loading="lazy" class="cens-case-img">
             <div class="cens-case-sev cens-sev-critical">Critical</div>
             <div class="cc-flag">&#127470;&#127479;</div>
             <h4>Iran — Complete Internet Shutdowns</h4>
@@ -3676,7 +3682,7 @@
         <div class="cens-answer-card">
           <div class="cens-answer-glow"></div>
           <h4>&#128752; OST's Answer</h4>
-          <p>Satellite-backed, decentralized internet + offline-capable payments. Zero fees. When every other system fails, OST still works.</p>
+          <p>Decentralized, offline-capable payments with zero fees &mdash; designed to keep working when other systems fail. Satellite-backed internet is an R&amp;D vision: no satellite exists today.</p>
         </div>
       </div>
 
@@ -3684,7 +3690,7 @@
       <div class="censorship-citizen-banner" style="margin-top:48px;">
         <div class="ccb-glow"></div>
         <h3>&#127758; For Every Citizen — Protected From Censorship</h3>
-        <p>OST's satellite-backed payment infrastructure ensures that every citizen — from Tehran to Yangon, from Cairo to Moscow — can transact freely, privately, and without government interference.</p>
+        <p>OST is designed so that every citizen — from Tehran to Yangon, from Cairo to Moscow — could transact freely, privately, and without government interference. Today it is a Solana devnet test network; satellite delivery is R&amp;D only.</p>
         <div class="ccb-stats">
           <div class="ccb-stat"><span class="ccb-num">2.6B</span><span>Without Internet</span></div>
           <div class="ccb-stat"><span class="ccb-num">55+</span><span>Countries Censored</span></div>
@@ -3705,8 +3711,8 @@
         <div class="sx-stage-copy">
           <div class="sx-header" style="text-align:left;">
             <div class="sx-icon-ring" style="margin:0 0 16px;"><span>&#128640;</span></div>
-            <h2 class="section-title" data-i18n="spacex.title">OST &times; SpaceX &mdash; The Journey to Space</h2>
-            <p class="section-subtitle" data-i18n="spacex.sub">Follow our partnership roadmap from Earth to Mars. Every milestone is real, every goal is funded by donations and investors &mdash; never by taxing your transactions.</p>
+            <h2 class="section-title" data-i18n="spacex.title">The Journey to Space &mdash; an OST vision</h2>
+            <p class="section-subtitle" data-i18n="spacex.sub">A vision roadmap from Earth to Mars, inspired by SpaceX &mdash; not a partnership. There is no agreement with SpaceX or Starlink, and nothing here is funded or launched yet. OST charges users no transaction fees.</p>
             <div class="sx-hero-actions">
               <a class="sx-hero-btn" href="#spaceJourney3d">Open 3D journey</a>
               <a class="sx-hero-btn sx-hero-btn-ghost" href="https://www.spacex.com/updates/" target="_blank" rel="noopener">Read official updates</a>
@@ -3855,12 +3861,12 @@
         </div>
       </div>
 
-      <!-- SpaceX Partnership Phases (existing checklists) -->
+      <!-- Space vision phases (existing checklists; R&D, no partnership) -->
       <div class="spacex-strategy" id="spacexStrategy" >
         <div class="sx-header">
           <div class="sx-icon-ring"><span>&#128640;</span></div>
-          <h3>OST &times; Starlink &mdash; Satellite DePIN Partnership</h3>
-          <p class="text-muted">Satellite infrastructure is funded entirely by donations and investors. OST is designed to complement Starlink&rsquo;s coverage in censored or remote areas &mdash; nationless technology, coded for space. Zero fees for users, forever.</p>
+          <h3>Satellite DePIN &mdash; R&amp;D vision (no Starlink partnership)</h3>
+          <p class="text-muted">An R&amp;D vision, not a funded project: OST could one day complement satellite internet coverage in censored or remote areas &mdash; nationless technology, coded for space. No satellite, partnership or funding exists today. OST charges users no transaction fees.</p>
         </div>
 
         <!-- Phase 1: Entry Point — COMPLETE -->
@@ -3953,7 +3959,7 @@
         <div class="sx-checklist-phase" id="sxPhase3">
           <div class="sx-phase-banner">
             <span class="sx-phase-status-dot"></span>
-            <h4>Phase 3 &mdash; Partnership</h4>
+            <h4>Phase 3 &mdash; Partnership outreach (planned, nothing agreed)</h4>
             <span class="sx-phase-label">Month 3&ndash;6</span>
           </div>
           <div class="checklist-grid">
@@ -4083,7 +4089,7 @@
             <img src="https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=600&h=200&fit=crop" alt="Uncensored internet" loading="lazy" style="width:100%;height:140px;object-fit:cover;opacity:.7;">
             <div style="padding:20px;">
               <h4 style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">&#127760; Uncensored Internet</h4>
-              <p>OST funds satellite infrastructure so anyone — from a student in Tehran to a journalist in Myanmar — can access the internet without government permission. No filters. No kill switches.</p>
+              <p>An R&amp;D vision: satellite infrastructure so anyone — from a student in Tehran to a journalist in Myanmar — could reach the internet without government permission. Nothing is built or launched yet, and no OST pays for it.</p>
               <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
                 <span style="font-size:.7rem;padding:3px 10px;background:rgba(167,139,250,.1);border:1px solid rgba(167,139,250,.2);border-radius:20px;color:var(--accent2);">LEO Satellites</span>
                 <span style="font-size:.7rem;padding:3px 10px;background:rgba(167,139,250,.1);border:1px solid rgba(167,139,250,.2);border-radius:20px;color:var(--accent2);">Mesh Network</span>
@@ -4095,7 +4101,7 @@
             <img src="https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?w=600&h=200&fit=crop" alt="Universal access" loading="lazy" style="width:100%;height:140px;object-fit:cover;opacity:.7;">
             <div style="padding:20px;">
               <h4 style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">&#128752; Universal Access</h4>
-              <p>Satellite infrastructure funded by donations and investors — not fees. Low-earth orbit satellites bring internet + financial access to 2.6 billion people currently offline.</p>
+              <p>Satellite infrastructure is an R&amp;D vision &mdash; nothing is funded or launched yet. Low-earth orbit satellites could bring internet + financial access to the 2.6 billion people currently offline.</p>
               <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
                 <span style="font-size:.7rem;padding:3px 10px;background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.2);border-radius:20px;color:var(--success);">2.6B Offline</span>
                 <span style="font-size:.7rem;padding:3px 10px;background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.2);border-radius:20px;color:var(--success);">NFC Payments</span>
@@ -4145,7 +4151,7 @@
             <div class="dt-step"><span class="dt-year">1991</span><span class="dt-text">Tim Berners-Lee: &ldquo;This is for everyone&rdquo;</span></div>
             <div class="dt-step"><span class="dt-year">2010s</span><span class="dt-text">5 Big Tech companies capture 72% of web traffic</span></div>
             <div class="dt-step"><span class="dt-year">2024</span><span class="dt-text">55 countries shut down or censored internet</span></div>
-            <div class="dt-step dt-step-ost"><span class="dt-year">2025</span><span class="dt-text">OST funds satellite internet for the unconnected</span></div>
+            <div class="dt-step dt-step-ost"><span class="dt-year">2025</span><span class="dt-text">OST launches on Solana devnet &mdash; satellite internet for the unconnected is still an R&amp;D vision</span></div>
           </div>
           <div class="decentral-stats">
             <div class="ds"><span class="ds-num">2.6B</span><span class="ds-label">People without internet</span></div>
@@ -4215,7 +4221,7 @@
                 <div class="tstat"><span class="tstat-num">0.4s</span><span class="tstat-label">Solana finality time</span></div>
                 <div class="tstat"><span class="tstat-num">$0</span><span class="tstat-label">Zero transaction fees</span></div>
               </div>
-              <p class="timeline-detail">Solana's Token-2022 program introduced ElGamal encryption and zero-knowledge range proofs at the protocol level. For the first time, a high-throughput blockchain could process confidential transactions &mdash; hiding sender, receiver, and amount &mdash; at 65,000 TPS with sub-second finality. Zero fees, funded by donations and investors. This wasn't an academic paper. It was production-ready code deployed on mainnet. A developer in Mexico City saw this and started coding at 2 AM.</p>
+              <p class="timeline-detail">Solana's Token-2022 program introduced ElGamal encryption and zero-knowledge range proofs at the protocol level. For the first time, a high-throughput blockchain could process confidential transactions &mdash; hiding sender, receiver, and amount &mdash; at 65,000 TPS with sub-second finality. This wasn't an academic paper. It was production-ready code deployed on mainnet. A developer in Mexico City saw this and started coding at 2 AM.</p>
             </div>
           </div>
         </div>
@@ -4232,7 +4238,7 @@
                 <div class="tstat"><span class="tstat-num">22</span><span class="tstat-label">On-chain instructions</span></div>
                 <div class="tstat"><span class="tstat-num">0</span><span class="tstat-label">Pre-mine or team allocation</span></div>
               </div>
-              <p class="timeline-detail"><strong>The real numbers:</strong> OST was built by a single developer from Mexico, incorporated as a legal entity in Panama. No venture capital. No pre-mine. No insider allocations. The program was written in Rust using the Anchor framework &mdash; 25 instructions covering confidential_mint, confidential_transfer, dao_propose, dao_vote, satellite_fund, zk_tax_proof, auto_delegate, and more. The program binary is 572KB. Every instruction is open source. OST charges zero transaction fees &mdash; the service is free forever, funded by donations and investors. Program ID: <code>J2jiS296YWVie1Sopb4SxcM3aJnP9aAwe6aLDhCqvGXY</code>. Mint: <code>44R8tYQYza1EEuiAriYs5NHnbGBeX8tLPTdu3zH7wLsz</code>. Everything is verifiable on-chain right now.</p>
+              <p class="timeline-detail"><strong>The real numbers:</strong> OST was built by a single developer from Mexico, incorporated as a legal entity in Panama. No venture capital. No pre-mine. No insider allocations. The program was written in Rust using the Anchor framework &mdash; 25 instructions covering confidential_mint, confidential_transfer, dao_propose, dao_vote, satellite_fund, zk_tax_proof, auto_delegate, and more. The program binary is 572KB. Every instruction is open source. OST charges zero transaction fees &mdash; it is free to try on devnet, where OST has no cash value. Program ID: <code>J2jiS296YWVie1Sopb4SxcM3aJnP9aAwe6aLDhCqvGXY</code>. Mint: <code>44R8tYQYza1EEuiAriYs5NHnbGBeX8tLPTdu3zH7wLsz</code>. Everything is verifiable on-chain right now.</p>
             </div>
           </div>
         </div>
@@ -4249,7 +4255,7 @@
                 <div class="tstat"><span class="tstat-num">8B</span><span class="tstat-label">People on Earth</span></div>
                 <div class="tstat"><span class="tstat-num">&infin;</span><span class="tstat-label">No borders. Ever.</span></div>
               </div>
-              <p class="timeline-detail">The endgame is not just a better payment app. It's the end of financial borders entirely. OST is designed to become the universal settlement layer &mdash; Earth-side for daily payments, space-side for satellite operations and eventual interplanetary commerce. Satellite infrastructure is funded entirely by donations and investors &mdash; never by taxing users. OST is free to use, forever. The constellation brings uncensored internet to every corner of Earth, including the 2.6 billion still offline. When humanity builds bases on Mars and the Moon, they won't be using SWIFT or correspondent banking. They'll need a currency that works without Earth infrastructure &mdash; a currency like OST. This isn't a pitch. It's a plan. The code is written. The mission is funded by people who believe in it.</p>
+              <p class="timeline-detail">The endgame is not just a better payment app. It's the end of financial borders entirely. OST is designed to become the universal settlement layer &mdash; Earth-side for daily payments, space-side for satellite operations and eventual interplanetary commerce. Satellite infrastructure is an R&amp;D vision &mdash; nothing is funded or launched yet. OST is free to try on devnet. A constellation would bring uncensored internet to every corner of Earth, including the 2.6 billion still offline. When humanity builds bases on Mars and the Moon, they won't be using SWIFT or correspondent banking. They'll need a currency that works without Earth infrastructure &mdash; a currency like OST. This isn't a pitch. It's a plan. The code is written and open; nothing is funded yet.</p>
             </div>
           </div>
         </div>
@@ -4375,7 +4381,7 @@
 
       <div class="growth-metrics" style="margin-top:48px;">
         <div class="growth-metric"><span class="growth-metric-num">22</span><span class="growth-metric-label">On-Chain Instructions</span></div>
-        <div class="growth-metric"><span class="growth-metric-num">$0</span><span class="growth-metric-label">Transaction Fees Forever</span></div>
+        <div class="growth-metric"><span class="growth-metric-num">$0</span><span class="growth-metric-label">Transaction fees (devnet)</span></div>
         <div class="growth-metric"><span class="growth-metric-num">11</span><span class="growth-metric-label">Languages Supported</span></div>
       </div>
       <p class="text-muted" style="text-align:center;margin-top:16px;font-size:.85rem;">We don't predict prices. We ship code. The service is free. The market decides the rest.</p>
@@ -4413,7 +4419,7 @@
             <div class="check-icon">&#9989;</div>
             <div class="check-body">
               <h4>Website &amp; Frontend</h4>
-              <p>Production website with 3D globe, live prices, wallet connect, interchange, 11 languages, AI connector panel, SpaceX partnership strategy.</p>
+              <p>Production website with 3D globe, live prices, wallet connect, interchange, 11 languages, AI connector panel, SpaceX-inspired space vision (no partnership).</p>
               <span class="check-status status-done">Complete</span>
             </div>
           </div>
@@ -4477,7 +4483,7 @@
             <div class="check-icon">&#9989;</div>
             <div class="check-body">
               <h4>DAO Treasury Wallet</h4>
-              <p>Treasury PDA + token account created on-chain. Receives donations and investor contributions for satellite infrastructure funding. Zero transaction fees.</p>
+              <p>Treasury PDA + token account created on-chain (devnet), intended to hold donations for future satellite R&amp;D. Zero transaction fees.</p>
               <span class="check-status status-done">Active</span>
             </div>
           </div>
@@ -5117,7 +5123,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
           <div class="sv-pillar-glow"></div>
           <div class="sv-pillar-icon">&#128752;</div>
           <h3>Satellite Redemption</h3>
-          <p>When any node &mdash; Solana, OST mesh, or LEO satellite &mdash; comes back online, bearer tokens auto-settle on-chain. The 0.1% fee funds satellite rebuilding.</p>
+          <p>When any node &mdash; Solana, OST mesh, or LEO satellite &mdash; comes back online, bearer tokens would settle on-chain. Satellite redemption is R&amp;D: no satellite exists and no fee is charged.</p>
           <ul class="sv-pillar-list">
             <li>&#10004; Redemption queued locally until network returns</li>
             <li>&#10004; LoRa/Bluetooth mesh bridges gaps</li>
@@ -5156,7 +5162,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
             <div class="sv-flow-num">4</div>
             <div class="sv-flow-text">
               <strong>Redeem when civilization reboots</strong>
-              <p>Scan the bearer token into any OST client. The vault unlocks, the hash is burned, and the OST credits your wallet. 0.1% fee funds satellite infrastructure rebuilding.</p>
+              <p>Scan the bearer token into any OST client. The vault unlocks, the hash is burned, and the OST credits your wallet. No fee is charged.</p>
             </div>
           </div>
         </div>
@@ -5200,9 +5206,9 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
 
           <div class="sv-fee-box">
             <div class="sv-fee-row"><span>Bearer Amount</span><span id="svFeeAmt">0 OST</span></div>
-            <div class="sv-fee-row sv-fee-sm"><span>Vault Lock Fee</span><span>0.1%</span></div>
-            <div class="sv-fee-row sv-fee-sm"><span>Redemption Fee (later)</span><span>0.1% &rarr; &#128752; Satellite Fund</span></div>
-            <div class="sv-fee-row"><span>Total Debit</span><span id="svFeeTotal">0 OST</span></div>
+            <div class="sv-fee-row sv-fee-sm"><span>Vault Lock Fee</span><span>None</span></div>
+            <div class="sv-fee-row sv-fee-sm"><span>Redemption Fee</span><span>None</span></div>
+            <div class="sv-fee-row"><span>Total</span><span id="svFeeTotal">0 OST</span></div>
           </div>
 
           <button class="sv-mint-btn" id="svMintBtn" disabled>
@@ -5674,7 +5680,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
         <div class="transp-stat-card">
           <div class="transp-stat-icon">&#128737;&#65039;</div>
           <div class="transp-stat-num">$0</div>
-          <div class="transp-stat-label">Fees Forever</div>
+          <div class="transp-stat-label">User transaction fees (devnet)</div>
         </div>
       </div>
 
@@ -5687,7 +5693,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
           <div class="transp-pledge"><span class="transp-pledge-icon">&#9989;</span><div><strong>No pre-mine. No hidden allocations. No "team tokens."</strong><p>Every token minted through the public confidential_mint instruction.</p></div></div>
           <div class="transp-pledge"><span class="transp-pledge-icon">&#9989;</span><div><strong>Open source from day one.</strong><p>Every line of Rust, TypeScript, and HTML on GitHub. Find a flaw? Open a PR.</p></div></div>
           <div class="transp-pledge"><span class="transp-pledge-icon">&#9989;</span><div><strong>Real company, real founder.</strong><p>Panama S.A. operated by a builder from Mexico. Company docs are public.</p></div></div>
-          <div class="transp-pledge"><span class="transp-pledge-icon">&#9989;</span><div><strong>The space story is real.</strong><p>Satellites funded by donations &amp; investors. Every disbursement voted publicly.</p></div></div>
+          <div class="transp-pledge"><span class="transp-pledge-icon">&#9989;</span><div><strong>The space story is a vision, not a launch.</strong><p>No satellite is funded or built yet &mdash; it is labelled R&amp;D wherever it appears.</p></div></div>
         </div>
       </div>
 
@@ -5814,7 +5820,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
 
 <footer class="footer">
     <div class="container">
-      <div class="footer-space"><p data-i18n="footer.mission">Every transaction helps fund satellite infrastructure for universal internet access. <strong>A gift we build together.</strong></p></div>
+      <div class="footer-space"><p data-i18n="footer.mission">Satellite internet for everyone is an R&amp;D vision &mdash; nothing is built yet and no transaction pays for it. <strong>A gift we build together.</strong></p></div>
       <div class="footer-bottom">
         <div class="footer-logo"><span class="logo-icon">&#9673;</span> OST</div>
         <p class="footer-copy" data-i18n="footer.copy">Open source. Built with love for every human on Earth.</p>
@@ -6155,14 +6161,14 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
        MUST load BEFORE app.js so all connections built by the app inherit the wrapper. -->
   <!-- Data Guard: recover/back up critical storage BEFORE anything reads it. -->
   <script src="ost-data-guard.js?v=4"></script>
-  <script src="ost-balance-tree.js?v=1"></script>
+  <script src="ost-balance-tree.js?v=2"></script>
   <script src="rpc-multiplexer.js?v=201"></script>
   <!-- Optimistic UX layer (toast + balance hint + tx simulation). Loads early so
        faucet-hub and wallet-extras can use window.OST_OPTIMISTIC / OST_NOTIFY. -->
-  <script src="ost-optimistic.js?v=8"></script>
+  <script src="ost-optimistic.js?v=9"></script>
   <!-- base58 (Phantom-format keys, WAL-7) and money error copy (rails, C3) load before app.js. -->
   <script src="ost-base58.js?v=2"></script>
-  <script src="ost-money-errors.js?v=2"></script>
+  <script src="ost-money-errors.js?v=3"></script>
   <script src="ost-celebrate.js?v=1"></script>
   <script src="ost-fx.js?v=4" defer></script>
   <script src="ost-currency-format.js?v=2" defer></script>
@@ -6176,7 +6182,7 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
       // Live OST price is ON by default; set window.OST_LIVE_PRICE=false before this block to disable.
       window.OST_LIVE_PRICE = window.OST_LIVE_PRICE !== false;
     </script>
-    <script src="realtime.js?v=6"></script>
+    <script src="realtime.js?v=7"></script>
     <script src="ost-price-client.js?v=204"></script>
     <script src="ost-token-section.js?v=3" defer></script>
     <script src="native-markets.js?v=3"></script>
@@ -6196,15 +6202,15 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
     <script src="ost-treasury-engine.js?v=2"></script>
     <script src="ost-engine-guard.js?v=2"></script>
     <script src="ost-appbar.js?v=21"></script>
-    <script src="ost-desktop-nav.js?v=4" defer></script>
-    <script src="ost-ghost-brain.js?v=3" defer></script>
+    <script src="ost-desktop-nav.js?v=5" defer></script>
+    <script src="ost-ghost-brain.js?v=4" defer></script>
     <script src="ost-ghost-connect.js?v=1" defer></script>
   <script src="ost-world.js?v=7" defer></script>
   <script src="ost-world-bubble.js?v=4" defer></script>
   <script src="ost-shortcuts.js?v=1" defer></script>
   <script src="ost-games-lanes.js?v=2" defer></script>
   <script src="ost-ostg-source.js?v=5" defer></script>
-  <script src="ost-balance.js?v=5" defer></script>
+  <script src="ost-balance.js?v=6" defer></script>
   <script src="ost-onchain-sync.js?v=2" defer></script>
   <script src="ost-loan-usd.js?v=1" defer></script>
   <script src="ost-cards-hub.js?v=11" defer></script>
@@ -6214,34 +6220,38 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
     <script src="ost-total-balance.js?v=4"></script>
     <script src="ost-ostg-wallet.js?v=3" defer></script>
     <script src="icons.js?v=1"></script>
-    <script src="app.js?v=274"></script>
+    <script src="app.js?v=275"></script>
   <script src="ost-session-key.js?v=13" defer></script>
   <script src="ost-onchain-market.js?v=8" defer></script>
   <script src="ost-onchain-route.js?v=4" defer></script>
     <!-- Ghost AI Summoning Circle (rebuild) -->
   <script src="nuevo-laredo-gas.js?v=2"></script>
-  <script src="shop-quickview.js?v=3"></script>
+  <script src="shop-quickview.js?v=4"></script>
   <script src="interchange-live.js?v=2"></script>
   <script src="polish.js?v=3"></script>
   <script src="swap-pool.js?v=2"></script>
-  <script src="wallet-extras.js?v=210"></script>
-  <script src="ost-wallet-home.js?v=2" defer></script>
-  <script type="module" src="ost-mesh-app.js?v=5"></script>
+  <script src="wallet-extras.js?v=211"></script>
+  <script src="ost-wallet-home.js?v=3" defer></script>
+  <!-- L-regression-M11: ost-auth.js (defer) must run BEFORE the Mesh module (modules
+       are deferred too and run in document order): Mesh boot signs with
+       OST_AUTH.now() and its C11 stale-clock retry needs window.OST_AUTH. -->
+  <script src="ost-auth.js?v=11" defer></script>
+  <script type="module" src="ost-mesh-app.js?v=6"></script>
   <script type="module" src="ost-mesh-call.js?v=2"></script>
-  <script type="module" src="ost-social.js?v=4"></script>
+  <script type="module" src="ost-social.js?v=5"></script>
   <script src="ost-apps-viewer.js?v=3" defer></script>
-  <script src="compartments.js?v=8"></script>
+  <script src="compartments.js?v=9"></script>
   <script src="prediction-extras.js?v=21"></script>
   <script src="ost-positions.js?v=3" defer></script>
-  <script src="prediction-pro.js?v=221"></script>
-  <script src="ost-predict-mobile.js?v=49" defer></script>
+  <script src="prediction-pro.js?v=222"></script>
+  <script src="ost-predict-mobile.js?v=50" defer></script>
 <script src="ost-markets-desk.js?v=5" defer></script>
 <script src="ost-market-chart.js?v=3" defer></script>
 <script src="ost-market-art.js?v=1" defer></script>
 <script src="ost-markets-pro.js?v=7" defer></script>
   <script src="prediction-scalar.js?v=4"></script>
   <link rel="stylesheet" href="prediction-modal.css?v=6">
-  <script src="prediction-modal.js?v=214"></script>
+  <script src="prediction-modal.js?v=215"></script>
   <script src="ost-ticket-overlay.js?v=2" defer></script>
   <script src="prediction-trade-popout.js?v=11"></script>
   <script src="prediction-pro-dash.js?v=16"></script>
@@ -6250,29 +6260,29 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
   <!-- PRD-5: ost-onchain-bet.js (on-chain betting, placeholder program id; nothing used it) removed. -->
   <script src="ux-extras.js?v=11"></script>
   <script src="faucet-hub.js?v=20"></script>
-  <script src="topup.js?v=15"></script>
+  <script src="topup.js?v=16"></script>
   <script src="apple-tap.js?v=6"></script>
-  <script src="ost-card.js?v=9" defer></script>
+  <script src="ost-card.js?v=10" defer></script>
   <script src="live-watch.js?v=201" defer></script>
   <script src="faucet-hub-ads.js?v=102"></script>
   <script src="offline-vault.js?v=10"></script>
   <script src="ost-quantum.js?v=1"></script>
   <script src="ost-quantum-lab.js?v=1" defer></script>
-  <script src="ost-games.js?v=33"></script>
+  <script src="ost-games.js?v=34"></script>
   <script src="i18n-runtime.js?v=5"></script>
-  <script src="devnet-rescue.js?v=206"></script>
+  <script src="devnet-rescue.js?v=207"></script>
   <script src="ost-notifications.js?v=4"></script>
   <!-- Mesh Casual Games (non-staked) -->
   <script src="launchpad-trenches.js?v=7"></script>
   <script src="launchpad-engine.js?v=8" defer></script>
 <script src="ost-launchpad-x.js?v=2" defer></script>
-  <script src="swap-resilient.js?v=203" defer></script>
+  <script src="swap-resilient.js?v=204" defer></script>
   <script src="stock-market.js?v=16"></script>
   <script src="ost-perps.js?v=2" defer></script>
   <script src="redesign.js?v=1" defer></script>
   <script src="mainnet-audit.js?v=1" defer></script>
   <script src="ost-microfx.js?v=2" defer></script>
-<script src="ost-nexus.js?v=7" defer></script>
+<script src="ost-nexus.js?v=8" defer></script>
   <script>
     (function () {
       var deferredPrompt = null;
@@ -6401,9 +6411,8 @@ console.<span class="code-fn">log</span>(<span class="code-str">`✅ Tx: </span>
        Entries with "group":"mesh" (the legacy mesh pavilion) are NEVER idle-loaded:
        they load only through OST_LAZY.group('mesh') (Classic mesh, games openers,
        mesh-link hash aliases). The OST Mesh app itself is ost-mesh-app.js above. -->
-  <script type="application/json" id="ost-lazy-manifest">[{"src":"ghost/ghost.js?v=8","module":true},{"src":"ghost/ghost-terminal.js?v=1","module":false},{"src":"ost-qr-reader.js?v=1","module":false},{"src":"mesh/mesh.js?v=48","module":true,"group":"mesh"},{"src":"mesh/veil.js?v=3","module":true,"group":"mesh"},{"src":"mesh/mesh-play.js?v=15","module":true,"group":"mesh"},{"src":"mesh/mesh-fair-fx.js?v=1","module":false,"group":"mesh"},{"src":"code-academy.js?v=5","module":false},{"src":"vendor/qrcode-generator.js","module":false},{"src":"mesh/mesh-upgrade.js?v=14","module":false,"group":"mesh"},{"src":"mesh/mesh-link.js?v=5","module":false,"group":"mesh"},{"src":"mesh/mesh-games.js?v=3","module":false,"group":"mesh"},{"src":"mesh/games/tictactoe.js?v=1","module":false,"group":"mesh"},{"src":"mesh/games/chess.js?v=1","module":false,"group":"mesh"},{"src":"mesh/games/pool8.js?v=1","module":false,"group":"mesh"},{"src":"mesh/games/cuppong.js?v=1","module":false,"group":"mesh"},{"src":"mesh/games/minigolf.js?v=1","module":false,"group":"mesh"},{"src":"mesh/mesh-social-x.js?v=5","module":false,"group":"mesh"},{"src":"mesh/mesh-mobile.js?v=11","module":false,"group":"mesh"},{"src":"mesh/mesh-contacts.js?v=3","module":false,"group":"mesh"},{"src":"mesh/mesh-group-markets.js?v=3","module":false,"group":"mesh"},{"src":"mesh/mesh-location-pro.js?v=7","module":false,"group":"mesh"},{"src":"ost-pq-demo.js?v=1","module":false}]</script>
+  <script type="application/json" id="ost-lazy-manifest">[{"src":"ghost/ghost.js?v=8","module":true},{"src":"ghost/ghost-terminal.js?v=1","module":false},{"src":"ost-qr-reader.js?v=1","module":false},{"src":"mesh/mesh.js?v=48","module":true,"group":"mesh"},{"src":"mesh/veil.js?v=3","module":true,"group":"mesh"},{"src":"mesh/mesh-play.js?v=16","module":true,"group":"mesh"},{"src":"mesh/mesh-fair-fx.js?v=1","module":false,"group":"mesh"},{"src":"code-academy.js?v=5","module":false},{"src":"vendor/qrcode-generator.js","module":false},{"src":"mesh/mesh-upgrade.js?v=15","module":false,"group":"mesh"},{"src":"mesh/mesh-link.js?v=5","module":false,"group":"mesh"},{"src":"mesh/mesh-games.js?v=3","module":false,"group":"mesh"},{"src":"mesh/games/tictactoe.js?v=1","module":false,"group":"mesh"},{"src":"mesh/games/chess.js?v=1","module":false,"group":"mesh"},{"src":"mesh/games/pool8.js?v=1","module":false,"group":"mesh"},{"src":"mesh/games/cuppong.js?v=1","module":false,"group":"mesh"},{"src":"mesh/games/minigolf.js?v=1","module":false,"group":"mesh"},{"src":"mesh/mesh-social-x.js?v=5","module":false,"group":"mesh"},{"src":"mesh/mesh-mobile.js?v=11","module":false,"group":"mesh"},{"src":"mesh/mesh-contacts.js?v=3","module":false,"group":"mesh"},{"src":"mesh/mesh-group-markets.js?v=3","module":false,"group":"mesh"},{"src":"mesh/mesh-location-pro.js?v=7","module":false,"group":"mesh"},{"src":"ost-pq-demo.js?v=1","module":false}]</script>
   <script src="ost-idle-guard.js?v=2" defer></script>
-  <script src="ost-auth.js?v=10" defer></script>
   <script src="ost-update.js?v=1" defer></script>
   <script src="ost-offline-mode.js?v=1" defer></script>
   <script src="ost-bridge-ui.js?v=7" defer></script>

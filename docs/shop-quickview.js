@@ -23,7 +23,7 @@
       desc: 'Recycled-polyester insulation, packable, water-resistant shell' },
     { name: 'Le Creuset Dutch Oven 5.5qt', price: 369, currency: 'USD', merchant: 'Le Creuset', category: 'food',
       link: 'https://www.lecreuset.com/round-dutch-oven/L2502.html',
-      img: 'https://images.unsplash.com/photo-1584990347449-718253fa6d11?w=400&h=400&fit=crop&q=80',
+      img: 'assets/shop/dutch-oven.svg',   // the Unsplash photo was deleted (404)
       desc: 'Enameled cast iron, lifetime warranty, oven-safe to 500°F' },
     { name: 'Lego Technic Bugatti', price: 449.99, currency: 'USD', merchant: 'Lego', category: 'tech',
       link: 'https://www.lego.com/en-us/product/bugatti-chiron-42083',

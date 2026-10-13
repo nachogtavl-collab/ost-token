@@ -52,6 +52,11 @@
     return bannerEl;
   }
   var bannerTimer = null;
+  // phone-notice-layout: this banner keeps ONE fixed spot. The shared notice
+  // host (OST_NOTIFY, ost-optimistic.js place()) is the one that moves: on
+  // phones it stacks above this banner while the banner shows. A second lift
+  // here (banner above the notices) made the two chase each other every
+  // 400 ms and the banner jumped over the Cash out button.
   function showBanner(text, tone, extraNode) {
     var el = ensureBanner();
     if (!el) return;
@@ -110,9 +115,11 @@
     var s = solUsd(); if (!s) return null;
     var needSol = (RENT_MIN_LAMPORTS - have) / 1e9;
     var ost = needSol * s / ostUsd() / (1 - POOL_SWAP_FEE);
-    // Round UP to 0.1 OST plus 0.1 margin for price drift; integer tenths so
-    // the figure never prints as 9.299999999999999.
-    return (Math.ceil(ost * 10) + 1) / 10;
+    // The worker's exact rule (wallet-payouts.js, below_rent_minimum): round UP
+    // to 0.01 OST. One rounding everywhere, so the quote, the refusal and the
+    // server never name three different minimums. Integer hundredths / 100
+    // prints cleanly (884 / 100 = 8.84).
+    return Math.ceil(ost * 100) / 100;
   }
 
   function walletPk() {
@@ -155,7 +162,8 @@
     var held = await ostHeld();
     if (held != null && held + 1e-9 < quote.ost) throw err('insufficient_balance', 'You have ' + held.toLocaleString(undefined, { maximumFractionDigits: 4 }) + ' OST.', { body: { have: held } });
     var lam = await solLamports();
-    if (lam != null && !quote.priceUnknown && lam < RENT_MIN_LAMPORTS && lam + quote.lamports < RENT_MIN_LAMPORTS) {
+    // Same test as the worker (it rounds the SOL out to the nearest lamport).
+    if (lam != null && !quote.priceUnknown && lam < RENT_MIN_LAMPORTS && lam + Math.round(quote.sol * 1e9) < RENT_MIN_LAMPORTS) {
       var min = minOstFor(lam);
       throw err('below_rent_minimum', 'Your first cash-out must be at least ' + min + ' OST.', { body: { minOst: min } });
     }
@@ -252,7 +260,16 @@
     sel.addEventListener('change', syncLabel);
     if (amt) amt.addEventListener('input', function () { if (sel.value === 'OST') paintQuote(); });
     window.addEventListener('ost:convert-price', paintQuote);
-    window.addEventListener('ost:balance', function () { if (sel.value === 'OST') solLamports().then(function (l) { lastLam = l; paintQuote(); }); });
+    // A read that left before the cash-out landed must not bring the old
+    // (pre-cash-out) SOL figure back for a moment.
+    var lamFloor = null, lamFloorUntil = 0;
+    window.addEventListener('ost:balance', function () {
+      if (sel.value !== 'OST') return;
+      solLamports().then(function (l) {
+        if (l != null && lamFloor != null && Date.now() < lamFloorUntil && l < lamFloor) l = lamFloor;
+        lastLam = l; paintQuote();
+      });
+    });
     syncLabel();
 
     // Capture-phase so we run BEFORE the forward-direction handler.
@@ -274,6 +291,13 @@
       swapOstToSol(v).then(function (r) {
         if (r.pending) showBanner('Still confirming — check your balance before retrying.' + (r.sig ? ' (tx ' + String(r.sig).slice(0, 8) + '…)' : ''), 'info');
         else showBanner('✓ Cashed out ' + fmt(r.ost, 4) + ' OST → ' + (Number.isFinite(r.sol) ? fmt(r.sol) : '?') + ' SOL · tx ' + String(r.sig).slice(0, 8) + '…', 'ok');
+        // The wallet now holds the SOL it just received: never repaint the
+        // "first cash-out must be at least …" line from the pre-cash-out
+        // balance (it stayed up to ~1 s next to the ✓). Unknown outcome =
+        // unknown balance: no minimum line until the next read.
+        if (r.pending) lastLam = null;
+        else if (Number.isFinite(Number(r.sol))) { lastLam = (lastLam || 0) + Math.round(Number(r.sol) * 1e9); lamFloor = lastLam; lamFloorUntil = Date.now() + 15000; }
+        else lastLam = null;
         if (amt) {
           amt.value = '';
           // Tell every preview writer (incl. the To box) the amount is gone,

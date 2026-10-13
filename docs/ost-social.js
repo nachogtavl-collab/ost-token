@@ -1402,7 +1402,11 @@
         if (!(amount > 0)) { toast('Enter an amount.', 'err'); return; }
         const go = $('oslPayGo'), st = $('oslPaySt'); go.disabled = true; go.textContent = 'Approve in your wallet…';
         try {
-          const sig = await payTo({ wallet, amount, ccy, memo: postId ? 'ost-tip:' + postId : 'ost-mesh-pay' });
+          // A chat payment binds itself to THIS sender (S20): the memo carries a
+          // tag only the receiver can check, so nobody else can cite it as theirs.
+          let memo = postId ? 'ost-tip:' + postId : 'ost-mesh-pay';
+          if (!postId) { try { if (window.OST_SEND && typeof OST_SEND.meshPayTag === 'function') memo = (await OST_SEND.meshPayTag(me(), addr)) || memo; } catch (_) {} }
+          const sig = await payTo({ wallet, amount, ccy, memo });
           const doneMsg = sig.pending
             ? 'Still confirming ' + amount + ' ' + ccy + ' to ' + dname(addr) + ' (tx ' + sig.slice(0, 8) + '…). Check your balance before retrying.'
             : 'Sent ' + amount + ' ' + ccy + ' to ' + dname(addr) + ' ✓ (tx ' + sig.slice(0, 8) + '…)';
@@ -1418,13 +1422,32 @@
           }
           if (chat || core.contact(addr)) {
             const note = ($('oslPayNote') || {}).value || '';
-            core.sendInner(addr, { k: 'pay', ccy, amount, sig, note }, { kind: 'pay', ccy, amount, sig, note }).catch(() => {});
+            // The card names both wallets; the receiver still reads the
+            // transaction before showing it as received (S20).
+            let from = '';
+            try { const s = window.OST_WALLET && OST_WALLET.session; from = s && s.publicKey ? s.publicKey.toBase58() : ''; } catch (_) {}
+            const sigStr = String(sig);
+            core.sendInner(addr, { k: 'pay', ccy, amount, sig: sigStr, note, from, to: wallet }, { kind: 'pay', ccy, amount, sig: sigStr, note, from, to: wallet }).catch(() => {});
           }
           closeSheet();
           // C2: a user-initiated result always shows — the sheet is gone, so
           // say it where the person is looking (tips also get "verified ✓").
           if (!postId) toast(doneMsg);
-        } catch (e) { go.disabled = false; go.textContent = (postId ? 'Tip ' : 'Send ') + amount + ' ' + ccy; const m = payErrText(e, ccy); st.textContent = m; toast(m, 'err'); }
+        } catch (e) {
+          go.disabled = false; go.textContent = (postId ? 'Tip ' : 'Send ') + amount + ' ' + ccy;
+          const m = payErrText(e, ccy); st.textContent = m; toast(m, 'err');
+          // "Not enough SOL" always comes with the way to get it (C8): cash out OST → SOL.
+          if (e && (e.getSol || e.code === 'insufficient_sol')) {
+            let n = 10;
+            try { if (window.OST_GET_SOL && typeof OST_GET_SOL.ostForError === 'function') n = Number(OST_GET_SOL.ostForError(e)) || 10; } catch (_) {}
+            const b = document.createElement('button');
+            b.type = 'button'; b.className = 'omx-primary'; b.style.marginTop = '8px';
+            b.textContent = 'Get SOL: cash out ' + n + ' OST → SOL';
+            // Leave Mesh first (its Back entry pops), then open Wallet → Convert preset to the OST amount.
+            b.onclick = () => { closeSheet(); try { if (window.OST_MESH_APP && typeof OST_MESH_APP.close === 'function') OST_MESH_APP.close(); } catch (_) {} setTimeout(() => { try { if (window.OST_GET_SOL) OST_GET_SOL.open(n); } catch (_) {} }, 500); };
+            st.appendChild(document.createElement('br')); st.appendChild(b);
+          }
+        }
       };
     };
     draw();

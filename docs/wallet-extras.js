@@ -88,9 +88,31 @@
     } catch (e) {}
     return '';
   }
+  // One money move = one row. The SIGNATURE identifies it, not whoever wrote
+  // the record: the faucet server logs a claim under its reservation id while
+  // this page logs the same claim under the payout sig, and keying by id kept
+  // both (one 100 OST claim showed as +200). Kind is part of the key because
+  // one transaction can carry two different records (a loss-making sell is a
+  // 'prediction-sell' AND a 'vault-retained-loss' with the same payout sig).
   function eventKey(event) {
     if (!event) return '';
-    return String(event.id || event.eventId || event.sig || event.signature || [event.kind || '', event.ts || '', event.amount || '', event.token || event.game || event.marketId || ''].join(':'));
+    var sig = event.sig || event.signature;
+    if (sig) return String(event.kind || 'tx') + ':' + String(sig);
+    return String(event.id || event.eventId || [event.kind || '', event.ts || '', event.amount || '', event.token || event.game || event.marketId || ''].join(':'));
+  }
+  // SRV-A1: a record with a signature is stored under ONE id on every device
+  // (<kind>:<sig>), whoever wrote it first. The writer's own id (the faucet
+  // server's reservation id) is kept as eventId so echoes carrying it still
+  // match this row.
+  function normalizeIdentity(s) {
+    if (!s || !(s.sig || s.signature)) return s;
+    var key = eventKey(s);
+    if (s.id && String(s.id) !== key) {
+      if (!s.eventId) s.eventId = String(s.id);
+      else if (String(s.eventId) !== String(s.id)) s.srcId = String(s.id);
+    }
+    s.id = key;
+    return s;
   }
   function normalizeEventTs(value) {
     if (!value) return Date.now();
@@ -133,7 +155,7 @@
       var key = eventKey(snap);
       if (key) byKey[key] = Object.assign({}, byKey[key] || {}, snap);
     });
-    var merged = Object.keys(byKey).map(function(key) { return byKey[key]; }).sort(function(a, b) {
+    var merged = Object.keys(byKey).map(function(key) { return normalizeIdentity(byKey[key]); }).sort(function(a, b) {
       return Number(a.ts || 0) - Number(b.ts || 0);
     }).slice(-MAX_SNAPSHOTS);
     saveSnapshots(merged);
@@ -250,40 +272,141 @@
   }
 
   // SOL-1: the one way to get devnet SOL is to cash out OST -> SOL. Opens
-  // Wallet → Convert with "From: OST" and 10 OST preset (RNT-1: a first
-  // cash-out into an empty wallet must cover Solana's rent minimum).
-  function openGetSol(presetOst) {
-    var amount = Number(presetOst) > 0 ? Number(presetOst) : 10;
-    // The preset must clear the rent minimum at today's SOL price.
+  // Wallet → Convert with "From: OST" and the OST amount preset (RNT-1: a
+  // first cash-out into an empty wallet must cover Solana's rent minimum).
+  function lamportsHeld() {
     try {
       var Bm = window.OST_BALANCE && OST_BALANCE.get ? OST_BALANCE.get() : {};
-      var lamNow = Bm.sol != null ? Math.round(Number(Bm.sol) * 1e9) : 0;
-      var minNow = window.OST_REAL_SWAP && typeof OST_REAL_SWAP.minOstFor === 'function' ? OST_REAL_SWAP.minOstFor(lamNow) : 0;
-      if (minNow && minNow > amount) amount = Math.ceil(minNow);
-    } catch (e) {}
+      return Bm.sol != null ? Math.round(Number(Bm.sol) * 1e9) : null;
+    } catch (e) { return null; }
+  }
+  function rentMinOst(lam) {
+    try {
+      var m = window.OST_REAL_SWAP && typeof OST_REAL_SWAP.minOstFor === 'function' ? OST_REAL_SWAP.minOstFor(lam == null ? 0 : lam) : 0;
+      return Number(m) > 0 ? Number(m) : 0;
+    } catch (e) { return 0; }
+  }
+  // How much OST to cash out so the wallet ends up with `shortSol` more SOL
+  // (the pool's 0.5% fee and a 1% price margin included), never below the
+  // rent minimum and never below the 10 OST "Get SOL" preset. A shortfall of
+  // 0.0077 SOL at today's price is ~86 OST — a fixed "10 OST" button made
+  // people repeat the cash-out eight times.
+  function ostForSol(shortSol, lam) {
+    var floor = Math.max(10, Math.ceil(rentMinOst(lam == null ? lamportsHeld() : lam)));
+    var solUsd = getLiveSolUsd(), ostUsd = getLiveOstUsd();
+    var need = Number(shortSol);
+    if (!(need > 0) || !solUsd || !ostUsd) return floor;
+    return Math.max(floor, Math.ceil(need * solUsd / ostUsd / (1 - POOL_SWAP_FEE) * 1.01));
+  }
+  // SOL a wallet holding `haveSol` is short to spend `spendSol` and keep what
+  // Solana requires (whatever stays behind must be 0 or ≥ 0.00089 SOL).
+  function solShortfall(spendSol, haveSol) {
+    var spend = Math.round(Number(spendSol) * 1e9), have = Math.max(0, Math.round(Number(haveSol || 0) * 1e9));
+    if (!(spend > 0) || have >= spend) return 0;
+    return (spend + RENT_MIN_LAMPORTS - have) / 1e9;
+  }
+  // The SOL → OST order minimum in SOL ($minUsd at today's price, rounded up
+  // the way the quote prints it); 0 while the price is unknown.
+  function orderMinSol() {
+    try {
+      var cfg = typeof topupConfigCache !== 'undefined' && topupConfigCache && topupConfigCache.value;
+      var minUsd = Number(cfg && cfg.pricing && cfg.pricing.minUsd) || 1;
+      var solUsd = getLiveSolUsd();
+      return solUsd ? Math.ceil(minUsd / solUsd * 1e6) / 1e6 : 0;
+    } catch (e) { return 0; }
+  }
+  // getsol-vs-min-order: what a SOL → OST order really needs. Typing less than
+  // the minimum cannot be paid, so the Get SOL amount covers
+  // max(typed, minimum) plus the 0.00089 SOL Solana keeps — a cash-out sized
+  // for the typed amount alone left the Pay button disabled.
+  function orderShortfall(typedSol, haveSol) {
+    var spend = Math.max(Number(typedSol) || 0, orderMinSol());
+    return { spendSol: spend, minSol: orderMinSol(), shortSol: spend > 0 ? solShortfall(spend, haveSol) : 0 };
+  }
+  function getSolOstForError(e) {
+    if (!e) return 10;
+    if (Number(e.getSolOst) > 0) return Number(e.getSolOst);
+    var b = (e.body && typeof e.body === 'object') ? e.body : {};
+    var need = Number(e.needSol != null ? e.needSol : b.needSol), have = Number(e.haveSol != null ? e.haveSol : (b.haveSol != null ? b.haveSol : b.have));
+    var short = need > 0 ? solShortfall(need, Number.isFinite(have) ? have : 0) : 0;
+    return ostForSol(short, Number.isFinite(have) ? Math.round(have * 1e9) : null);
+  }
+
+  // Keep the cash-out amount field centred and uncovered. The wallet section is
+  // ~12 000 px down on desktop: a smooth glide there is slow and other movers
+  // (a section scroll queued for the next frame) used to land after it and
+  // leave the person on the Home hero with no quote on screen.
+  function landOnCashOut() {
+    var target = $('transferAmount');
+    if (!target) return;
+    var jump = function () { try { target.scrollIntoView({ behavior: 'instant', block: 'center' }); } catch (e) { try { target.scrollIntoView({ block: 'center' }); } catch (_) { target.scrollIntoView(); } } };
+    jump();
+    var checks = 0;
+    (function settle() {
+      if (checks++ >= 5) return;
+      setTimeout(function () {
+        try {
+          if (target.offsetParent === null) return settle();
+          var r = target.getBoundingClientRect();
+          var vh = window.innerHeight || 800;
+          var hit = document.elementFromPoint(r.left + Math.min(20, r.width / 2), r.top + r.height / 2);
+          var wrap = target.closest('.convert-terminal') || target.parentNode;
+          var covered = !hit || !(hit === target || target.contains(hit) || (wrap && wrap.contains(hit)));
+          if (r.top < 60 || r.bottom > vh - 120 || covered) jump();
+        } catch (e) {}
+        settle();
+      }, 350);
+    })();
+  }
+  function openGetSol(presetOst) {
+    var amount = Number(presetOst) > 0 ? Math.ceil(Number(presetOst)) : 10;
+    // The preset must clear the rent minimum at today's SOL price.
+    var minNow = rentMinOst(lamportsHeld());
+    if (minNow && minNow > amount) amount = Math.ceil(minNow);
     try { closeSendModal(); } catch (e) {}
-    try { if (window.OST_COMPARTMENTS && typeof window.OST_COMPARTMENTS.activate === 'function') window.OST_COMPARTMENTS.activate('wallet', true); } catch (e) {}
-    try { if (typeof window.setWalletPanel === 'function') window.setWalletPanel('convert', { scroll: true }); } catch (e) {}
+    // No section scroll-to-top (its smooth scroll is queued for the next frame
+    // and would carry the form away): open the panel, then jump to the field.
+    try { if (window.OST_COMPARTMENTS && typeof window.OST_COMPARTMENTS.activate === 'function') window.OST_COMPARTMENTS.activate('wallet', false); } catch (e) {}
+    try { if (typeof window.setWalletPanel === 'function') window.setWalletPanel('convert'); } catch (e) {}
     var tries = 0;
     (function fill() {
       var sel = $('transferFrom'), amt = $('transferAmount');
-      if (sel && amt && sel.querySelector('option[value="OST"]')) {
+      if (sel && amt && sel.querySelector('option[value="OST"]') && (amt.offsetParent !== null || tries >= 12)) {
         sel.value = 'OST';
         sel.dispatchEvent(new Event('change', { bubbles: true }));
         amt.value = String(amount);
         amt.dispatchEvent(new Event('input', { bubbles: true }));
-        try { (sel.closest('.convert-terminal') || sel).scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) {}
+        landOnCashOut();
         return;
       }
-      if (tries++ < 20) setTimeout(fill, 200);
+      if (tries++ < 20) setTimeout(fill, 150);
     })();
     return true;
   }
-  window.OST_GET_SOL = { open: openGetSol };
-  // A "Need SOL" message always comes with this button, never as a dead end.
-  function getSolButtonHtml() {
-    return '<button type="button" class="btn btn-outline btn-sm" data-ost-get-sol="10" style="margin-top:6px;">Get SOL: cash out 10 OST → SOL</button>';
+  // A "Need SOL" message always comes with this button, never as a dead end,
+  // and the button names the OST amount that actually covers the shortfall.
+  function getSolButtonHtml(ostAmount, shortSol) {
+    var n = Number(ostAmount) > 0 ? Math.ceil(Number(ostAmount)) : 10;
+    var why = Number(shortSol) > 0 ? 'Covers the ' + Number(shortSol).toLocaleString(undefined, { maximumFractionDigits: 6 }) + ' SOL you are short (incl. Solana’s 0.00089 SOL reserve)' : 'Cash out OST to get devnet SOL';
+    return '<button type="button" class="btn btn-outline btn-sm" data-ost-get-sol="' + n + '" title="' + why + '" style="margin-top:6px;">Get SOL: cash out ' + n + ' OST → SOL</button>';
   }
+  window.OST_GET_SOL = {
+    open: openGetSol,
+    // OST to cash out so a SOL → OST order of `spendSol` can be paid by a
+    // wallet holding `haveSol` (C8): never sized below the order minimum.
+    // { anyAmount: true } sizes it for exactly `spendSol` (a plain SOL send).
+    ostFor: function (spendSol, haveSol, opts) {
+      var s = opts && opts.anyAmount ? solShortfall(spendSol, haveSol) : orderShortfall(spendSol, haveSol).shortSol;
+      return ostForSol(s, haveSol != null ? Math.round(Number(haveSol) * 1e9) : null);
+    },
+    // { spendSol, minSol, shortSol } for a SOL → OST order (min-order guard).
+    orderShortfall: orderShortfall,
+    orderMinSol: orderMinSol,
+    shortfall: solShortfall,
+    ostForError: getSolOstForError,
+    buttonHtml: function (spendSol, haveSol) { var s = solShortfall(spendSol, haveSol); return getSolButtonHtml(ostForSol(s, haveSol != null ? Math.round(Number(haveSol) * 1e9) : null), s); },
+    buttonHtmlForError: function (e) { return getSolButtonHtml(getSolOstForError(e)); }
+  };
   document.addEventListener('click', function (e) {
     var b = e.target && e.target.closest && e.target.closest('[data-ost-get-sol]');
     if (!b) return;
@@ -305,7 +428,7 @@
     try { have = Number(await solLamportsOf(w.session.publicKey)); } catch (e) { have = null; }
     if (have != null && Number.isFinite(have)) {
       if (have < needed) {
-        throw moneyErr('insufficient_sol', 'Need ' + (needed / 1e9).toFixed(6) + ' SOL (you have ' + (have / 1e9).toFixed(6) + ').', { needSol: needed / 1e9, haveSol: have / 1e9, getSol: true });
+        throw moneyErr('insufficient_sol', 'Need ' + (needed / 1e9).toFixed(6) + ' SOL (you have ' + (have / 1e9).toFixed(6) + ').', { needSol: needed / 1e9, haveSol: have / 1e9, getSol: true, getSolOst: ostForSol(solShortfall(needed / 1e9, have / 1e9), have), asset: 'SOL' });
       }
       var rest = have - needed;      // the pool pays the network fee
       if (rest > 0 && rest < RENT_MIN_LAMPORTS) {
@@ -857,7 +980,8 @@
       } catch (e) { haveLam = null; }
       if (haveLam != null && Number.isFinite(haveLam)) {
         if (haveLam < needLam) {
-          throw moneyErr('insufficient_sol', 'Need ' + (needLam / TOPUP_LAMPORTS_PER_SOL).toFixed(6) + ' devnet SOL — you have ' + (haveLam / TOPUP_LAMPORTS_PER_SOL).toFixed(6) + '. Get SOL by cashing out 10 OST → SOL (Convert, From: OST). No order was created.', { needSol: needLam / 1e9, haveSol: haveLam / 1e9, getSol: true });
+          var getSolOst = ostForSol(solShortfall(needLam / 1e9, haveLam / 1e9), haveLam);
+          throw moneyErr('insufficient_sol', 'Need ' + (needLam / TOPUP_LAMPORTS_PER_SOL).toFixed(6) + ' devnet SOL — you have ' + (haveLam / TOPUP_LAMPORTS_PER_SOL).toFixed(6) + '. Get SOL by cashing out ' + getSolOst + ' OST → SOL (Convert, From: OST). No order was created.', { needSol: needLam / 1e9, haveSol: haveLam / 1e9, getSol: true, getSolOst: getSolOst, asset: 'SOL' });
         }
         var restLam = haveLam - needLam;
         if (restLam > 0 && restLam < RENT_MIN_LAMPORTS) {
@@ -1194,7 +1318,7 @@
     var balance = Number(await conn.getBalance(session.publicKey));
     var feeBuffer = poolPaid ? 0 : 5000;
     if (balance < lamports + feeBuffer) {
-      throw moneyErr('insufficient_sol', 'Need ' + (lamports / TOPUP_LAMPORTS_PER_SOL).toFixed(6) + ' SOL on ' + topupNetworkLabel(currentConfig) + ' (you have ' + (balance / TOPUP_LAMPORTS_PER_SOL).toFixed(6) + ').', { needSol: lamports / 1e9, haveSol: balance / 1e9, getSol: true });
+      throw moneyErr('insufficient_sol', 'Need ' + (lamports / TOPUP_LAMPORTS_PER_SOL).toFixed(6) + ' SOL on ' + topupNetworkLabel(currentConfig) + ' (you have ' + (balance / TOPUP_LAMPORTS_PER_SOL).toFixed(6) + ').', { needSol: (lamports + feeBuffer) / 1e9, haveSol: balance / 1e9, getSol: true, getSolOst: ostForSol(solShortfall((lamports + feeBuffer) / 1e9, balance / 1e9), balance), asset: 'SOL' });
     }
     var rest = balance - lamports - feeBuffer;
     if (rest > 0 && rest < RENT_MIN_LAMPORTS) {
@@ -1986,16 +2110,33 @@
     if (me && to === me) throw moneyErr('self_send', 'That’s your own wallet.');
     if (knownMints().indexOf(to) !== -1) throw moneyErr('mint_address', 'That is a token mint address, not a wallet.');
     if (window.OST_SWAP_POOL && (to === window.OST_SWAP_POOL.ata)) throw moneyErr('token_account_address', 'That is a token account, not a wallet.');
-    try { if (!solanaWeb3.PublicKey.isOnCurve(pk.toBytes())) throw moneyErr('invalid_recipient', 'That address is a program account and can’t receive here.'); }
-    catch (e) { if (e && e.code) throw e; }
+    var offCurve = false;
+    try { offCurve = !solanaWeb3.PublicKey.isOnCurve(pk.toBytes()); } catch (e) { offCurve = false; }
+    // Owner check FIRST: every token account is an off-curve address, so the
+    // off-curve test used to answer "not a valid Solana address" for them.
+    // Read the account to say what it really is.
     var info = null, known = false;
     try { info = await w.rpcCall(function (c) { return c.getAccountInfo(pk); }); known = true; } catch (e) { known = false; }
     if (info) {
       var owner = info.owner && info.owner.toBase58 ? info.owner.toBase58() : String(info.owner || '');
       if (TOKEN_PROGRAMS.indexOf(owner) !== -1) throw moneyErr('token_account_address', 'That is a token account or mint, not a wallet.');
-      if (info.executable) throw moneyErr('invalid_recipient', 'That address is a program and can’t receive here.');
+      if (info.executable) throw moneyErr('invalid_recipient', 'That address is a program and can’t receive here.', { reason: 'not_a_wallet' });
     }
+    // A valid address no key can sign for (a program-derived address).
+    if (offCurve) throw moneyErr('invalid_recipient', 'That address is not a person’s wallet (it is a program-derived address).', { reason: 'not_a_wallet' });
     return { pubkey: pk, lamports: info ? Number(info.lamports || 0) : (known ? 0 : null) };
+  }
+
+  // Not enough SOL to send: say how much is there, how much is missing, and
+  // carry the Get SOL amount (C8: Get SOL = cash out OST → SOL), never a dead end.
+  function solShortError(needBase, haveBase) {
+    var needSol = Number(baseToText(needBase, 9)), haveSol = Number(baseToText(haveBase, 9));
+    var short = solShortfall(needSol, haveSol);
+    return moneyErr('insufficient_sol', 'You have ' + baseToText(haveBase, 9) + ' SOL.', {
+      asset: 'SOL', getSol: true, needSol: needSol, haveSol: haveSol, shortSol: short,
+      getSolOst: ostForSol(short, Math.round(haveSol * 1e9)),
+      body: { have: haveSol, needSol: needSol, haveSol: haveSol }
+    });
   }
 
   // One send for every surface (Send sheet, Mesh pay, tips). Resolves to
@@ -2004,12 +2145,21 @@
     var w = window.OST_WALLET;
     var asset = SEND_ASSETS.indexOf(String(opts.asset || 'OST').toUpperCase()) !== -1 ? String(opts.asset || 'OST').toUpperCase() : 'OST';
     if (!w || !w.session || !w.session.publicKey) throw moneyErr('no_wallet', 'Connect a wallet first.');
-    var base = textToBase(opts.amount, decimalsOf(asset));
+    // Precision before size: "1.0000000001" is not a small amount, it has more
+    // decimals than the token (9) can hold.
+    var amountText = String(opts.amount == null ? '' : opts.amount).trim().replace(',', '.');
+    if (/^\d*\.\d+$/.test(amountText) && amountText.split('.')[1].length > decimalsOf(asset) && /[1-9]/.test(amountText.split('.')[1].slice(decimalsOf(asset)))) {
+      throw moneyErr('too_many_decimals', 'Use at most ' + decimalsOf(asset) + ' decimal places.', { asset: asset, body: { decimals: decimalsOf(asset) } });
+    }
+    // Trailing zeros past the 9th decimal change nothing: "1.50000000000" is 1.5.
+    if (/^\d*\.\d+$/.test(amountText)) amountText = amountText.replace(/(\.\d*?[1-9]?)0+$/, '$1').replace(/\.$/, '');
+    var base = textToBase(amountText, decimalsOf(asset));
     if (base == null || base <= 0n) throw moneyErr('invalid_amount', 'Enter an amount greater than zero.');
     var amountNum = Number(baseToText(base, 9));
     var rcpt = await checkRecipient(opts.to, asset);
     var have = opts.balanceBase != null ? BigInt(opts.balanceBase) : await readBaseBalance(asset);
     if (have != null && base > have) {
+      if (asset === 'SOL') throw solShortError(base, have);
       throw moneyErr('insufficient_balance', 'You have ' + baseToText(have, 9) + ' ' + asset + '.', { body: { have: Number(baseToText(have, 9)) }, asset: asset });
     }
     var memo = opts.memo ? String(opts.memo).slice(0, 120) : '';
@@ -2030,7 +2180,7 @@
     var poolPaid = !!(window.OST_RESCUE && typeof window.OST_RESCUE.sendPoolFeeOnly === 'function');
     var feeBuffer = poolPaid ? 0n : 5000n;
     if (have != null) {
-      if (lamports + feeBuffer > have) throw moneyErr('insufficient_balance', 'You have ' + baseToText(have, 9) + ' SOL.', { asset: 'SOL', body: { have: Number(baseToText(have, 9)) } });
+      if (lamports + feeBuffer > have) throw solShortError(lamports + feeBuffer, have);
       var rest = have - lamports - feeBuffer;
       if (rest > 0n && rest < BigInt(RENT_MIN_LAMPORTS)) throw moneyErr('keep_rent_reserve', 'Leave at least 0.00089 SOL, or use Max to send all of it.', { asset: 'SOL' });
     }
@@ -2050,11 +2200,132 @@
     try { window.dispatchEvent(new CustomEvent('ost:wallet-tx', { detail: { sig: sig, asset: 'SOL', amount: amountNum, direction: 'out', to: to, status: pending ? 'pending' : 'confirmed', source: opts.source || 'send' } })); } catch (e) {}
     return { ok: true, sig: sig, pending: pending, asset: 'SOL', amount: amountNum, to: to };
   }
+  // ------------------------------------------------------------------
+  // Payment proof (S20): a chat/arena "I paid you" card is only a claim. Read
+  // the transaction itself and say what it really moved.
+  //   verifyPayment({ sig, asset, amount, to:[addr], from?:[addr], out?:bool })
+  //   -> { state: 'confirmed'|'unverified'|'pending'|'failed'|'unknown',
+  //        reason?, credited, to, payer }
+  //   incoming (default): `to` (one of my wallets) must have RECEIVED at least
+  //     `amount` of that mint (SOL: lamports) in this transaction, and when
+  //     `from` is given the payer must be one of those addresses.
+  //   out: one of `from` (my wallets) must have SENT at least `amount`.
+  //   'unknown' = the chain could not be asked; try again later.
+  // ------------------------------------------------------------------
+  function toBaseUnits(n, decimals) {
+    var v = Number(n);
+    if (!Number.isFinite(v) || v <= 0) return 0n;
+    var b = textToBase(v.toFixed(decimals), decimals);
+    return b == null ? 0n : b;
+  }
+  function keyStr(k) {
+    if (!k) return '';
+    if (typeof k === 'string') return k;
+    var p = k.pubkey || k;
+    try { return p.toBase58 ? p.toBase58() : String(p); } catch (e) { return ''; }
+  }
+  async function verifyPayment(o) {
+    o = o || {};
+    var sig = String(o.sig || '');
+    var asset = String(o.asset || 'OST').toUpperCase();
+    var list = function (v) { return (Array.isArray(v) ? v : [v]).filter(Boolean).map(String); };
+    var to = list(o.to), from = list(o.from);
+    var w = window.OST_WALLET;
+    if (!sig || !w || typeof w.rpcCall !== 'function') return { state: 'unknown', reason: 'no_rpc' };
+    var wantBase = toBaseUnits(o.amount, 9);
+    if (wantBase <= 0n || (o.out ? !from.length : !to.length) || SEND_ASSETS.indexOf(asset) === -1) return { state: 'unverified', reason: 'bad_claim' };
+    var tx;
+    try { tx = await w.rpcCall(function (c) { return c.getParsedTransaction(sig, { maxSupportedTransactionVersion: 0, commitment: 'confirmed' }); }); }
+    catch (e) { return { state: 'unknown', reason: 'rpc' }; }
+    if (!tx) {
+      var st = null;
+      try { var rs = await w.rpcCall(function (c) { return c.getSignatureStatuses([sig], { searchTransactionHistory: true }); }); st = rs && rs.value && rs.value[0]; }
+      catch (e) { return { state: 'unknown', reason: 'rpc' }; }
+      if (st && st.err) return { state: 'failed' };
+      return { state: 'pending', seen: !!st };
+    }
+    var meta = tx.meta || {};
+    if (meta.err) return { state: 'failed' };
+    var deltas = {};   // owner -> received (positive) / sent (negative), base units
+    if (asset === 'SOL') {
+      var keys = ((tx.transaction && tx.transaction.message && tx.transaction.message.accountKeys) || []).map(keyStr);
+      keys.forEach(function (k, i) {
+        try { deltas[k] = BigInt(meta.postBalances[i] || 0) - BigInt(meta.preBalances[i] || 0); } catch (e) {}
+      });
+    } else {
+      var mint = asset === 'OSTG' ? OSTG_MINT : ostMint();
+      var add = function (arr, sign) {
+        (arr || []).forEach(function (b) {
+          if (!b || b.mint !== mint || !b.owner) return;
+          var a = 0n;
+          try { a = BigInt((b.uiTokenAmount && b.uiTokenAmount.amount) || '0'); } catch (e) {}
+          deltas[b.owner] = (deltas[b.owner] || 0n) + sign * a;
+        });
+      };
+      add(meta.postTokenBalances, 1n);
+      add(meta.preTokenBalances, -1n);
+    }
+    var best = function (pred) {
+      var who = '', amt = 0n;
+      Object.keys(deltas).forEach(function (k) { var d = deltas[k]; if (pred(k, d) && (d < 0n ? -d : d) > amt) { amt = d < 0n ? -d : d; who = k; } });
+      return { who: who, amt: amt };
+    };
+    // The memos the PAYER signed (top-level and inner): a Mesh payment binds
+    // itself to the sender's Mesh identity there ("ost-mesh-pay|<tag>").
+    var memos = [];
+    try {
+      var ixs = ((tx.transaction && tx.transaction.message && tx.transaction.message.instructions) || []).slice();
+      (meta.innerInstructions || []).forEach(function (x) { (x && x.instructions || []).forEach(function (ix) { ixs.push(ix); }); });
+      ixs.forEach(function (ix) { if (ix && ix.program === 'spl-memo' && typeof ix.parsed === 'string') memos.push(ix.parsed.slice(0, 300)); });
+    } catch (e) {}
+    var out = { blockTime: tx.blockTime || null, memos: memos };
+    if (o.out) {
+      var sent = best(function (k, d) { return d < 0n && from.indexOf(k) !== -1; });
+      var rcv = best(function (k, d) { return d > 0n && from.indexOf(k) === -1; });
+      out.payer = sent.who; out.to = rcv.who; out.credited = Number(baseToText(rcv.amt, 9)); out.debited = Number(baseToText(sent.amt, 9));
+      // SOL: the sender also pays the network fee when it is not pool-paid.
+      return Object.assign(out, sent.amt >= wantBase ? { state: 'confirmed' } : { state: 'unverified', reason: sent.amt > 0n ? 'amount_short' : 'not_from_you' });
+    }
+    // OST paid out by the pool (faucet, market payouts, conversions) is never
+    // a person's payment, whoever cites it; the pool paying a network fee
+    // does not make it the payer either.
+    var pool = (window.OST_SWAP_POOL && window.OST_SWAP_POOL.publicKey) ? String(window.OST_SWAP_POOL.publicKey) : '5ibGwXAV6yLZPR6uWbzou1LaHhmhehjYEpqWZKZw5WZS';
+    var got = best(function (k, d) { return d > 0n && to.indexOf(k) !== -1; });
+    var paid = best(function (k, d) { return d < 0n && to.indexOf(k) === -1 && k !== pool; });
+    out.to = got.who; out.credited = Number(baseToText(got.amt, 9)); out.payer = paid.who;
+    if (got.amt < wantBase) return Object.assign(out, { state: 'unverified', reason: got.amt > 0n ? 'amount_short' : 'not_to_you' });
+    if (!paid.who) return Object.assign(out, { state: 'unverified', reason: 'not_a_payment' });
+    if (from.length && from.indexOf(paid.who) === -1) return Object.assign(out, { state: 'unverified', reason: 'other_sender' });
+    return Object.assign(out, { state: 'confirmed' });
+  }
+
+  // A Mesh payment's binding (S20): the payer's wallet signs the memo
+  // "ost-mesh-pay|<tag>", tag = first 16 hex of SHA-256 over both Mesh
+  // addresses. Only the receiver (who knows both addresses) can check it, it
+  // does not publish anyone's Mesh address on chain, and nobody can re-cite
+  // someone else's payment as their own: the tag names the real sender.
+  var MESH_PAY_PREFIX = 'ost-mesh-pay|';
+  async function meshPayTag(fromAddr, toAddr) {
+    var f = String(fromAddr || ''), t = String(toAddr || '');
+    if (!f || !t || !window.crypto || !crypto.subtle) return '';
+    var buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('ost-mesh-pay|v1|' + f + '|' + t));
+    var hex = Array.prototype.map.call(new Uint8Array(buf), function (b) { return ('0' + b.toString(16)).slice(-2); }).join('');
+    return MESH_PAY_PREFIX + hex.slice(0, 16);
+  }
+  async function meshPayBound(memos, fromAddr, toAddr) {
+    var tag = await meshPayTag(fromAddr, toAddr);
+    if (!tag) return false;
+    return (memos || []).some(function (m) { return String(m || '').indexOf(tag) === 0; });
+  }
+
   window.OST_SEND = {
     send: sendAsset,
+    meshPayTag: meshPayTag,
+    meshPayBound: meshPayBound,
     checkRecipient: checkRecipient,
     balance: readBaseBalance,
     parse: parseRecipientInput,
+    verifyPayment: verifyPayment,
     open: function (o) { openSendModal(o); }
   };
 
@@ -2164,7 +2435,15 @@
 
   function setSendStatus(msg, color) {
     var s = $('ostSendStatus');
-    if (s) { s.textContent = msg; s.style.color = color || '#94a3b8'; }
+    if (s) { s.textContent = msg; s.style.color = color || '#94a3b8'; s.removeAttribute('data-sol-hint'); }
+  }
+  // Trusted markup we build ourselves (the Get SOL button), under the text.
+  function appendSendStatusHtml(html) {
+    var s = $('ostSendStatus');
+    if (!s || !html) return;
+    var box = document.createElement('div');
+    box.innerHTML = html;
+    s.appendChild(box);
   }
   // C2: a user-initiated result always shows; a pending notice is later
   // updated in place (same id) by the rail's resolution notice.
@@ -2265,6 +2544,9 @@
 
   function setSendAsset(asset) {
     asset = SEND_ASSETS.indexOf(String(asset || '').toUpperCase()) !== -1 ? String(asset).toUpperCase() : 'OST';
+    // A refusal for the previous asset ("Not enough OST") is not about this
+    // one; a send still confirming keeps its line.
+    if (asset !== sendState.asset && !sendState.busy && !sendState.pendingSig) setSendStatus('');
     sendState.asset = asset;
     window._ostSendAsset = asset;
     document.querySelectorAll('#ostSendModal [data-send-asset]').forEach(function (b) {
@@ -2290,6 +2572,8 @@
     var asset = sendState.asset;
     sendState.balanceBase = null; sendState.balanceAsset = asset;
     if (maxBtn) maxBtn.disabled = true;
+    var st = $('ostSendStatus');
+    if (st && st.getAttribute('data-sol-hint') === '1') { st.removeAttribute('data-sol-hint'); setSendStatus(''); }
     if (!w || !w.session || !w.session.publicKey) { avail.textContent = 'Connect a wallet first'; return; }
     avail.textContent = 'You have …';
     readBaseBalance(asset).then(function (base) {
@@ -2303,6 +2587,13 @@
       sendState.balanceBase = base;
       avail.textContent = 'You have ' + Number(baseToText(base, 9)).toLocaleString(undefined, { maximumFractionDigits: 9 }) + ' ' + asset;
       if (maxBtn) maxBtn.disabled = base <= 0n;
+      // No SOL: say up front how to get it instead of letting Send refuse.
+      var s2 = $('ostSendStatus');
+      if (asset === 'SOL' && base < BigInt(RENT_MIN_LAMPORTS) && s2 && !s2.textContent && !sendState.busy) {
+        setSendStatus('No SOL to send yet. OST pays every OST/OSTG fee — SOL is only needed to send SOL. Get some by cashing out OST:', '#94a3b8');
+        s2.setAttribute('data-sol-hint', '1');
+        appendSendStatusHtml(getSolButtonHtml(ostForSol(0, Number(base))));
+      }
     });
   }
 
@@ -2351,6 +2642,8 @@
       // and asset; `submit` is only the fallback for errors that don't.
       var h = humanOf(err, { stage: 'submit', asset: asset });
       setSendStatus(h.title + (h.body ? ' — ' + h.body : ''), h.state === 'pending' ? '#7dd3fc' : '#ef4444');
+      // "Not enough SOL" always comes with the way to get it (C8).
+      if (err && (err.getSol || err.code === 'insufficient_sol')) appendSendStatusHtml(getSolButtonHtml(getSolOstForError(err), err.shortSol));
     } finally {
       sendState.busy = false;
       sendBtn.disabled = false; sendBtn.innerHTML = 'Send ' + sendState.asset;
@@ -2360,12 +2653,36 @@
   // ------------------------------------------------------------------
   // 3) Balance snapshots → real wallet portfolio curve
   // ------------------------------------------------------------------
+  // A "received" row inferred from two balance reads (no signature) is a guess,
+  // not a transaction: a 2-decimal display value replacing the 9-decimal one
+  // read as "+0.0044 OST received" every minute, and another tab's own faucet
+  // claim read as a second "+100 received". Rounding noise is dropped; any
+  // other inferred receive stays on this device and is never shared to the
+  // server log (which every device and the realtime echo would then repeat).
+  function inferredReceive(s) {
+    return !!s && /^recv-(ost|sol)$/.test(String(s.kind || '')) && !(s.sig || s.signature);
+  }
   function recordSnapshot(snap) {
+    if (inferredReceive(snap) && !(Math.abs(Number(snap.amount)) >= 0.01)) return;
     var list = loadSnapshots();
-    var enriched = enrichSnapshot(Object.assign({ wallet: getActiveWalletAddress() }, snap || {}));
+    var base = Object.assign({ wallet: getActiveWalletAddress() }, snap || {});
+    // SRV-A1: the same money move recorded again (the server's copy of this
+    // faucet claim synced first, or a second writer) updates its one row —
+    // never a second row, never a second POST.
+    if (base.sig || base.signature) {
+      var key = eventKey(base);
+      for (var i = list.length - 1; i >= 0; i--) {
+        if (eventKey(list[i]) === key) {
+          list[i] = normalizeIdentity(Object.assign({}, list[i], base));
+          saveSnapshots(list);
+          return;
+        }
+      }
+    }
+    var enriched = normalizeIdentity(enrichSnapshot(base));
     list.push(enriched);
     saveSnapshots(list);
-    shareWalletEvent(enriched);
+    if (!inferredReceive(enriched)) shareWalletEvent(enriched);
   }
   // Expose so external modules (e.g. prediction buys in app.js) can log events.
   window.recordOstSnapshot = recordSnapshot;
@@ -3007,13 +3324,34 @@
           ' &nbsp;&bull;&nbsp; 1 SOL = $' + solUsd.toFixed(2) + ' &nbsp;&bull;&nbsp; ' + rateLine +
           '<br><small style="color:#cbd5e1;font-size:11px">You will sign <b>' + fmtSol(v) + ' SOL</b>. The network fee is paid by OST.</small>';
         var belowMinSol = v + 1e-12 < minSol;
-        if (belowMinSol) {
-          html += '<br><small style="color:#f59e0b;font-size:11px">Minimum ' + fmtSol(Math.ceil(minSol * 1e6) / 1e6) + ' SOL ($' + minUsd.toFixed(2) + ').</small>';
-        }
         setBelowMin(belowMinSol);
         var B = window.OST_BALANCE && OST_BALANCE.get ? OST_BALANCE.get() : {};
-        if (B.sol != null && B.sol + 1e-12 < v) {
-          html += '<br><small style="color:#f59e0b;font-size:11px">Need ' + fmtSol(v) + ' SOL — you have ' + fmtSol(B.sol) + '.</small> ' + getSolButtonHtml();
+        // What can actually be paid is max(typed, minimum): below the minimum
+        // the button stays disabled, so the Get SOL amount must cover the
+        // minimum order (plus the 0.00089 SOL Solana keeps), not the typed one.
+        var minShown = Math.ceil(minSol * 1e6) / 1e6;
+        var spendSol = Math.max(v, minShown);
+        var solShort = B.sol != null && B.sol + 1e-12 < spendSol;
+        // The shortfall line below names the minimum itself; say it once.
+        if (belowMinSol && !solShort) {
+          html += '<br><small style="color:#f59e0b;font-size:11px">Minimum ' + fmtSol(minShown) + ' SOL ($' + minUsd.toFixed(2) + ').</small>';
+        }
+        if (solShort) {
+          // Name the real gap and the OST that covers it (incl. the 0.00089 SOL
+          // Solana keeps), not a fixed 10 OST that adds ~0.001 SOL per round.
+          var shortSol = solShortfall(spendSol, B.sol);
+          var shortTxt = fmtSol(Math.ceil(shortSol * 1e6) / 1e6);
+          var getOst = ostForSol(shortSol, Math.round(B.sol * 1e9));
+          html += '<br><small style="color:#f59e0b;font-size:11px">' +
+            (belowMinSol
+              ? 'Minimum ' + fmtSol(minShown) + ' SOL ($' + minUsd.toFixed(2) + ') — you have ' + fmtSol(B.sol) + '. Short by ' + shortTxt + ' SOL for the smallest order (incl. the 0.00089 SOL Solana keeps).'
+              : 'Need ' + fmtSol(v) + ' SOL — you have ' + fmtSol(B.sol) + '. Short by ' + shortTxt + ' SOL (incl. the 0.00089 SOL Solana keeps).') +
+            '</small><br>' + getSolButtonHtml(getOst, shortSol);
+          // Say it up front when the wallet does not hold that much OST (the
+          // cash-out would only refuse with "You have … OST").
+          if (B.ost != null && Number(B.ost) + 1e-9 < getOst) {
+            html += '<br><small style="color:#94a3b8;font-size:11px">That cash-out needs ' + getOst + ' OST — this wallet holds ' + fmtOst(Number(B.ost)) + ' OST.</small>';
+          }
         }
         out.innerHTML = html;
         return;
