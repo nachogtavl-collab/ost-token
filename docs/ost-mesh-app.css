@@ -1,235 +1,424 @@
-/* OST Mesh app (prefix oma- is taken by market-art; this file uses omx-)
- * Self-sufficient (contract C1): the site's global button / input / universal
- * rules are excluded from the app roots, so every control here sets its own
- * size, padding, font and colour. Core chat widgets (attach tray, live bar,
- * map / pay / call cards) and the call screen's buttons are styled here too.
- * z-order (C5): #ostMeshApp 12000 < #omxSheet 12500 < (#oslSheet 12600 <
- * #oslLight 12700 < #oslStory 12800) < #omxCall 13000 < .omx-toasts 13500. */
-#ostMeshApp {
-  --omx-text: var(--text, #e4e7f1); --omx-muted: var(--text-muted, #8b92ad); --omx-accent: var(--accent, #6d9fff);
-  --omx-bg: var(--bg-alt, #0c0f1a); --omx-surface: var(--surface, #111627); --omx-surface2: var(--surface2, #171d32);
-  --omx-border: var(--border, rgba(109,159,255,.15)); --omx-ok: var(--success, #34d399); --omx-danger: var(--danger, #ef4444);
-  /* sent bubble / primary fill: white text ≥ 4.5:1 on both stops */
-  --omx-me1: #2c5bd4; --omx-me2: #3a68e6; --omx-cta1: #2c5bd4; --omx-cta2: #6a45d6;
-  position: fixed; inset: 0; z-index: 12000; display: none; background: rgba(3, 6, 15, .72); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
-  color: var(--omx-text); font-family: inherit; font-size: 16px; line-height: 1.4; text-align: left;
-  touch-action: none; overscroll-behavior: none;   /* the page behind never scrolls; scroll areas inside re-enable panning */
-}
+/* =====================================================================================
+ * OST Mesh app · design-system components (docs/ost-mesh-app.css, core-owned) · Phase 2
+ * Reads docs/ost-mesh-tokens.css only (role tokens; no raw hex except white/black on media).
+ * Sections (BUILD-SPEC §3.3): A roots/shell · B header, icon buttons, badges, devnet chip · C tab bar ·
+ * D rail · E buttons, chips, inputs, search, segmented tabs · F avatars, presence, verified, story ring ·
+ * M sheets / popovers / dialogs · P toasts · Q empty / loading / error · V1 Add · V2 Settings · T motion,
+ * then the core additions and the phase-1 global rules (kept verbatim).
+ * Specificity (contract C1): in-app rules start with #ostMeshApp; shared components start with
+ * :is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) (ID weight), so the site's
+ * global button / input rules never win inside the family, and nothing here styles the site.
+ * z-order (C5): #ostMeshApp 12000 < #omxSheet 12500 < #oslSheet 12600 < #oslLight 12700 < #oslStory 12800
+ * < .over 12900 < #omxCall 13000 < .omx-toasts 13500 (values in the tokens).
+ * Chat surfaces (list, thread, composer, call screen) live in docs/ost-mesh-chat.css; social views in
+ * docs/ost-social.css; bands and the grid in docs/ost-mesh-layout.css (loaded last).
+ * ===================================================================================== */
+
+/* ---------- A. Roots and shell (every band) ---------- */
+#ostMeshApp { position: fixed; inset: 0; z-index: var(--omx-z-app); display: none; background: var(--omx-bg); touch-action: none; overscroll-behavior: none; isolation: isolate; }
 #ostMeshApp.open { display: block; }
 #ostMeshApp:focus { outline: none; }
-#ostMeshApp *, #ostMeshApp *::before, #ostMeshApp *::after { box-sizing: border-box; }
-/* Font family only (B3): class rules below own size / weight / colour. */
-#ostMeshApp button { font-family: inherit; cursor: pointer; }
-/* Zero-specificity defaults so a control without its own rule inherits instead of using UA styles. */
-:where(#ostMeshApp, #omxSheet, .omx-toasts) :where(button, input, textarea, select) { font: inherit; color: inherit; letter-spacing: normal; text-transform: none; }
-:where(#ostMeshApp, #omxSheet) :where(button) { margin: 0; }
-#ostMeshApp [hidden] { display: none !important; }
-#ostMeshApp :focus-visible { outline: 2px solid var(--omx-accent); outline-offset: 2px; }
-.omx-shell { position: absolute; right: 0; top: 0; bottom: 0; width: min(100%, 440px); background: var(--omx-bg, #0c0f1a); border-left: 1px solid var(--omx-border, rgba(109,159,255,.15)); display: flex; flex-direction: column; box-shadow: -20px 0 60px rgba(0,0,0,.5); }
-@media (max-width: 560px) { .omx-shell { width: 100%; border-left: 0; } }
-#ostMeshApp .omx-head { display: flex; align-items: center; gap: 8px; min-height: 60px; padding: calc(8px + env(safe-area-inset-top)) 10px 8px 14px; border-bottom: 1px solid var(--omx-border); background: var(--omx-surface); flex: 0 0 auto; }
-#ostMeshApp .omx-head h2 { flex: 1 1 auto; margin: 0; padding: 0; font-size: 1.05rem; font-weight: 800; line-height: 1.25; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--omx-text); letter-spacing: 0; }
-#ostMeshApp .omx-head h2 small { display: block; font-size: .75rem; font-weight: 600; line-height: 1.3; color: var(--omx-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-/* chat header: the peer's name is a button that opens their profile (keyboard reachable) */
-#ostMeshApp .omx-head h2 .omx-peerbtn { display: block; width: 100%; max-width: 100%; min-width: 0; min-height: 44px; height: auto; padding: 2px 6px; margin: 0; border: 0; border-radius: 10px; background: transparent; color: inherit; font: inherit; letter-spacing: inherit; text-align: left; text-transform: none; white-space: nowrap; overflow: hidden; box-shadow: none; cursor: pointer; }
-#ostMeshApp .omx-head h2 .omx-peerbtn > span { display: block; overflow: hidden; text-overflow: ellipsis; }
-#ostMeshApp .omx-head h2 .omx-peerbtn:hover { background: rgba(109,159,255,.08); }
-#ostMeshApp .omx-head h2 .omx-peerbtn:focus-visible { outline: 2px solid var(--omx-accent); outline-offset: -2px; }   /* inset: the h2 clips overflow */
-/* Icon buttons: true 44 × 44 squares everywhere, whatever the page's button rules say. */
-#ostMeshApp .omx-ib, #omxSheet .omx-ib {
-  width: 44px; height: 44px; min-width: 44px; min-height: 0 !important; max-width: none; padding: 0 !important; margin: 0; flex: 0 0 44px;
-  display: grid; place-items: center; border-radius: 12px; border: 1px solid var(--omx-border); background: var(--omx-surface2);
-  color: var(--omx-text); font-size: 1.05rem; font-weight: 600; line-height: 1; text-align: center; box-shadow: none; position: relative;
+#ostMeshApp .omx-shell { position: absolute; inset: 0; display: flex; flex-direction: column; background: var(--omx-bg); }
+#ostMeshApp .omx-view { position: relative; flex: 1 1 auto; min-height: 0; min-width: 0; display: flex; flex-direction: column; }
+#ostMeshApp .omx-body { flex: 1 1 auto; min-height: 0; overflow: hidden auto; overscroll-behavior: contain; touch-action: pan-y; scroll-padding-top: 104px; position: relative; }
+#ostMeshApp .omx-sr, .omx-sr { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+#omxSprite { position: absolute; width: 0; height: 0; overflow: hidden; }
+
+/* ---------- B. Header + icon buttons + badges ---------- */
+#ostMeshApp .omx-head { position: relative; z-index: var(--omx-z-sticky); display: flex; align-items: center; gap: var(--omx-sp-4); height: var(--omx-bar); flex: 0 0 auto; padding: 0 var(--omx-sp-4) 0 var(--omx-sp-12); background: var(--omx-bg-glass); -webkit-backdrop-filter: var(--omx-blur); backdrop-filter: var(--omx-blur); box-shadow: inset 0 -1px 0 var(--omx-line); }
+#ostMeshApp .omx-head.has-back { padding-left: var(--omx-sp-4); }
+#ostMeshApp .omx-head h2 { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: var(--omx-sp-8); font-size: var(--omx-fs-17); font-weight: var(--omx-fw-bold); line-height: var(--omx-lh-tight); letter-spacing: var(--omx-tracking-title); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#ostMeshApp .omx-head h2.omx-h2col { flex-direction: column; align-items: flex-start; gap: 0; }
+#ostMeshApp .omx-head h2.omx-h2col > span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+#ostMeshApp .omx-head h2 small { display: block; max-width: 100%; font-size: var(--omx-fs-13); font-weight: var(--omx-fw-regular); line-height: 18px; color: var(--omx-muted); letter-spacing: normal; overflow: hidden; text-overflow: ellipsis; }
+#ostMeshApp .omx-brandmark { display: grid; place-items: center; width: 32px; height: 32px; flex: 0 0 auto; border-radius: var(--omx-r-sm); background: var(--omx-accent-tint); color: var(--omx-accent); }
+#ostMeshApp .omx-brandmark .omx-i { width: 20px; height: 20px; stroke-width: 2; }
+#ostMeshApp .omx-conn { display: inline-block; width: 8px; height: 8px; flex: 0 0 8px; border-radius: 50%; background: var(--omx-success); box-shadow: 0 0 0 3px var(--omx-success-tint); }
+#ostMeshApp .omx-conn.warn { background: var(--omx-warning); box-shadow: 0 0 0 3px var(--omx-warning-tint); }
+#ostMeshApp .omx-conn.off { background: var(--omx-danger); box-shadow: 0 0 0 3px var(--omx-danger-tint); }
+/* quiet icon button: no fill, no border, circular hover wash */
+:is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) .omx-ib { position: relative; display: inline-grid; place-items: center; width: var(--omx-hit); height: var(--omx-hit); flex: 0 0 auto; border-radius: var(--omx-r-full); color: var(--omx-text); transition: background-color var(--omx-dur-1) var(--omx-ease); }
+:is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) .omx-ib .omx-i { width: 22px; height: 22px; }
+:is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) .omx-ib:is(:hover, .is-hover) { background: var(--omx-hover); }
+:is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) .omx-ib:is(:active, .is-active) { background: var(--omx-press); }
+:is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) .omx-ib:is(:disabled, [aria-disabled="true"]) { color: var(--omx-disabled); background: none; }
+:is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) .omx-ib.sm { width: 36px; height: 36px; } :is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) .omx-ib.sm .omx-i { width: 20px; height: 20px; }
+:is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) .omx-ib.md { width: 40px; height: 40px; }
+:is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) .omx-ib.filled { background: var(--omx-surface-2); }
+:is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) .omx-ib.filled:hover { background: var(--omx-surface-3); }
+:is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) .omx-ib.accent { color: var(--omx-accent); }
+:is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) .omx-ib.accent:hover { background: var(--omx-accent-tint-2); }
+:is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) .omx-ib.outline { box-shadow: inset 0 0 0 1px var(--omx-line-strong); }
+#ostMeshApp .omx-head .omx-ib[aria-pressed="true"] { background: var(--omx-accent-tint); color: var(--omx-accent); }
+:is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) .omx-ib > .omx-badge { position: absolute; top: 4px; right: 2px; }
+@media (pointer: coarse) { :is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) .omx-ib:is(.sm, .md) { width: var(--omx-hit); height: var(--omx-hit); } }
+/* ONE badge colour for every count; 2 px ring in the surface colour */
+:is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) .omx-badge { display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 5px; border-radius: var(--omx-r-full); background: var(--omx-accent-fill); color: var(--omx-on-accent); font-size: var(--omx-fs-11); font-weight: var(--omx-fw-bold); line-height: 1; font-variant-numeric: var(--omx-num); box-shadow: 0 0 0 2px var(--omx-ring-bg, var(--omx-bg)); pointer-events: none; }
+:is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) .omx-badge.dot { min-width: 10px; width: 10px; height: 10px; padding: 0; }
+:is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) .omx-devnet { display: inline-flex; align-items: center; height: 20px; padding: 0 7px; flex: 0 0 auto; border-radius: var(--omx-r-full); background: var(--omx-warning-tint); color: var(--omx-warning); font-size: var(--omx-fs-11); font-weight: var(--omx-fw-semibold); letter-spacing: .02em; line-height: 1; text-transform: none; }
+
+/* ---------- C. Phone / drawer tab bar: nav#omxTabs (hidden on desk; the rail is a separate element) ---------- */
+#ostMeshApp .omx-tabs { position: relative; z-index: var(--omx-z-nav); display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; flex: 0 0 auto; height: calc(var(--omx-bar) + env(safe-area-inset-bottom)); padding-bottom: env(safe-area-inset-bottom); background: var(--omx-bg-glass); -webkit-backdrop-filter: var(--omx-blur); backdrop-filter: var(--omx-blur); box-shadow: inset 0 1px 0 var(--omx-line); --omx-ring-bg: var(--omx-bg); }
+#ostMeshApp .omx-tabs > button { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-height: var(--omx-hit); color: var(--omx-muted); font-size: var(--omx-fs-11); font-weight: var(--omx-fw-medium); line-height: 1; }
+#ostMeshApp .omx-tabs > button .omx-i { width: var(--omx-icon-nav); height: var(--omx-icon-nav); }
+#ostMeshApp .omx-tabs > button[aria-current="page"] { color: var(--omx-text); font-weight: var(--omx-fw-semibold); }
+#ostMeshApp .omx-tabs > button[aria-current="page"] .omx-i { color: var(--omx-accent); }
+#ostMeshApp .omx-tabs > button > .omx-badge { position: absolute; top: 5px; left: calc(50% + 5px); }
+#ostMeshApp .omx-tabs > button .omx-av { width: 26px; height: 26px; font-size: 13px; }
+#ostMeshApp .omx-tabs > button[aria-current="page"] .omx-av { box-shadow: 0 0 0 2px var(--omx-bg), 0 0 0 3.5px var(--omx-accent); }
+#ostMeshApp .omx-tabs > button:focus-visible, #ostMeshApp .omx-tabs > button.is-focus { outline: none; box-shadow: var(--omx-focus-inset); border-radius: var(--omx-r-md); }
+
+/* ---------- D. Desktop rail: nav#omxRail (240 labelled >= 1280, 72 icons at 1100-1279) ---------- */
+#ostMeshApp .omx-rail { display: none; }
+#ostMeshApp .omx-rail .omx-brand { display: flex; align-items: center; gap: 10px; height: 56px; padding: 0 0 0 12px; margin-bottom: 4px; }
+#ostMeshApp .omx-rail .omx-brand .omx-brandmark { width: 36px; height: 36px; }
+#ostMeshApp .omx-rail .omx-brand b { font-size: var(--omx-fs-20); font-weight: var(--omx-fw-bold); letter-spacing: var(--omx-tracking-title); }
+#ostMeshApp .omx-rail .omx-brand .omx-ib { margin-left: auto; color: var(--omx-muted); }
+#ostMeshApp .omx-rail > button[data-tab] { position: relative; display: flex; align-items: center; gap: 16px; width: max-content; max-width: 100%; height: 50px; padding: 0 20px 0 12px; border-radius: var(--omx-r-full); color: var(--omx-text); font-size: var(--omx-fs-17); font-weight: var(--omx-fw-regular); transition: background-color var(--omx-dur-1) var(--omx-ease); }
+#ostMeshApp .omx-rail > button[data-tab]:is(:hover, .is-hover) { background: var(--omx-hover); }
+#ostMeshApp .omx-rail > button[data-tab] .omx-i { width: 26px; height: 26px; }
+#ostMeshApp .omx-rail > button[data-tab][aria-current="page"] { font-weight: var(--omx-fw-bold); }
+#ostMeshApp .omx-rail > button[data-tab][aria-current="page"] .omx-i { color: var(--omx-accent); }
+#ostMeshApp .omx-rail > button[data-tab] > .omx-badge { position: absolute; left: 28px; top: 7px; }
+#ostMeshApp .omx-rail > button[data-tab] .omx-av { width: 26px; height: 26px; font-size: 13px; }
+#ostMeshApp .omx-rail > button[data-tab][aria-current="page"] .omx-av { box-shadow: 0 0 0 2px var(--omx-bg), 0 0 0 3.5px var(--omx-accent); }
+#ostMeshApp .omx-rail .omx-rail-post { width: calc(100% - 16px); margin: 12px 0 0; }
+#ostMeshApp .omx-rail .omx-rail-post .omx-i { display: none; }
+#ostMeshApp .omx-rail .omx-rail-sp { flex: 1 1 auto; }
+#ostMeshApp .omx-rail .omx-rail-me { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; column-gap: 10px; align-items: center; width: calc(100% - 8px); padding: 10px 8px 10px 10px; border-radius: var(--omx-r-full); text-align: left; }
+#ostMeshApp .omx-rail .omx-rail-me:hover { background: var(--omx-hover); }
+#ostMeshApp .omx-rail .omx-rail-me .t { display: grid; min-width: 0; }
+#ostMeshApp .omx-rail .omx-rail-me b { font-size: var(--omx-fs-15); font-weight: var(--omx-fw-bold); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#ostMeshApp .omx-rail .omx-rail-me small { font-size: var(--omx-fs-13); color: var(--omx-muted); }
+#ostMeshApp .omx-rail .omx-rail-me > .omx-i { color: var(--omx-muted); }
+
+/* ---------- E. Buttons, chips, inputs, search ---------- */
+:is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) :is(.omx-primary, .omx-ghost, .omx-textbtn) {
+  position: relative; display: inline-flex; align-items: center; justify-content: center; gap: var(--omx-sp-8); height: 40px; padding: 0 18px; border-radius: var(--omx-r-full);
+  font-size: var(--omx-fs-15); font-weight: var(--omx-fw-semibold); line-height: 1; white-space: nowrap; text-decoration: none;
+  transition: background-color var(--omx-dur-1) var(--omx-ease), box-shadow var(--omx-dur-1) var(--omx-ease), color var(--omx-dur-1) var(--omx-ease), transform var(--omx-dur-1) var(--omx-ease);
 }
-#ostMeshApp .omx-ib:hover { background: #1d2440; }
-#ostMeshApp .omx-av-sm { width: 38px; height: 38px; border-radius: 12px; font-size: 1.1rem; }
-#ostMeshApp .omx-body { flex: 1 1 auto; min-height: 0; overflow: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; padding: 12px 14px calc(14px + env(safe-area-inset-bottom)); }
-#ostMeshApp .omx-tabs { display: flex; gap: 6px; padding: 6px 10px; padding-bottom: calc(6px + env(safe-area-inset-bottom)); border-top: 1px solid var(--omx-border); background: var(--omx-surface); flex: 0 0 auto; }
-#ostMeshApp .omx-tabs button { flex: 1 1 0; min-width: 0; min-height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 4px 4px; margin: 0; border: 0; border-radius: 12px; background: transparent; color: var(--omx-muted); font-size: max(11px, .72rem); font-weight: 800; line-height: 1.15; position: relative; white-space: nowrap; overflow-wrap: normal; box-shadow: none; }
-#ostMeshApp .omx-tabs button b { font-size: 1.2rem; line-height: 1.1; font-weight: 400; }
-#ostMeshApp .omx-tabs button > span:not(.omx-badge) { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
-#ostMeshApp .omx-tabs button.on { background: rgba(109,159,255,.14); color: var(--omx-accent); }
-#ostMeshApp .omx-tabs .omx-badge { position: absolute; top: 3px; right: 18%; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: #dc2626; color: #fff; font-size: 11px; font-weight: 800; line-height: 18px; display: grid; place-items: center; }
+:is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) :is(.omx-primary, .omx-ghost, .omx-textbtn) .omx-i { width: 18px; height: 18px; }
+:is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) .omx-primary { background: var(--omx-accent-fill); color: var(--omx-on-accent); }
+:is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) .omx-primary:is(:hover, .is-hover) { background: var(--omx-accent-hover); }
+:is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) .omx-primary:is(:active, .is-active) { background: var(--omx-accent-press); transform: scale(var(--omx-press-scale)); }
+:is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) .omx-primary:is(:disabled, [aria-disabled="true"]) { background: var(--omx-accent-fill); opacity: .45; transform: none; cursor: default; }
+:is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) .omx-primary.omx-danger { background: var(--omx-danger-fill); }
+:is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) .omx-primary.omx-danger:is(:hover, .is-hover) { background: var(--omx-danger-hover); }
+:is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) .omx-ghost { background: transparent; color: var(--omx-text); box-shadow: inset 0 0 0 1px var(--omx-line-strong); }
+:is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) .omx-ghost:is(:hover, .is-hover) { background: var(--omx-hover); }
+:is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) .omx-ghost:is(:active, .is-active) { background: var(--omx-press); }
+:is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) .omx-ghost:is(:disabled, [aria-disabled="true"]) { color: var(--omx-disabled); box-shadow: inset 0 0 0 1px var(--omx-line-2); }
+:is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) .omx-ghost.omx-danger { color: var(--omx-danger); box-shadow: inset 0 0 0 1px rgba(248, 113, 113, .5); }
+:is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) .omx-ghost.is-on { box-shadow: inset 0 0 0 1px var(--omx-line-strong); }
+:is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) .omx-textbtn { height: 36px; padding: 0 10px; color: var(--omx-accent); }
+:is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) .omx-textbtn:is(:hover, .is-hover) { background: var(--omx-accent-tint-2); }
+:is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) .omx-sm { height: 32px; padding: 0 14px; font-size: var(--omx-fs-13); }
+:is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) .omx-lg { height: 48px; padding: 0 24px; font-size: var(--omx-fs-17); font-weight: var(--omx-fw-bold); }
+:is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) .omx-block { display: flex; width: 100%; }
+/* loading: the label stays for width, an 18 px spinner sits on top, aria-busy=true on the button */
+:is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) .omx-primary.is-loading { color: transparent; }
+:is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) .omx-primary.is-loading::after { content: ""; position: absolute; left: calc(50% - 9px); top: calc(50% - 9px); width: 18px; height: 18px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, .35); border-top-color: #fff; animation: omx-spin .8s linear infinite; }
+/* focus: 2 px accent ring, 2 px offset; on filled buttons the offset gap shows the bg, so the ring keeps 7.3:1 */
+:is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) :is(.omx-primary, .omx-ghost, .omx-textbtn, .omx-ib, .omx-chip).is-focus { outline: 2px solid var(--omx-focus); outline-offset: 2px; }
+@media (pointer: coarse) { :is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) :is(.omx-primary, .omx-ghost, .omx-textbtn):not(.omx-sm) { min-height: var(--omx-hit); } }
+/* a small control keeps a 44 px target on touch through an invisible extension */
+:is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) .omx-hit::before { content: ""; position: absolute; left: 0; right: 0; top: -6px; bottom: -6px; }
+/* chips / filters */
+#ostMeshApp .omx-chips { display: flex; gap: var(--omx-sp-8); padding: 0 var(--omx-gutter) var(--omx-sp-12); overflow-x: auto; scrollbar-width: none; }
+:is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) .omx-chip { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-width: 44px; height: 32px; padding: 0 12px; flex: 0 0 auto; border-radius: var(--omx-r-full); background: var(--omx-surface-2); color: var(--omx-text-2); font-size: var(--omx-fs-13); font-weight: var(--omx-fw-semibold); white-space: nowrap; }
+:is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) .omx-chip:is(:hover, .is-hover) { background: var(--omx-surface-3); }
+:is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) .omx-chip[aria-selected="true"] { background: var(--omx-accent-tint); color: var(--omx-accent); }
+:is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) .omx-chip b { font-weight: var(--omx-fw-bold); color: var(--omx-text); font-variant-numeric: var(--omx-num); }
+:is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) .omx-chip[aria-selected="true"] b { color: var(--omx-accent); }
+/* inputs: one style for core and social */
+:is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) .omx-input { display: block; width: 100%; height: 44px; padding: 0 14px; border-radius: var(--omx-r-md); background: var(--omx-surface-2); color: var(--omx-text); font-size: var(--omx-fs-15); line-height: var(--omx-lh-snug); border: 1px solid var(--omx-line-strong); outline: none; transition: border-color var(--omx-dur-1) var(--omx-ease), box-shadow var(--omx-dur-1) var(--omx-ease); }
+:is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) textarea.omx-input { height: auto; min-height: 88px; padding: 10px 14px; resize: none; }
+:is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) .omx-input:is(:focus, .is-focus) { border-color: var(--omx-accent); box-shadow: 0 0 0 3px rgba(109, 159, 255, .25); }
+:is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) .omx-input[aria-invalid="true"] { border-color: var(--omx-danger); box-shadow: 0 0 0 3px var(--omx-danger-tint); }
+:is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) .omx-field { display: grid; gap: 6px; min-width: 0; }
+:is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) .omx-field > span { font-size: var(--omx-fs-13); font-weight: var(--omx-fw-semibold); color: var(--omx-text-2); }
+:is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) .omx-field > small { font-size: var(--omx-fs-12); line-height: 16px; color: var(--omx-muted); }
+:is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) .omx-field > small.err { display: flex; align-items: center; gap: 6px; color: var(--omx-danger); font-weight: var(--omx-fw-semibold); }
+:is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) .omx-field > small.err .omx-i { width: 14px; height: 14px; }
+#ostMeshApp .omx-search { position: relative; display: flex; align-items: center; width: 100%; height: 40px; padding: 0 16px 0 44px; border-radius: var(--omx-r-full); background: var(--omx-surface-2); color: var(--omx-muted); font-size: var(--omx-fs-15); text-align: left; }
+#ostMeshApp .omx-search .omx-i { position: absolute; left: 14px; width: 18px; height: 18px; }
+#ostMeshApp .omx-search:hover { background: var(--omx-surface-3); }
+#ostMeshApp[data-layout="phone"] :is(.omx-input, textarea, input) { font-size: var(--omx-fs-input-phone); }
+#ostMeshApp[data-layout="phone"] .omx-search { height: 44px; }
+#ostMeshApp[data-layout="phone"] .omx-chip { height: 36px; }
+/* segmented tabs (feed For you / Following, profile Posts / Media): sticky, underline 4 x 56 */
+#ostMeshApp .omx-seg { position: sticky; top: 0; z-index: var(--omx-z-sticky); display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; height: var(--omx-tabs-h); background: var(--omx-bg-glass); -webkit-backdrop-filter: var(--omx-blur); backdrop-filter: var(--omx-blur); box-shadow: inset 0 -1px 0 var(--omx-line); }
+#ostMeshApp .omx-seg > button { position: relative; display: grid; place-items: center; color: var(--omx-muted); font-size: var(--omx-fs-15); font-weight: var(--omx-fw-medium); transition: background-color var(--omx-dur-1) var(--omx-ease), color var(--omx-dur-1) var(--omx-ease); }
+#ostMeshApp .omx-seg > button:is(:hover, .is-hover) { background: var(--omx-hover); color: var(--omx-text-2); }
+#ostMeshApp .omx-seg > button[aria-selected="true"] { color: var(--omx-text); font-weight: var(--omx-fw-bold); }
+#ostMeshApp .omx-seg > button[aria-selected="true"]::after { content: ""; position: absolute; bottom: 0; left: calc(50% - 28px); width: 56px; height: 4px; border-radius: var(--omx-r-full); background: var(--omx-accent); }
+#ostMeshApp .omx-seg > button:is(:focus-visible, .is-focus) { outline: none; box-shadow: var(--omx-focus-inset); }
+#ostMeshApp[data-layout="phone"] .omx-seg, #ostMeshApp[data-layout="drawer"] .omx-seg { height: 44px; }
 
-#ostMeshApp .omx-status { display: flex; align-items: center; gap: 8px; font-size: .78rem; line-height: 1.35; color: var(--omx-muted); margin-bottom: 10px; }
-#ostMeshApp .omx-status i { width: 8px; height: 8px; flex: 0 0 8px; border-radius: 50%; background: var(--omx-muted); display: inline-block; }
-#ostMeshApp .omx-status.on i { background: var(--omx-ok); box-shadow: 0 0 8px rgba(52,211,153,.7); }
-#ostMeshApp .omx-status.warn i { background: #f5c468; }
-#ostMeshApp .omx-status.warn span { color: #f5d38f; }
-#ostMeshApp .omx-status.off i { background: var(--omx-danger); }
-#ostMeshApp .omx-status.off span { color: #fca5a5; }
-#ostMeshApp .omx-card { background: var(--omx-surface); border: 1px solid var(--omx-border); border-radius: 16px; padding: 14px; margin-bottom: 12px; }
-#ostMeshApp .omx-card h3 { margin: 0 0 6px; font-size: 1.05rem; font-weight: 800; line-height: 1.3; color: var(--omx-text); }
-#ostMeshApp .omx-card p { margin: 0 0 10px; font-size: .86rem; line-height: 1.5; color: var(--omx-muted); }
-#ostMeshApp .omx-primary { display: flex; align-items: center; justify-content: center; width: 100%; min-height: 46px; padding: 10px 14px; border: 0; border-radius: 13px; background: linear-gradient(135deg, var(--omx-cta1), var(--omx-cta2)); color: #fff; font-weight: 800; font-size: .95rem; line-height: 1.2; text-align: center; box-shadow: none; }
-#ostMeshApp .omx-primary:disabled { opacity: .6; cursor: default; }
-#ostMeshApp .omx-ghost { display: flex; align-items: center; justify-content: center; width: 100%; min-height: 44px; padding: 9px 12px; border-radius: 12px; border: 1px solid rgba(109,159,255,.25); background: transparent; color: var(--omx-text); font-weight: 700; font-size: .88rem; line-height: 1.25; text-align: center; box-shadow: none; }
-#ostMeshApp .omx-ghost:hover { background: rgba(109,159,255,.08); }
-#ostMeshApp .omx-wide + .omx-wide { margin-top: 8px; }
-#ostMeshApp .omx-danger { color: #fca5a5 !important; border-color: rgba(239,68,68,.45) !important; }
-#ostMeshApp .omx-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-#ostMeshApp .omx-row2 > :only-child { grid-column: 1 / -1; }
-#ostMeshApp .omx-input { display: block; width: 100%; min-height: 44px; padding: 11px 12px; margin: 0; border-radius: 12px; border: 1px solid rgba(109,159,255,.25); background: rgba(0,0,0,.25); color: var(--omx-text); font-size: .95rem; line-height: 1.3; box-shadow: none; }
-#ostMeshApp .omx-input:focus { outline: none; border-color: var(--omx-accent); box-shadow: 0 0 0 3px rgba(109,159,255,.25); }
-#ostMeshApp .omx-note { display: block; font-size: .78rem; color: var(--omx-muted); line-height: 1.45; margin-top: 8px; }
-#ostMeshApp .omx-empty { padding: 26px 10px; text-align: center; color: var(--omx-muted); font-size: .9rem; line-height: 1.5; }
-#ostMeshApp .omx-empty b { display: block; font-size: 2rem; margin-bottom: 6px; }
-/* settings row (notifications) */
-#ostMeshApp .omx-setrow { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 56px; padding: 10px 12px; margin: 0; border-radius: 12px; border: 1px solid var(--omx-border); background: var(--omx-surface2); color: var(--omx-text); text-align: left; font-size: .9rem; line-height: 1.3; box-shadow: none; }
-#ostMeshApp .omx-setrow > span { flex: 1 1 auto; min-width: 0; }
-#ostMeshApp .omx-setrow b { display: block; font-weight: 800; }
-#ostMeshApp .omx-setrow small { display: block; margin-top: 2px; font-size: .78rem; color: var(--omx-muted); line-height: 1.35; }
-#ostMeshApp .omx-setrow i { flex: 0 0 auto; font-style: normal; font-size: 1.2rem; color: var(--omx-accent); }
-#ostMeshApp button.omx-setrow:hover { border-color: rgba(109,159,255,.4); }
+/* ---------- F. Avatars (ONE component, ONE shape), presence, verified ---------- */
+:is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) .omx-av { position: relative; display: inline-grid; place-items: center; flex: 0 0 auto; width: var(--omx-av-md); height: var(--omx-av-md); border-radius: 50%; background: var(--av, var(--omx-id-8)); color: var(--omx-av-fg); box-shadow: var(--omx-av-ring); font-size: 17px; font-weight: var(--omx-fw-semibold); line-height: 1; overflow: visible; user-select: none; }
+:is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) .omx-av > img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
+:is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) .omx-av.xs { width: var(--omx-av-xs); height: var(--omx-av-xs); font-size: 12px; }
+:is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) .omx-av.sm { width: var(--omx-av-sm); height: var(--omx-av-sm); font-size: 15px; }
+:is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) .omx-av.lg { width: var(--omx-av-lg); height: var(--omx-av-lg); font-size: 20px; }
+:is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) .omx-av.xl { width: var(--omx-av-xl); height: var(--omx-av-xl); font-size: 40px; }
+:is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) .omx-av.xxl { width: var(--omx-av-2xl); height: var(--omx-av-2xl); font-size: 50px; }
+:is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) .omx-av.emoji { font-weight: var(--omx-fw-regular); }
+/* presence: dot at 28 % of the avatar, ringed in the surface colour; friends only, never on yourself */
+:is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) .omx-av > i.on { position: absolute; right: -1px; bottom: -1px; width: 28%; height: 28%; min-width: 10px; min-height: 10px; border-radius: 50%; background: var(--omx-success); box-shadow: 0 0 0 2px var(--omx-ring-bg, var(--omx-bg)); }
+:is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) .omx-av.pending { box-shadow: 0 0 0 2px var(--omx-ring-bg, var(--omx-bg)), 0 0 0 3.5px var(--omx-warning); }
+:is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) .omx-avstack { display: inline-flex; }
+:is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) .omx-avstack .omx-av { box-shadow: 0 0 0 2px var(--omx-ring-bg, var(--omx-bg)); }
+:is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) .omx-avstack .omx-av + .omx-av { margin-left: -8px; }
+:is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) .omx-ver { display: inline-block; width: 16px; height: 16px; flex: 0 0 auto; color: var(--omx-accent); vertical-align: -3px; margin-left: 2px; }
+/* story ring (one accent; seen = quiet line) */
+:is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) .osl-ring { position: relative; display: grid; place-items: center; width: var(--omx-av-ring-d); height: var(--omx-av-ring-d); border-radius: 50%; padding: 3px; box-shadow: inset 0 0 0 2.5px var(--omx-accent); }
+:is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) .osl-ring > .omx-av { width: 54px; height: 54px; font-size: 24px; box-shadow: 0 0 0 2px var(--omx-ring-bg, var(--omx-bg)); }
+:is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) .osl-ring.seen { box-shadow: inset 0 0 0 1.5px var(--omx-line-strong); }
+:is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) .osl-ring.none { box-shadow: none; }
+:is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) .osl-addst { position: absolute; right: 0; bottom: 0; display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--omx-accent-fill); color: #fff; box-shadow: 0 0 0 2px var(--omx-ring-bg, var(--omx-bg)); }
+:is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) .osl-addst .omx-i { width: 14px; height: 14px; stroke-width: 2.5; }
 
-/* chats list */
-#ostMeshApp .omx-list { display: grid; gap: 4px; }
-#ostMeshApp .omx-item { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 64px; padding: 10px; margin: 0; border-radius: 14px; border: 1px solid transparent; background: transparent; color: var(--omx-text); text-align: left; font-size: 1rem; line-height: 1.3; box-shadow: none; }
-#ostMeshApp .omx-item:hover, #ostMeshApp .omx-item:focus-visible { background: var(--omx-surface); border-color: var(--omx-border); }
-#ostMeshApp .omx-av { width: 44px; height: 44px; min-width: 0; border-radius: 14px; flex: 0 0 auto; display: grid; place-items: center; font-size: 1.3rem; position: relative; color: #fff; font-weight: 900; line-height: 1; }
-#ostMeshApp .omx-av i { position: absolute; right: -2px; bottom: -2px; width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--omx-bg); background: var(--omx-muted); }
-#ostMeshApp .omx-av.on i { background: var(--omx-ok); }
-#ostMeshApp .omx-av-sm.omx-av { width: 38px; height: 38px; border-radius: 12px; font-size: 1.1rem; }
-#ostMeshApp .omx-item .omx-main { flex: 1 1 auto; min-width: 0; }
-#ostMeshApp .omx-item .omx-main b { display: block; font-size: .95rem; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-#ostMeshApp .omx-item .omx-main b small { font-weight: 600; color: var(--omx-muted); }
-#ostMeshApp .omx-item .omx-main span { display: block; font-size: .8rem; color: var(--omx-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-#ostMeshApp .omx-item .omx-meta { flex: 0 0 auto; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; font-size: .72rem; color: var(--omx-muted); }
-#ostMeshApp .omx-item .omx-main .omx-lfail { font-style: normal; font-weight: 800; color: #fca5a5; }
-#ostMeshApp .omx-item .omx-unread { min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; background: var(--omx-me1); color: #fff; font-weight: 800; font-size: 11px; line-height: 20px; display: grid; place-items: center; }
-#ostMeshApp .omx-req { display: flex; align-items: center; gap: 10px; padding: 10px; border-radius: 14px; background: rgba(245,196,104,.08); border: 1px solid rgba(245,196,104,.3); margin-bottom: 6px; }
-#ostMeshApp .omx-req .omx-main { flex: 1 1 auto; min-width: 0; font-size: .86rem; line-height: 1.35; overflow-wrap: anywhere; }
-#ostMeshApp .omx-req .omx-main small { color: var(--omx-muted); font-size: .72rem; }
-/* "Accept" never breaks into "Acce/pt" (B5) */
-#ostMeshApp .omx-req button { flex: 0 0 auto; min-width: 44px; max-width: none; min-height: 44px; padding: 0 14px; margin: 0; border-radius: 10px; border: 0; font-weight: 800; font-size: .82rem; line-height: 1; white-space: nowrap; overflow-wrap: normal; word-break: normal; box-shadow: none; }
-#ostMeshApp .omx-req .acc { background: var(--omx-ok); color: #06231a; }
-#ostMeshApp .omx-req .dec { background: var(--omx-surface2); color: var(--omx-text); padding: 0; width: 44px; }
+/* ---------- M. Sheets: ONE system, three presentations (#omxSheet core, #oslSheet social) ----------
+   .pop  anchored popover   (fine pointer and viewport >= 700 px; menus)  — no scrim, flips to stay on screen
+   .sheet bottom sheet      (coarse pointer or < 700 px)                  — scrim, grabber, separate Cancel row
+   .dlg  dialog             (confirm 480 / forms 600, wide screens)        — scrim, 10 vh from the top
+   .over raises the root to 12900 when opened FROM the lightbox or story viewer (above them, under a call). */
+#omxSheet, #oslSheet { position: fixed; inset: 0; z-index: var(--omx-z-sheet); display: none; }
+#oslSheet { z-index: var(--omx-z-osheet); }
+:is(#omxSheet, #oslSheet).over { z-index: var(--omx-z-over); }
+:is(#omxSheet, #oslSheet).on { display: block; }
+:is(#omxSheet, #oslSheet):is(.sheet, .dlg) { background: var(--omx-scrim); animation: omx-fade var(--omx-dur-3) var(--omx-ease) both; }
+:is(#omxSheet, #oslSheet) .omx-box { position: absolute; display: flex; flex-direction: column; background: var(--omx-elev); color: var(--omx-text); }
+:is(#omxSheet, #oslSheet).pop .omx-box { min-width: var(--omx-pop-min); max-width: var(--omx-pop-max); padding: 6px; border-radius: var(--omx-r-md); box-shadow: var(--omx-shadow-2); transform-origin: var(--omx-pop-origin, top right); animation: omx-pop-in var(--omx-dur-3) var(--omx-ease-out) both; }
+:is(#omxSheet, #oslSheet).pop .omx-box.closing { animation: omx-pop-out var(--omx-dur-2) var(--omx-ease-in) both; }
+:is(#omxSheet, #oslSheet).pop .omx-box > h3, :is(#omxSheet, #oslSheet).pop .grab, :is(#omxSheet, #oslSheet).pop .omx-cancel { display: none; }
+:is(#omxSheet, #oslSheet).sheet .omx-box { left: 0; right: 0; bottom: 0; max-height: 90%; overflow: auto; padding: 8px 12px calc(12px + env(safe-area-inset-bottom)); border-radius: var(--omx-r-lg) var(--omx-r-lg) 0 0; background: var(--omx-surface-1); box-shadow: var(--omx-shadow-3); animation: omx-sheet-in var(--omx-dur-4) var(--omx-ease-out) both; }
+:is(#omxSheet, #oslSheet).sheet .grab { width: 36px; height: 4px; margin: 0 auto 10px; border-radius: var(--omx-r-full); background: var(--omx-line-strong); }
+:is(#omxSheet, #oslSheet).sheet .omx-box > h3 { padding: 2px 8px 4px; font-size: var(--omx-fs-13); font-weight: var(--omx-fw-semibold); color: var(--omx-muted); text-align: center; }
+:is(#omxSheet, #oslSheet) .omx-box > p { padding: 0 8px 10px; font-size: var(--omx-fs-13); line-height: 18px; color: var(--omx-muted); text-align: center; }
+:is(#omxSheet, #oslSheet).sheet .grp { border-radius: var(--omx-r-md); background: var(--omx-surface-2); overflow: hidden; margin-top: 6px; }
+:is(#omxSheet, #oslSheet) .omx-mi { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 40px; padding: 0 12px; border-radius: var(--omx-r-sm); color: var(--omx-text); font-size: var(--omx-fs-15); font-weight: var(--omx-fw-medium); text-align: left; white-space: nowrap; }
+:is(#omxSheet, #oslSheet) .omx-mi > .omx-i { width: 18px; height: 18px; color: var(--omx-text-2); }
+:is(#omxSheet, #oslSheet) .omx-mi > span { display: grid; min-width: 0; }
+:is(#omxSheet, #oslSheet) .omx-mi small { font-size: var(--omx-fs-12); font-weight: var(--omx-fw-regular); color: var(--omx-muted); white-space: normal; line-height: 16px; }
+:is(#omxSheet, #oslSheet) .omx-mi:is(:hover, .is-hover) { background: var(--omx-hover); }
+:is(#omxSheet, #oslSheet) .omx-mi:is(:focus-visible, .is-focus) { outline: none; background: var(--omx-hover); box-shadow: var(--omx-focus-inset); }
+:is(#omxSheet, #oslSheet) .omx-mi.danger, :is(#omxSheet, #oslSheet) .omx-mi.danger > .omx-i { color: var(--omx-danger); }
+:is(#omxSheet, #oslSheet) .omx-box hr { height: 1px; margin: 6px; border: 0; background: var(--omx-line-2); }
+:is(#omxSheet, #oslSheet).sheet .omx-mi { min-height: 52px; gap: 14px; padding: 8px 16px; border-radius: 0; white-space: normal; }
+:is(#omxSheet, #oslSheet).sheet .omx-mi + .omx-mi { box-shadow: inset 0 1px 0 var(--omx-line); }
+:is(#omxSheet, #oslSheet).sheet .omx-mi > .omx-i { width: 22px; height: 22px; }
+:is(#omxSheet, #oslSheet).sheet .omx-box hr { display: none; }
+:is(#omxSheet, #oslSheet) .omx-cancel { display: flex; align-items: center; justify-content: center; width: 100%; height: 52px; margin-top: 8px; border-radius: var(--omx-r-md); background: var(--omx-surface-2); font-size: var(--omx-fs-15); font-weight: var(--omx-fw-semibold); }
+:is(#omxSheet, #oslSheet).dlg .omx-box { left: 50%; top: 10vh; width: min(var(--omx-dialog-sm), calc(100% - 32px)); max-height: 80vh; overflow: auto; transform: translateX(-50%); padding: 20px; border-radius: var(--omx-r-lg); background: var(--omx-bg); box-shadow: var(--omx-shadow-3); animation: omx-dialog-in var(--omx-dur-3) var(--omx-ease-out) both; }
+:is(#omxSheet, #oslSheet).dlg.wide .omx-box { width: min(var(--omx-dialog-w), calc(100% - 32px)); padding: 0; }
+:is(#omxSheet, #oslSheet).dlg .omx-box > h3 { font-size: var(--omx-fs-17); font-weight: var(--omx-fw-bold); margin-bottom: 6px; }
+:is(#omxSheet, #oslSheet).dlg .omx-box > p { padding: 0 0 16px; text-align: left; font-size: var(--omx-fs-15); line-height: 21px; }
+/* confirm row: Cancel LEFT, action right (desk); stacked with the action on top (phone sheet) */
+:is(#omxSheet, #oslSheet) .omx-askrow { display: flex; justify-content: flex-end; gap: 8px; }
+:is(#omxSheet, #oslSheet).sheet .omx-askrow { flex-direction: column-reverse; gap: 8px; }
+:is(#omxSheet, #oslSheet).sheet .omx-askrow > * { width: 100%; height: 48px; }
+/* composer dialog (#oslSheet.dlg.wide) */
+#oslSheet .osl-dhead { display: flex; align-items: center; height: 52px; padding: 0 8px; }
+#oslSheet .osl-dhead .sp { flex: 1; }
+#oslSheet .osl-dbody, #ostMeshApp .osl-dbody { display: grid; grid-template-columns: 40px minmax(0, 1fr); column-gap: 12px; padding: 0 16px; }
+#oslSheet .osl-dmain, #ostMeshApp .osl-dmain { min-width: 0; display: grid; gap: 12px; padding-bottom: 12px; }
+#oslSheet .osl-dtext, #ostMeshApp .osl-dtext { min-height: 84px; padding-top: 6px; font-size: var(--omx-fs-20); line-height: 28px; color: var(--omx-text); white-space: pre-wrap; }
+#ostMeshApp .osl-dtext { font-size: var(--omx-fs-17); line-height: 24px; }
+:is(#oslSheet, #ostMeshApp) .osl-picks { display: grid; gap: 8px; }
+:is(#oslSheet, #ostMeshApp) .osl-picks.n2 { grid-template-columns: 1fr 1fr; }
+:is(#oslSheet, #ostMeshApp) .osl-picks.row { grid-template-columns: repeat(3, 1fr); }
+:is(#oslSheet, #ostMeshApp) .osl-pick { position: relative; border-radius: var(--omx-r-md); overflow: hidden; aspect-ratio: 4 / 3; box-shadow: inset 0 0 0 1px var(--omx-line-2); }
+:is(#oslSheet, #ostMeshApp) .osl-picks.row .osl-pick { aspect-ratio: 1; }
+:is(#oslSheet, #ostMeshApp) .osl-pick > :is(img, video, .mk-ph) { width: 100%; height: 100%; object-fit: cover; }
+:is(#oslSheet, #ostMeshApp) .osl-pick .omx-ib { position: absolute; top: 0; right: 0; width: 44px; height: 44px; color: #fff; isolation: isolate; }
+:is(#oslSheet, #ostMeshApp) .osl-pick .omx-ib::after { content: ""; position: absolute; inset: 8px; border-radius: 50%; background: var(--omx-media-chip); z-index: -1; }
+:is(#oslSheet, #ostMeshApp) .osl-pick .omx-ib .omx-i { width: 16px; height: 16px; }
+:is(#oslSheet, #ostMeshApp) .osl-attached { position: relative; }
+:is(#oslSheet, #ostMeshApp) .osl-attached > .omx-ib { position: absolute; top: -12px; right: -12px; background: var(--omx-surface-3); box-shadow: 0 0 0 2px var(--omx-bg); }
+:is(#oslSheet, #ostMeshApp) .osl-dnote { display: flex; align-items: center; gap: 6px; margin: 0 16px 0 68px; padding: 10px 0; border-bottom: 1px solid var(--omx-line); font-size: var(--omx-fs-13); font-weight: var(--omx-fw-medium); color: var(--omx-accent); }
+:is(#oslSheet, #ostMeshApp) .osl-dnote .omx-i { width: 16px; height: 16px; }
+:is(#oslSheet, #ostMeshApp) .osl-dbar { display: flex; align-items: center; gap: 2px; padding: 8px 16px 12px 60px; }
+:is(#oslSheet, #ostMeshApp) .osl-dbar .sp { flex: 1; }
+#ostMeshApp .osl-dbar.phone { padding: 4px 12px; box-shadow: inset 0 1px 0 var(--omx-line); }
+:is(#oslSheet, #ostMeshApp) .osl-ring2 { display: inline-flex; align-items: center; gap: 6px; margin-right: 10px; font-size: var(--omx-fs-12); color: var(--omx-muted); }
+:is(#oslSheet, #ostMeshApp) .osl-ring2 svg { width: 24px; height: 24px; }
+/* desk attach popover in #omxSheet.pop (rows with a tile + description + the encryption note) */
+#omxSheet.pop .omx-box.attach { width: 288px; max-width: 288px; }
+#omxSheet .omx-mi .tile { display: grid; place-items: center; width: 32px; height: 32px; flex: 0 0 auto; border-radius: 50%; background: var(--tile, var(--omx-id-8)); color: #fff; }
+#omxSheet .omx-mi .tile .omx-i { width: 18px; height: 18px; color: #fff; }
+#omxSheet.pop .omx-box.attach .omx-mi { min-height: 48px; }
+#omxSheet .omx-box > .omx-boxnote { display: flex; align-items: center; gap: 6px; margin-top: 4px; padding: 8px 8px 4px; box-shadow: inset 0 1px 0 var(--omx-line); font-size: var(--omx-fs-12); color: var(--omx-muted); white-space: normal; }
+#omxSheet .omx-boxnote .omx-i { width: 14px; height: 14px; }
 
-/* add person */
-#ostMeshApp .omx-qr { display: grid; place-items: center; margin: 6px 0 10px; }
-#ostMeshApp .omx-qr canvas { border-radius: 16px; max-width: 100%; height: auto; }
-#ostMeshApp .omx-link { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .76rem; line-height: 1.4; word-break: break-all; padding: 10px; border-radius: 12px; background: var(--omx-surface2); color: var(--omx-muted); margin-bottom: 8px; }
-#ostMeshApp .omx-scan { position: relative; border-radius: 16px; overflow: hidden; background: #000; aspect-ratio: 1 / 1; margin: 8px 0; }
+/* ---------- P. Toasts (.omx-toasts, z 13500): bottom centre desk, above the tab bar on phones; max 2 ---------- */
+.omx-toasts { position: fixed; left: 50%; bottom: 24px; z-index: var(--omx-z-toast); display: grid; gap: 8px; width: max-content; max-width: min(440px, calc(100% - 32px)); transform: translateX(-50%); pointer-events: none; }
+.omx-toasts.phone { bottom: calc(var(--omx-bar) + 12px + env(safe-area-inset-bottom)); }
+.omx-toasts .omx-toast { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 6px 6px 6px 12px; border-radius: var(--omx-r-md); background: var(--omx-elev); color: var(--omx-text); box-shadow: var(--omx-shadow-2); font-size: var(--omx-fs-15); font-weight: var(--omx-fw-medium); pointer-events: auto; animation: omx-toast-in var(--omx-dur-3) var(--omx-ease-out) both; --omx-ring-bg: var(--omx-elev); --omx-ic-surface: var(--omx-elev); }
+.omx-toasts .omx-toast > .omx-i { width: 20px; height: 20px; }
+.omx-toasts .omx-toast.ok > .omx-i { color: var(--omx-success); }
+.omx-toasts .omx-toast.err > .omx-i { color: var(--omx-danger); }
+.omx-toasts .omx-toast .t { display: grid; min-width: 0; padding-right: 4px; }
+.omx-toasts .omx-toast .t small { font-size: var(--omx-fs-13); color: var(--omx-muted); font-weight: var(--omx-fw-regular); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.omx-toasts .omx-toast .omx-textbtn { margin-left: auto; }
+.omx-toasts .omx-toast:not(:has(.omx-textbtn)) { padding-right: 16px; }
+
+/* ---------- Q. Empty / loading / error ---------- */
+#ostMeshApp .omx-skel-post { display: grid; grid-template-columns: 40px 1fr; column-gap: 12px; padding: 14px var(--omx-gutter); border-bottom: 1px solid var(--omx-line); }
+#ostMeshApp .omx-sk { display: block; border-radius: var(--omx-r-xs); background: linear-gradient(90deg, var(--omx-surface-1) 0, var(--omx-surface-2) 40%, var(--omx-surface-1) 80%) 0 0 / 300% 100%; animation: omx-shimmer var(--omx-shimmer) linear infinite; }
+#ostMeshApp .omx-sk.c { border-radius: 50%; } #ostMeshApp .omx-sk.l { height: 12px; margin: 6px 0 8px; } #ostMeshApp .omx-sk.m { border-radius: var(--omx-r-md); margin-top: 10px; }
+#ostMeshApp .omx-skel { animation: omx-fade var(--omx-dur-3) var(--omx-ease) 300ms both; }   /* skeletons only after 300 ms */
+#ostMeshApp .omx-empty { display: grid; justify-items: center; gap: 8px; padding: 48px 32px; text-align: center; }
+#ostMeshApp .omx-empty .ic { display: grid; place-items: center; width: 72px; height: 72px; margin-bottom: 8px; border-radius: 50%; background: var(--omx-surface-2); color: var(--omx-accent); }
+#ostMeshApp .omx-empty .ic .omx-i { width: 32px; height: 32px; stroke-width: 1.6; }
+#ostMeshApp .omx-empty.err .ic { background: var(--omx-danger-tint); color: var(--omx-danger); }
+#ostMeshApp .omx-empty h3 { font-size: var(--omx-fs-17); font-weight: var(--omx-fw-bold); line-height: var(--omx-lh-tight); }
+#ostMeshApp .omx-empty p { max-width: 320px; font-size: var(--omx-fs-15); line-height: 21px; color: var(--omx-muted); }
+#ostMeshApp .omx-empty .omx-primary, #ostMeshApp .omx-empty .omx-ghost { margin-top: 12px; }
+#ostMeshApp .omx-empty small { font-size: var(--omx-fs-12); color: var(--omx-muted); font-variant-numeric: var(--omx-num); }
+#ostMeshApp .omx-inerr { display: flex; align-items: center; gap: 10px; padding: 6px 8px 6px var(--omx-gutter); border-bottom: 1px solid var(--omx-line); background: var(--omx-danger-tint); color: var(--omx-text); font-size: var(--omx-fs-13); line-height: 18px; }
+#ostMeshApp .omx-inerr > .omx-i { width: 18px; height: 18px; flex: 0 0 auto; color: var(--omx-danger); }
+#ostMeshApp .omx-inerr > span { flex: 1; min-width: 0; }
+
+/* ---------- V. Remaining views: Add · Settings (core) · Alerts (social) · call screen (core) · lightbox · Edit profile (social) ----------
+   Split: V1, V2, V4 -> docs/ost-mesh-app.css (core-shell / chat-ui owners) · V3, V5, V6 -> docs/ost-social.css (social-views owner) */
+/* V1. Add people (renderAdd): pending requests first, then a segmented Your invite | Add someone */
+#ostMeshApp .omx-sec { padding: var(--omx-sp-12) var(--omx-gutter) var(--omx-sp-4); font-size: var(--omx-fs-13); font-weight: var(--omx-fw-semibold); color: var(--omx-muted); }
+#ostMeshApp .omx-req { display: grid; grid-template-columns: var(--omx-av-lg) minmax(0, 1fr) auto; column-gap: var(--omx-sp-12); align-items: center; min-height: 72px; padding: 8px var(--omx-gutter); }
+#ostMeshApp .omx-req .t { display: grid; min-width: 0; }
+#ostMeshApp .omx-req .t b { font-size: var(--omx-fs-15); font-weight: var(--omx-fw-semibold); line-height: 20px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#ostMeshApp .omx-req .t small { font-size: var(--omx-fs-13); line-height: 18px; color: var(--omx-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#ostMeshApp .omx-req .acts { display: flex; align-items: center; gap: var(--omx-sp-4); }
+#ostMeshApp .omx-card { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--omx-sp-12); margin: var(--omx-sp-12) var(--omx-gutter); padding: var(--omx-sp-16); border-radius: var(--omx-r-lg); background: var(--omx-surface-1); --omx-ring-bg: var(--omx-surface-1); --omx-ic-surface: var(--omx-surface-1); }
+#ostMeshApp .omx-card > h3 { font-size: var(--omx-fs-17); font-weight: var(--omx-fw-bold); line-height: var(--omx-lh-tight); }
+#ostMeshApp .omx-card > p { font-size: var(--omx-fs-13); line-height: 18px; color: var(--omx-muted); }
+#ostMeshApp .omx-card .omx-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--omx-sp-8); }
+#ostMeshApp .omx-card .omx-row2 > * { width: 100%; }
+#ostMeshApp .omx-invme { display: flex; align-items: center; gap: var(--omx-sp-12); }
+#ostMeshApp .omx-invme .t { display: grid; min-width: 0; }
+#ostMeshApp .omx-invme b { font-size: var(--omx-fs-17); font-weight: var(--omx-fw-bold); }
+#ostMeshApp .omx-invme small { font-size: var(--omx-fs-13); color: var(--omx-muted); }
+/* the QR keeps a white quiet zone so phone cameras read it; it is the one light surface in the app */
+#ostMeshApp .omx-qr { position: relative; justify-self: center; display: grid; place-items: center; width: 232px; height: 232px; padding: 12px; border-radius: var(--omx-r-lg); background: #fff; }
+#ostMeshApp .omx-qr > :is(canvas, svg) { width: 208px; height: 208px; image-rendering: pixelated; }
+#ostMeshApp .omx-linkrow { display: flex; align-items: center; gap: var(--omx-sp-4); min-height: 44px; padding: 0 4px 0 12px; border-radius: var(--omx-r-md); background: var(--omx-surface-2); }
+#ostMeshApp .omx-linkrow code { flex: 1; min-width: 0; font-family: var(--omx-font-mono); font-size: var(--omx-fs-13); color: var(--omx-text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#ostMeshApp .omx-steps { display: grid; gap: var(--omx-sp-12); counter-reset: st; }
+#ostMeshApp .omx-steps li { display: grid; grid-template-columns: 24px minmax(0, 1fr); column-gap: 10px; font-size: var(--omx-fs-15); line-height: 21px; color: var(--omx-text-2); counter-increment: st; }
+#ostMeshApp .omx-steps li::before { content: counter(st); display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--omx-accent-tint); color: var(--omx-accent); font-size: var(--omx-fs-12); font-weight: var(--omx-fw-bold); }
+#ostMeshApp .omx-note { font-size: var(--omx-fs-13); line-height: 18px; color: var(--omx-muted); }
+/* V2. Settings (core renderMe -> Settings only; the name / emoji editor lives in Edit profile) */
+#ostMeshApp .omx-setgrp { margin: var(--omx-sp-8) var(--omx-gutter) var(--omx-sp-16); }
+#ostMeshApp .omx-setgrp > h3 { padding: 0 4px 6px; font-size: var(--omx-fs-13); font-weight: var(--omx-fw-semibold); color: var(--omx-muted); }
+#ostMeshApp .omx-setgrp > div { border-radius: var(--omx-r-lg); background: var(--omx-surface-1); overflow: hidden; --omx-ring-bg: var(--omx-surface-1); --omx-ic-surface: var(--omx-surface-1); }
+#ostMeshApp .omx-setrow { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; column-gap: var(--omx-sp-12); width: 100%; min-height: 56px; padding: 8px 12px 8px 16px; text-align: left; color: var(--omx-text); }
+#ostMeshApp .omx-setrow + .omx-setrow { box-shadow: inset 0 1px 0 var(--omx-line); }
+#ostMeshApp button.omx-setrow:hover { background: var(--omx-hover); }
+#ostMeshApp .omx-setrow:is(:focus-visible, .is-focus) { outline: none; box-shadow: var(--omx-focus-inset); }
+#ostMeshApp .omx-setrow > .omx-i { width: 20px; height: 20px; color: var(--omx-text-2); }
+#ostMeshApp .omx-setrow > .t { display: grid; min-width: 0; }
+#ostMeshApp .omx-setrow > .t b { font-size: var(--omx-fs-15); font-weight: var(--omx-fw-medium); line-height: 20px; }
+#ostMeshApp .omx-setrow > .t small { font-size: var(--omx-fs-13); line-height: 18px; color: var(--omx-muted); overflow-wrap: anywhere; }
+#ostMeshApp .omx-setrow > .rt { display: flex; align-items: center; gap: 4px; color: var(--omx-muted); font-size: var(--omx-fs-13); }
+#ostMeshApp .omx-setrow > .rt .omx-i { width: 18px; height: 18px; }
+#ostMeshApp .omx-setrow code { font-family: var(--omx-font-mono); font-size: var(--omx-fs-13); color: var(--omx-text-2); }
+#ostMeshApp .omx-setrow.danger, #ostMeshApp .omx-setrow.danger > .omx-i { color: var(--omx-danger); }
+#ostMeshApp .omx-setrow > .omx-av { width: 40px; height: 40px; }
+
+/* ---------- T. Motion (transform + opacity only; triggered by a user action or a real view change) ---------- */
+@keyframes omx-spin { to { transform: rotate(360deg); } }
+@keyframes omx-shimmer { from { background-position: 100% 0; } to { background-position: -50% 0; } }
+@keyframes omx-dot { 0%, 60%, 100% { transform: translateY(0); opacity: .5; } 30% { transform: translateY(calc(var(--omx-move-sm) * -.75)); opacity: 1; } }
+@keyframes omx-pop { 0% { transform: scale(1); } 40% { transform: scale(1.25); } 100% { transform: scale(1); } }
+@keyframes omx-fade { from { opacity: 0; } }
+@keyframes omx-pop-in { from { opacity: 0; transform: translateY(calc(var(--omx-move-sm) * -1)) scale(var(--omx-scale-from)); } }
+@keyframes omx-pop-out { to { opacity: 0; transform: translateY(calc(var(--omx-move-sm) * -1)) scale(var(--omx-scale-from)); } }
+@keyframes omx-sheet-in { from { transform: translateY(calc(var(--omx-move) * 40)); } }
+@keyframes omx-dialog-in { from { opacity: 0; transform: translate(-50%, var(--omx-move)) scale(var(--omx-scale-from)); } }
+@keyframes omx-toast-in { from { opacity: 0; transform: translateY(var(--omx-move)); } }
+@keyframes omx-view-in { from { opacity: 0; transform: translateY(var(--omx-move)); } }
+@keyframes omx-tray-in { from { opacity: 0; transform: translateY(calc(var(--omx-move) * 2)); } }
+@keyframes omx-drawer-in { from { opacity: 0; transform: translateX(calc(var(--omx-move) * 3)); } }
+/* a REAL view change: render() adds .omx-enter to #omxBody only when the view key changed (never on repaints) */
+#ostMeshApp .omx-body.omx-enter { animation: omx-view-in var(--omx-dur-3) var(--omx-ease-out) both; }
+@media (prefers-reduced-motion: reduce) {
+  #ostMeshApp :is(.omx-sk, .omx-typing i), :is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) .omx-primary.is-loading::after { animation: none; }
+  #ostMeshApp .osl-act.like.popping .omx-i { animation: none; }
+  #ostMeshApp .osl-card:hover { transform: none; }
+}
+
+
+/* ---------- core additions (production details the reference sheet leaves to the build) ---------- */
+/* avatar glyph: the emoji / initial is drawn from data-g, so an avatar adds no text to a button's label */
+:is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) .omx-av[data-g]::before { content: attr(data-g); }
+:is(#ostMeshApp,#omxSheet,#oslSheet,#oslLight,#oslStory,#omxCall,.omx-toasts) .omx-av > .omx-i { width: 55%; height: 55%; }
+/* an old plugin's text "icon" in the navs */
+#ostMeshApp .omx-rail > button[data-tab] > b, #ostMeshApp .omx-tabs > button > b { display: grid; place-items: center; width: 26px; height: 26px; font-size: 20px; font-weight: var(--omx-fw-regular); line-height: 1; }
+#ostMeshApp .omx-rail .omx-rail-me:is(:focus-visible, .is-focus) { outline: 2px solid var(--omx-focus); outline-offset: -2px; }
+/* a view title with a chip / connection dot keeps them on one line */
+#ostMeshApp .omx-head h2 .omx-devnet, #ostMeshApp .omx-head h2 .omx-conn { flex: 0 0 auto; }
+/* the chats search as a field (chat-ui renders it, or the core turns the pill into one in place) */
+#ostMeshApp .omx-search > input { flex: 1 1 auto; min-width: 0; height: 100%; padding: 0; border: 0; outline: none; background: transparent; color: var(--omx-text); font: inherit; }
+#ostMeshApp .omx-search:focus-within { box-shadow: inset 0 0 0 2px var(--omx-focus); }
+#ostMeshApp .omx-search > input::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
+/* Add: the in-app QR scanner (camera preview with a frame) */
+#ostMeshApp .omx-scan { position: relative; aspect-ratio: 1 / 1; width: 100%; max-width: 320px; justify-self: center; overflow: hidden; border-radius: var(--omx-r-lg); background: #000; }
 #ostMeshApp .omx-scan video { width: 100%; height: 100%; object-fit: cover; }
-#ostMeshApp .omx-scan::after { content: ''; position: absolute; inset: 14%; border: 2px solid rgba(255,255,255,.75); border-radius: 18px; pointer-events: none; }
-#ostMeshApp .omx-steps { display: grid; gap: 8px; margin: 10px 0; }
-#ostMeshApp .omx-steps div { display: flex; gap: 10px; align-items: flex-start; font-size: .84rem; line-height: 1.45; color: var(--omx-muted); }
-#ostMeshApp .omx-steps div b { flex: 0 0 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: rgba(109,159,255,.16); color: var(--omx-accent); font-size: .74rem; }
+#ostMeshApp .omx-scan::after { content: ""; position: absolute; inset: 14%; border: 2px solid rgba(255, 255, 255, .75); border-radius: var(--omx-r-lg); pointer-events: none; }
+#ostMeshApp #omxScanWrap { display: grid; gap: var(--omx-sp-8); }
+#ostMeshApp #omxScanWrap[hidden] { display: none; }
+#ostMeshApp .omx-card .omx-block { margin-top: var(--omx-sp-4); }
+#ostMeshApp .omx-linkrow .omx-ib { flex: 0 0 auto; }
+/* monospace runs (invite link, address, safety code) are spans, not <code>: the site styles every code element
+   (padding, a background, and white-space: pre-wrap !important on phones) */
+#ostMeshApp .omx-code { font-family: var(--omx-font-mono); font-size: var(--omx-fs-13); color: var(--omx-text-2); overflow-wrap: anywhere; }
+#ostMeshApp .omx-linkrow .omx-code { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; overflow-wrap: normal; }
+#ostMeshApp .omx-card em { font-style: italic; }
+/* Settings */
+#ostMeshApp .omx-setnote { padding: 0 20px 24px; }
+#ostMeshApp .omx-setrow > .rt .omx-i.is-on { color: var(--omx-success); --omx-ic-cut: var(--omx-surface-1); }
+/* Me without OST Social: the name / emoji editor under the profile row */
+#ostMeshApp .omx-meform { display: grid; gap: var(--omx-sp-12); padding: var(--omx-sp-4) 16px 16px; }
+#ostMeshApp .omx-emojis { display: flex; flex-wrap: wrap; gap: 6px; }
+#ostMeshApp .omx-emojis > button { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: var(--omx-surface-2); font-size: 20px; }
+#ostMeshApp .omx-emojis > button:hover { background: var(--omx-surface-3); }
+#ostMeshApp .omx-emojis > button[aria-checked="true"] { box-shadow: 0 0 0 2px var(--omx-surface-1), 0 0 0 4px var(--omx-accent); }
+#ostMeshApp[data-layout="phone"] .omx-emojis > button { width: 44px; height: 44px; }
+#ostMeshApp .omx-empty :is(.omx-ghost, .omx-primary) .omx-i { width: 18px; height: 18px; }
+/* toasts: a bold first line, the exit, tappable message toasts, and room above the site's bar on phones */
+.omx-toasts .omx-toast .t { font-size: var(--omx-fs-15); line-height: 20px; }
+.omx-toasts .omx-toast .t b { font-weight: var(--omx-fw-semibold); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.omx-toasts .omx-toast > .omx-av { flex: 0 0 auto; }
+.omx-toasts .omx-toast.tap { cursor: pointer; }
+.omx-toasts .omx-toast.tap:focus-visible { outline: 2px solid var(--omx-focus); outline-offset: 2px; }
+.omx-toasts .omx-toast > span.omx-textbtn { pointer-events: none; }
+.omx-toasts .omx-toast.out { animation: omx-toast-out var(--omx-dur-2) var(--omx-ease-in) both; pointer-events: none; }
+@keyframes omx-toast-out { to { opacity: 0; transform: translateY(var(--omx-move)); } }
+.omx-toasts.site { bottom: calc(84px + env(safe-area-inset-bottom)); }
+/* sheets: a popover that is leaving lets clicks through; text icons of old plugins; dialog menus */
+#omxSheet.closing, #oslSheet.closing { pointer-events: none; }
+:is(#omxSheet, #oslSheet) .omx-mi > b { display: grid; place-items: center; width: 22px; font-size: 18px; font-weight: var(--omx-fw-regular); }
+:is(#omxSheet, #oslSheet) .omx-boxnote > span { min-width: 0; }
+:is(#omxSheet, #oslSheet).dlg .grp { display: grid; gap: 2px; margin: 0 -8px; }
+:is(#omxSheet, #oslSheet).dlg .omx-askrow { margin-top: 4px; }
+/* C1 guard: the site styles the bare elements the shell now uses as landmarks. style.css `nav { position: fixed;
+   top/left/right: 0; z-index: 1000; glass background; backdrop-filter; border-bottom; transition }`, mobile.css (<= 640)
+   `nav { width: 100vw !important; overflow: hidden !important }`, mobile-shell.css (<= 820, coarse <= 1024)
+   `section[id] { display: block !important }` and `section { padding: 34px 0 }`, ost-mobile-scale.css (<= 820)
+   `section { padding; margin-block; border-radius } !important` (the Add card lost its grid gap, padding and radius).
+   The app's own values win here; the site's !important ones need !important. Social and chat sections guard their
+   own (chat: section.omx-dayblock). */
+#ostMeshApp :is(nav.omx-rail, nav.omx-tabs) { top: auto; left: auto; right: auto; border-bottom: 0; transition: none; width: auto !important; overflow: visible !important; }
+#ostMeshApp nav.omx-rail { background: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+#ostMeshApp section.omx-card { display: grid !important; padding: var(--omx-sp-16) !important; margin: var(--omx-sp-12) var(--omx-gutter) !important; border-radius: var(--omx-r-lg) !important; }
+/* Friends' activity (core aside module): its names carry no badge, so the title is a block and a long name ends in "…"
+   (a flex title clips without the ellipsis) */
+#ostMeshApp .omx-modhost[data-mod="friends"] .omx-row .t b { display: block; }
 
-/* chat */
-#ostMeshApp .omx-chat { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
-#ostMeshApp .omx-msgwrap { position: relative; flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
-#ostMeshApp .omx-msgs { flex: 1 1 auto; min-height: 0; overflow: auto; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
-#ostMeshApp .omx-newpill { position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%); z-index: 2; min-height: 36px; padding: 0 16px; margin: 0; border: 0; border-radius: 999px; background: var(--omx-me1); color: #fff; font-size: .82rem; font-weight: 800; line-height: 1; white-space: nowrap; box-shadow: 0 6px 18px rgba(0,0,0,.45); }
-#ostMeshApp .omx-day { align-self: center; font-size: 11px; color: var(--omx-muted); padding: 4px 10px; border-radius: 999px; background: var(--omx-surface); margin: 6px 0; }
-/* bubbles: 82 % wide, line breaks kept (B5, B17) */
-#ostMeshApp .omx-b { max-width: 82%; min-width: 0; padding: 9px 12px; border-radius: 16px; font-size: .95rem; line-height: 1.4; white-space: pre-wrap; overflow-wrap: anywhere; word-wrap: break-word; position: relative; }
-#ostMeshApp .omx-b.me { align-self: flex-end; background: linear-gradient(135deg, var(--omx-me1), var(--omx-me2)); color: #fff; border-bottom-right-radius: 5px; }
-#ostMeshApp .omx-b.them { align-self: flex-start; background: var(--omx-surface); color: var(--omx-text); border: 1px solid var(--omx-border); border-bottom-left-radius: 5px; }
-#ostMeshApp .omx-b.sys { align-self: center; background: transparent; color: var(--omx-muted); font-size: .8rem; text-align: center; max-width: 92%; }
-#ostMeshApp .omx-b > div, #ostMeshApp .omx-b > a { white-space: normal; }
-#ostMeshApp .omx-b .omx-t { display: block; margin-top: 3px; font-size: 11px; line-height: 1.3; opacity: 1; text-align: right; white-space: nowrap; }
-#ostMeshApp .omx-b.me .omx-t { color: #fff; }
-#ostMeshApp .omx-b.them .omx-t { color: var(--omx-muted); }
-#ostMeshApp .omx-b .omx-a { color: inherit; text-decoration: underline; }
-#ostMeshApp .omx-b .omx-unsup { font-style: italic; opacity: .9; }
-/* not delivered: visibly different + a red "!" (tap to retry) */
-#ostMeshApp .omx-b.me.failed { background: #3b1520; border: 1px solid rgba(239,68,68,.7); color: #fff; cursor: pointer; margin-left: 30px; }
-#ostMeshApp .omx-b.me.failed .omx-t.omx-tfail { color: #fecaca; font-weight: 700; display: flex; align-items: center; justify-content: flex-end; gap: 6px; white-space: normal; }
-#ostMeshApp .omx-fail { position: absolute; left: -30px; top: 50%; transform: translateY(-50%); width: 22px; height: 22px; border-radius: 50%; background: #dc2626; color: #fff; font-size: 13px; font-weight: 900; line-height: 22px; text-align: center; font-style: normal; }
-#ostMeshApp .omx-b img, #ostMeshApp .omx-b video { display: block; max-width: 100%; max-height: 320px; border-radius: 10px; margin-bottom: 4px; background: #000; }
-#ostMeshApp .omx-file { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 12px; background: rgba(0,0,0,.2); text-decoration: none; color: inherit; }
-#ostMeshApp .omx-file b { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; background: rgba(255,255,255,.12); font-size: 1rem; flex: 0 0 auto; }
-#ostMeshApp .omx-file span { display: block; font-size: .84rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-#ostMeshApp .omx-file small { display: block; font-size: 11px; opacity: .9; }
-#ostMeshApp .omx-prog { height: 4px; border-radius: 2px; background: rgba(255,255,255,.2); overflow: hidden; margin-top: 6px; position: relative; }
-#ostMeshApp .omx-prog i { display: block; height: 100%; width: 0; background: #fff; transition: width .2s; }
-/* indeterminate: the upload has no measurable progress, so none is faked (B59) */
-#ostMeshApp .omx-prog.ind i { position: absolute; top: 0; left: 0; width: 38%; animation: omx-ind 1.15s ease-in-out infinite; }
-@keyframes omx-ind { 0% { transform: translateX(-100%); } 100% { transform: translateX(270%); } }
-#ostMeshApp .omx-compose { display: flex; align-items: flex-end; gap: 8px; padding: 8px 10px calc(8px + env(safe-area-inset-bottom)); border-top: 1px solid var(--omx-border); background: var(--omx-surface); flex: 0 0 auto; }
-#ostMeshApp .omx-compose textarea { flex: 1 1 auto; min-width: 0; min-height: 44px; max-height: 120px; margin: 0; resize: none; padding: 11px 12px; border-radius: 14px; border: 1px solid rgba(109,159,255,.25); background: rgba(0,0,0,.25); color: var(--omx-text); font-size: 1rem; line-height: 1.35; box-shadow: none; white-space: pre-wrap; }
-#ostMeshApp .omx-compose textarea:focus { outline: none; border-color: var(--omx-accent); box-shadow: 0 0 0 3px rgba(109,159,255,.22); }
-#ostMeshApp .omx-compose .omx-ib { border-radius: 13px; }
-/* send: white glyph on a fill that keeps ≥ 3:1 for the icon and against the bar */
-#ostMeshApp .omx-compose .omx-send { background: var(--omx-me1); border-color: var(--omx-me1); color: #fff; }
-#ostMeshApp .omx-compose .omx-send:disabled { opacity: .5; }
-#ostMeshApp .omx-typing { font-size: .76rem; color: var(--omx-muted); padding: 0 14px 4px; min-height: 16px; flex: 0 0 auto; }
-#ostMeshApp .omx-blocked { margin: 10px; }
-#ostMeshApp .omx-blocked .omx-ghost { margin-top: 8px; }
-/* core chat widgets (rendered by this module) */
-#ostMeshApp .omx-livebar { display: flex; align-items: center; gap: 8px; padding: 8px 14px; background: rgba(52,211,153,.12); border-bottom: 1px solid rgba(52,211,153,.3); font-size: .8rem; font-weight: 700; color: var(--omx-ok); flex: 0 0 auto; }
-#ostMeshApp .omx-livebar span { flex: 1 1 auto; min-width: 0; }
-#ostMeshApp .omx-livebar button { flex: 0 0 auto; min-height: 36px; padding: 0 14px; margin: 0; border-radius: 999px; border: 0; background: #dc2626; color: #fff; font-size: .82rem; font-weight: 800; line-height: 1; white-space: nowrap; }
-#ostMeshApp .omx-attach { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 6px; padding: 8px 10px; border-top: 1px solid var(--omx-border); background: var(--omx-surface); flex: 0 0 auto; }
-#ostMeshApp .omx-attach > button { display: flex; align-items: center; gap: 8px; min-width: 0; min-height: 44px; padding: 8px 10px; margin: 0; border-radius: 12px; border: 1px solid var(--omx-border); background: var(--omx-surface2); color: var(--omx-text); font-weight: 700; font-size: .84rem; line-height: 1.2; text-align: left; white-space: nowrap; overflow-wrap: normal; box-shadow: none; }
-#ostMeshApp .omx-attach > button b { font-size: 1.1rem; font-weight: 400; }
-#ostMeshApp .omx-livepick { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: .82rem; color: var(--omx-muted); }
-#ostMeshApp .omx-livepick button { flex: 0 0 auto; min-height: 40px; padding: 0 14px; margin: 0; border-radius: 999px; border: 1px solid rgba(52,211,153,.5); background: rgba(52,211,153,.1); color: var(--omx-ok); font-size: .82rem; font-weight: 800; line-height: 1; white-space: nowrap; }
-#ostMeshApp .omx-callc { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; white-space: normal; }
-#ostMeshApp .omx-callc button { flex: 0 0 auto; min-height: 36px; padding: 0 14px; margin: 0; border-radius: 999px; border: 0; background: rgba(255,255,255,.18); color: inherit; font-size: .82rem; font-weight: 800; line-height: 1; white-space: nowrap; }
-#ostMeshApp .omx-payc { display: flex; flex-direction: column; gap: 3px; min-width: 180px; white-space: normal; }
-#ostMeshApp .omx-payc b { font-size: 1.15rem; }
-#ostMeshApp .omx-payc span { font-size: .78rem; opacity: .9; }
-#ostMeshApp .omx-loct { display: flex; flex-direction: column; gap: 2px; margin-top: 6px; font-size: .78rem; line-height: 1.35; white-space: normal; }
-#ostMeshApp .omx-loct span { opacity: .85; }
-#ostMeshApp .omx-loct a, #ostMeshApp .omx-payc a { color: inherit; text-decoration: underline; font-weight: 700; }
-/* location map: 3x3 OSM tiles behind a fixed window (tiles are never rounded / capped like bubble images) */
-#ostMeshApp .omx-locc { display: block; white-space: normal; }
-#ostMeshApp .omx-map { position: relative; width: 260px; max-width: 100%; height: 150px; overflow: hidden; border-radius: 10px; background: #1b2236; }
-#ostMeshApp .omx-map .omx-tiles { position: absolute; width: 768px; height: 768px; max-width: none !important; }
-#ostMeshApp .omx-b .omx-map .omx-tiles img { position: absolute; display: block; width: 256px; height: 256px; max-width: none !important; max-height: none; margin: 0; border-radius: 0; background: none; }
-#ostMeshApp .omx-map .omx-pin { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -100%); font-size: 1.6rem; line-height: 1; filter: drop-shadow(0 2px 3px rgba(0,0,0,.5)); }
-#ostMeshApp .omx-map small { position: absolute; right: 4px; bottom: 2px; padding: 0 3px; border-radius: 3px; font-size: 9px; line-height: 1.3; color: #333; background: rgba(255,255,255,.7); }
 
-/* me / settings */
-#ostMeshApp .omx-me { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; min-width: 0; }
-#ostMeshApp .omx-me > div:last-child { min-width: 0; }
-#ostMeshApp .omx-me .omx-av { width: 56px; height: 56px; font-size: 1.6rem; border-radius: 18px; }
-#ostMeshApp .omx-me b { display: block; font-size: 1.1rem; font-weight: 800; }
-#ostMeshApp .omx-me span { display: block; font-size: .76rem; color: var(--omx-muted); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; overflow-wrap: anywhere; }
-#ostMeshApp .omx-emojis { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
-#ostMeshApp .omx-emojis button { flex: 0 0 auto; width: 44px; height: 44px; min-width: 44px; min-height: 0; padding: 0; margin: 0; border-radius: 10px; border: 1px solid var(--omx-border); background: var(--omx-surface2); font-size: 1.25rem; line-height: 1; box-shadow: none; }
-#ostMeshApp .omx-emojis button.on { border-color: var(--omx-accent); background: rgba(109,159,255,.18); }
-
-/* touch screens: every small pill control is a 44 px target (contract C1) */
-@media (pointer: coarse) {
-  #ostMeshApp .omx-livebar button, #ostMeshApp .omx-livepick button, #ostMeshApp .omx-callc button, #ostMeshApp .omx-newpill { min-height: 44px; }
-}
-/* narrow phones: 📞 🎥 move into the ⋯ sheet (B54) */
-@media (max-width: 399.98px) { #ostMeshApp .omx-head .omx-hide-narrow { display: none; } }
-
-/* ---------- action sheet + confirm (#omxSheet, contract C6) ---------- */
-#omxSheet { position: fixed; inset: 0; z-index: 12500; display: none; align-items: flex-end; justify-content: center; background: rgba(3,6,15,.6); color: var(--text, #e4e7f1); font-family: inherit; font-size: 16px; line-height: 1.35; text-align: left; touch-action: none; overscroll-behavior: none; }
-#omxSheet.on { display: flex; }
-#omxSheet:focus { outline: none; }
-#omxSheet *, #omxSheet *::before, #omxSheet *::after { box-sizing: border-box; }
-#omxSheet .omxs-box { width: min(100%, 440px); max-height: 85vh; overflow: auto; touch-action: pan-y; padding: 8px 14px calc(14px + env(safe-area-inset-bottom)); border-radius: 20px 20px 0 0; background: var(--bg-alt, #0c0f1a); border: 1px solid var(--border, rgba(109,159,255,.2)); border-bottom: 0; box-shadow: 0 -20px 60px rgba(0,0,0,.55); animation: omxs-up .22s cubic-bezier(.2,.8,.2,1); }
-@media (min-width: 700px) { #omxSheet { align-items: center; } #omxSheet .omxs-box { border-radius: 20px; border-bottom: 1px solid var(--border, rgba(109,159,255,.2)); padding-bottom: 14px; } }
-@keyframes omxs-up { from { transform: translateY(40px); opacity: 0; } to { transform: none; opacity: 1; } }
-#omxSheet .omxs-grab { width: 40px; height: 4px; border-radius: 2px; background: rgba(255,255,255,.2); margin: 2px auto 10px; }
-#omxSheet h3 { margin: 0 0 4px; padding: 0 4px; font-size: 1.05rem; font-weight: 800; line-height: 1.3; color: var(--text, #e4e7f1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-#omxSheet p { margin: 0 0 10px; padding: 0 4px; font-size: .88rem; line-height: 1.45; color: var(--text-muted, #8b92ad); }
-#omxSheet .omxs-items { display: grid; gap: 6px; margin: 8px 0; }
-#omxSheet button { font-family: inherit; cursor: pointer; }
-#omxSheet .omxs-item { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 2px; width: 100%; min-height: 52px; padding: 10px 14px; margin: 0; border-radius: 14px; border: 1px solid var(--border, rgba(109,159,255,.15)); background: var(--surface, #111627); color: var(--text, #e4e7f1); font-size: .95rem; font-weight: 700; line-height: 1.25; text-align: left; box-shadow: none; }
-#omxSheet .omxs-item small { font-size: .78rem; font-weight: 500; color: var(--text-muted, #8b92ad); }
-#omxSheet .omxs-item:hover, #omxSheet .omxs-item:focus-visible { border-color: rgba(109,159,255,.45); }
-#omxSheet .omxs-item.danger { color: #fca5a5; border-color: rgba(239,68,68,.35); }
-#omxSheet .omxs-item.primary { background: linear-gradient(135deg, #2c5bd4, #6a45d6); border-color: transparent; color: #fff; align-items: center; }
-#omxSheet .omxs-item.danger:only-child { background: #b91c1c; border-color: transparent; color: #fff; align-items: center; }
-#omxSheet .omxs-cancel { display: block; width: 100%; min-height: 48px; padding: 0 14px; margin: 0; border-radius: 14px; border: 0; background: var(--surface2, #171d32); color: var(--text, #e4e7f1); font-size: .95rem; font-weight: 800; line-height: 1; box-shadow: none; }
-#omxSheet :focus-visible { outline: 2px solid var(--accent, #6d9fff); outline-offset: 2px; }
-
-/* ---------- toasts: above every overlay; message toasts are tappable (B2) ---------- */
-.omx-toasts { position: fixed; left: 50%; bottom: calc(84px + env(safe-area-inset-bottom)); transform: translateX(-50%); display: grid; gap: 6px; z-index: 13500; pointer-events: none; width: min(92vw, 420px); font-family: inherit; font-size: 16px; line-height: 1.35; }
-.omx-toast { padding: 10px 14px; border-radius: 12px; background: rgba(17,22,39,.97); border: 1px solid rgba(109,159,255,.3); color: #e4e7f1; font-size: .86rem; font-weight: 700; line-height: 1.35; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,.45); transition: opacity .3s; overflow-wrap: anywhere; }
-.omx-toast.err { border-color: rgba(239,68,68,.6); }
-.omx-toast.tap { pointer-events: auto; cursor: pointer; min-height: 44px; display: flex; align-items: center; justify-content: center; }
-.omx-toast.msg { text-align: left; justify-content: flex-start; border-color: rgba(109,159,255,.5); }
-.omx-toast.msg::after { content: 'Open ›'; margin-left: auto; padding-left: 12px; color: #9ec0ff; font-weight: 800; white-space: nowrap; }
-.omx-toast.tap:focus-visible { outline: 2px solid #6d9fff; outline-offset: 2px; }
-.omx-toast.out { opacity: 0; }
+/* ---------- global rules kept from phase 1 (verbatim: the app family's effect on the page around it) ---------- */
 /* during a call the bottom of the screen belongs to the call buttons */
 html.omx-incall .omx-toasts { top: calc(16px + env(safe-area-inset-top)); bottom: auto; }
 /* phones: a bottom action sheet's rows (a red "Delete" included) are never covered by a toast */
@@ -239,32 +428,6 @@ html.omx-incall .omx-toasts { top: calc(16px + env(safe-area-inset-top)); bottom
 @media (max-width: 699.98px) {
   html:has(#oslSheet.on) .omx-toasts { top: calc(16px + env(safe-area-inset-top)); bottom: auto; }
 }
-
-/* ---------- call screen (ost-mesh-call.js, z 13000): self-sufficient; button labels never wrap ---------- */
-#omxCall { position: fixed; inset: 0; z-index: 13000; display: none; background: radial-gradient(circle at 50% 30%, #1b2a4a, #05070d 70%); color: #fff; font-family: inherit; font-size: 16px; line-height: 1.35; text-align: left; touch-action: none; overscroll-behavior: none; }
-#omxCall.on { display: block; }
-#omxCall:focus { outline: none; }
-#omxCall *, #omxCall *::before, #omxCall *::after { box-sizing: border-box; }
-#omxCall #omxCallRemote { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; background: #000; display: none; }
-#omxCall.video.live #omxCallRemote { display: block; }
-#omxCall #omxCallLocal { position: absolute; right: 14px; top: calc(14px + env(safe-area-inset-top)); width: 112px; height: 150px; object-fit: cover; border-radius: 14px; border: 2px solid rgba(255,255,255,.4); background: #111; display: none; transform: scaleX(-1); z-index: 2; }
-#omxCall.video #omxCallLocal { display: block; }
-#omxCall #omxCallLocal[hidden] { display: none !important; }
-#omxCall .omxc-top { position: absolute; left: 0; right: 0; top: 18%; display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; z-index: 1; text-shadow: 0 1px 6px rgba(0,0,0,.6); }
-#omxCall.video.live .omxc-top { top: calc(18px + env(safe-area-inset-top)); left: 14px; right: auto; align-items: flex-start; text-align: left; }
-#omxCall .omxc-av { width: 110px; height: 110px; border-radius: 36px; display: grid; place-items: center; font-size: 3rem; font-weight: 900; line-height: 1; box-shadow: 0 0 0 10px rgba(255,255,255,.06); }
-#omxCall.video.live .omxc-av { display: none; }
-#omxCall:not(.live) .omxc-av { animation: omxc-pulse 1.6s ease-in-out infinite; }
-@keyframes omxc-pulse { 50% { box-shadow: 0 0 0 22px rgba(255,255,255,.03); } }
-#omxCall .omxc-top b { font-size: 1.5rem; }
-#omxCall .omxc-top span { font-size: .95rem; opacity: .85; }
-#omxCall .omxc-btns { position: absolute; left: 0; right: 0; bottom: calc(40px + env(safe-area-inset-bottom)); display: flex; justify-content: center; gap: 18px; z-index: 2; flex-wrap: wrap; }
-#omxCall .omxc-btns button { flex: 0 0 auto; width: 72px; height: 72px; min-width: 72px; min-height: 0; max-width: none; padding: 0; margin: 0; border-radius: 50%; border: 0; background: rgba(255,255,255,.16); color: #fff; font-family: inherit; font-size: 1.6rem; line-height: 1.1; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; overflow-wrap: normal; box-shadow: none; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
-#omxCall .omxc-btns button small { display: block; margin-top: 2px; font-size: 11px; font-weight: 700; opacity: .9; white-space: nowrap; }
-#omxCall .omxc-btns button.off { background: rgba(255,255,255,.85); color: #111; }
-#omxCall .omxc-btns .omxc-no { background: #dc2626; }   /* white label ≥ 4.5:1 */
-#omxCall .omxc-btns .omxc-yes { background: #15803d; }
-#omxCall :focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
 
 /* Hide the legacy floating mesh trigger everywhere: the app has its own launchers. */
 #ost-mesh-trigger { display: none !important; }
@@ -278,9 +441,3 @@ html.omx-lock .nx-dock, html.omx-lock #ostAppBar, html.omx-lock #ostAppSheet, ht
  * the site's bottom bar (z 99500) must not cover Decline / Accept either. */
 html.omx-incall .nx-dock, html.omx-incall #ostAppBar, html.omx-incall #ostAppSheet, html.omx-incall #ostAppSheetBackdrop, html.omx-incall #ost-mesh-trigger { display: none !important; }
 html.omx-lock, html.omx-lock body, html.omx-lock body.ost-mobile-shell { overflow: hidden !important; overscroll-behavior: none !important; }
-
-@media (prefers-reduced-motion: reduce) {
-  #omxSheet .omxs-box { animation: none; }
-  #omxCall:not(.live) .omxc-av { animation: none; }
-  #ostMeshApp .omx-prog.ind i { animation-duration: 2.4s; }
-}

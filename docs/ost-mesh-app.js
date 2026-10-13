@@ -1,8 +1,8 @@
 /* ==========================================================================
  * OST · Mesh app — one place to add people, chat and share files (all devices)
  * --------------------------------------------------------------------------
- * Replaces the five overlapping mesh surfaces with a single sheet:
- *   Chats · Add (QR / link / scan / paste) · Me
+ * Replaces the five overlapping mesh surfaces with a single app:
+ *   Home (OST Social) · Chats · Add (QR / link / scan / paste) · Me / Settings
  * Identity: the SAME keys and address the legacy pavilion uses
  *   (localStorage ost_mesh_identity_v1 / ost_mesh_addr_v1), so nobody loses
  *   their contacts. ECDH P-384 → AES-256-GCM per pair (mesh/mesh-crypto.js).
@@ -16,8 +16,13 @@
  *   accepts it and is retried on reconnect / 'online' / tab focus / boot.
  * One network gate: a single WebSocket chain with jittered backoff and a
  *   circuit breaker that honours HTTP 429/503 + Retry-After for every call.
- * History: core.back.push(fn)/pop(token) — app and chat each own one entry,
- *   so the browser/system Back closes the chat, then the app.
+ * History: core.back.push(fn)/pop(token)/retag(token, meta) — app and chat each
+ *   own one entry, so the browser/system Back closes the chat, then the app.
+ * Layout (phase 2): three bands written on #ostMeshApp as data-layout / data-band
+ *   (phone < 600 · drawer 600-1099 · desk >= 1100, compact 1100-1279 / full), one DOM
+ *   (#omxRail · #omxPane · main#omxMain > #omxHead + #omxBody · #omxAside · #omxInfo ·
+ *   #omxTabs); icons from ost-mesh-icons.js (one zero-size #omxSprite); the chat
+ *   surfaces' markup from ost-mesh-chat-ui.js (pure HTML builders).
  * window.OST_MESH_APP.{ open, close, openChat, addFromText, unread, sync, state, core }
  *   events: 'ost:mesh-app:unread' {total}, 'ost:mesh-app:message', 'ost:mesh-app:profile'
  * ========================================================================== */
@@ -25,6 +30,8 @@ import {
   generateIdentity, exportPublicBundle, importPeerBundle, deriveSessionKey,
   sealPayload, openPayload, sealBytes, openBytes, fingerprint as fpOf
 } from './mesh/mesh-crypto.js?v=1';
+import { SPRITE, icon as iconHtml, hasIcon } from './ost-mesh-icons.js?v=1';
+import * as CUI from './ost-mesh-chat-ui.js?v=1';
 
 if (!window.OST_MESH_APP) {
   const API = String(window.OST_MESH_API_BASE || window.OST_API_BASE || 'https://ost-api.nachogtavl.workers.dev').replace(/\/+$/, '');
@@ -33,7 +40,8 @@ if (!window.OST_MESH_APP) {
     profile: 'ost.mesh.app.profile.v1', contacts: 'ost.mesh.app.contacts.v1', msgs: 'ost.mesh.app.msgs.v1.', seen: 'ost.mesh.app.seen.v1'
   };
   const MSG_CAP = 500, BLOB_MAX = 6 * 1024 * 1024, IMG_MAX_EDGE = 1600, AUTO_FETCH_IMG = 3 * 1024 * 1024;
-  const EMOJIS = ['🦊', '🐼', '🐸', '🦁', '🐙', '🦄', '🐯', '🐳', '🦉', '🐝', '🌵', '🍀', '⚡', '🔥', '🌙', '🎧', '🛰️', '🎲'];
+  // ONE shared set of 20 avatar emoji (core.EMOJIS; OST Social uses the same list).
+  const EMOJIS = ['🦊', '🐼', '🐸', '🦁', '🐙', '🦄', '🐯', '🐳', '🦉', '🐝', '🌵', '🍀', '⚡', '🔥', '🌙', '🎧', '🛰️', '🎲', '🚀', '💎'];
 
   /* ---------- utils ---------- */
   const $ = (id) => document.getElementById(id);
@@ -46,12 +54,32 @@ if (!window.OST_MESH_APP) {
   const shortA = (a) => { a = String(a || ''); const m = a.match(/([0-9a-f]{4})$/i); return 'mesh·' + (m ? m[1] : a.slice(-4)); };
   const fmtSize = (n) => n < 1024 ? n + ' B' : n < 1048576 ? (n / 1024).toFixed(0) + ' KB' : (n / 1048576).toFixed(1) + ' MB';
   const tTime = (ts) => new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  const tDay = (ts) => { const d = new Date(ts), n = new Date(); return d.toDateString() === n.toDateString() ? 'Today' : d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' }); };
+  const dayStart = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const daysAgo = (ts) => Math.round((dayStart(new Date()) - dayStart(new Date(ts))) / 86400000);
+  // Day pills: "Today" · "Yesterday" · a weekday within 6 days · "Mon, Sep 28" (+ the year when not this year).
+  const tDay = (ts) => {
+    const d = new Date(ts), n = daysAgo(ts);
+    if (n === 0) return 'Today';
+    if (n === 1) return 'Yesterday';
+    if (n > 1 && n < 7) return d.toLocaleDateString(undefined, { weekday: 'long' });
+    const o = { weekday: 'short', month: 'short', day: 'numeric' }; if (d.getFullYear() !== new Date().getFullYear()) o.year = 'numeric';
+    return d.toLocaleDateString(undefined, o);
+  };
+  // List rows: the time today, the weekday this week, "Oct 2" older (+ the year when not this year).
+  const tShort = (ts) => {
+    if (!ts) return '';
+    const d = new Date(ts), n = daysAgo(ts);
+    if (n <= 0) return tTime(ts);
+    if (n < 7) return d.toLocaleDateString(undefined, { weekday: 'short' });
+    const o = { month: 'short', day: 'numeric' }; if (d.getFullYear() !== new Date().getFullYear()) o.year = 'numeric';
+    return d.toLocaleDateString(undefined, o);
+  };
   const ago = (ts) => { const s = Math.max(0, (Date.now() - ts) / 1000); return s < 60 ? 'now' : s < 3600 ? Math.floor(s / 60) + 'm' : s < 86400 ? Math.floor(s / 3600) + 'h' : Math.floor(s / 86400) + 'd'; };
   const agoText = (ts) => { const a = ago(ts); return a === 'now' ? 'just now' : a + ' ago'; };
   const uid = () => hex(crypto.getRandomValues(new Uint8Array(8)));
-  const hue = (a) => { let h = 0; for (let i = 0; i < a.length; i++) h = (h * 31 + a.charCodeAt(i)) >>> 0; return h % 360; };
-  const avStyle = (a) => `background:linear-gradient(135deg,hsl(${hue(a)},70%,52%),hsl(${(hue(a) + 60) % 360},75%,42%))`;
+  const hue = (a) => { a = String(a || ''); let h = 0; for (let i = 0; i < a.length; i++) h = (h * 31 + a.charCodeAt(i)) >>> 0; return h % 360; };
+  // One identity colour per person (12 hues, white initials >= 4.74:1): callers keep style="${avStyle(a)}".
+  const avStyle = (a) => `--av:var(--omx-id-${hue(a) % 12})`;
   const lsGet = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k) || 'null'); return v == null ? d : v; } catch (_) { return d; } };
   const lsSet = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (_) {} };
   const ssGet = (k, d) => { try { const v = JSON.parse(sessionStorage.getItem(k) || 'null'); return v == null ? d : v; } catch (_) { return d; } };
@@ -59,8 +87,22 @@ if (!window.OST_MESH_APP) {
   const clipName = (s) => String(s == null ? '' : s).replace(/[\u0000-\u001f\u007f]/g, '').slice(0, 40);   // peer-supplied names
   const clipEmoji = (s) => String(s == null ? '' : s).slice(0, 8);
   const isPhone = () => !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
-  // Toasts live above every overlay of the app family (z 13500). Message toasts
-  // are tappable and open that chat (opts.onTap).
+  const mq = (q) => { try { return !!(window.matchMedia && window.matchMedia(q).matches); } catch (_) { return false; } };
+  const reducedMotion = () => mq('(prefers-reduced-motion: reduce)');
+  // Popovers need a precise pointer and room; touch screens and narrow windows get bottom sheets.
+  const deskPointer = () => window.innerWidth >= 700 && mq('(pointer: fine)');
+  const netName = () => { try { return String((window.OST_CONFIG && window.OST_CONFIG.network) || 'devnet'); } catch (_) { return 'devnet'; } };
+  const isDevnet = () => !/^mainnet/i.test(netName());
+  const devnetChip = () => isDevnet() ? `<span class="omx-devnet">${esc(netName())}</span>` : '';
+  // Icons (contract C9): core.icon(id, cls) -> <svg class="omx-i"><use href="#i-id"/></svg>; '' for an unknown id.
+  // A plugin's old emoji "icon" still renders, as aria-hidden text.
+  const icon = (id, cls) => iconHtml(id, cls);
+  const icoOrText = (ico, cls) => hasIcon(ico) ? iconHtml(ico, cls) : (ico ? `<b aria-hidden="true">${esc(ico)}</b>` : '');
+
+  /* ---------- toasts: above every overlay of the app family (z 13500) ----------
+   * toast(msg, kind, opts): kind 'ok' (check-circle) · 'err' (alert, role=alert) · 'msg' (an avatar) · '';
+   * opts.avatar (address) + opts.sub (a second line); opts.action = {label, run} = ONE real text button
+   * (6 s instead of 4 s); opts.onTap = the whole toast opens something (message toasts). At most 2 at once. */
   let toastHost;
   function toast(msg, kind, opts) {
     try {
@@ -71,32 +113,70 @@ if (!window.OST_MESH_APP) {
         toastHost.setAttribute('role', 'status'); toastHost.setAttribute('aria-live', 'polite');
       }
       if (kind === 'err') S.lastErr = msg;
-      const t = document.createElement('div'); t.className = 'omx-toast' + (kind ? ' ' + kind : ''); t.textContent = msg;
-      const kill = () => { t.classList.add('out'); setTimeout(() => t.remove(), 300); };
-      if (typeof opts.onTap === 'function') {
+      const t = document.createElement('div'); t.className = 'omx-toast' + (kind ? ' ' + kind : '');
+      if (kind === 'err') t.setAttribute('role', 'alert');
+      const act = opts.action && opts.action.label && typeof opts.action.run === 'function' ? opts.action : null;
+      const tap = !act && typeof opts.onTap === 'function' ? opts.onTap : null;
+      const lead = opts.avatar ? avHtml(opts.avatar, 'sm') : kind === 'ok' ? icon('check-circle', 'is-on') : kind === 'err' ? icon('alert', 'is-on') : (opts.ico ? icon(opts.ico) : '');
+      const txt = opts.sub ? `<span class="t"><b>${esc(msg)}</b><small>${esc(opts.sub)}</small></span>` : `<span class="t">${esc(msg)}</span>`;
+      t.innerHTML = lead + txt + (act ? `<button type="button" class="omx-textbtn">${esc(act.label)}</button>` : tap ? `<span class="omx-textbtn" aria-hidden="true">${esc(opts.tapLabel || 'Open')}</span>` : '');
+      const kill = () => { if (t.classList.contains('out')) return; t.classList.add('out'); setTimeout(() => t.remove(), 200); };
+      if (act) t.querySelector('button').addEventListener('click', (e) => { e.stopPropagation(); kill(); try { act.run(); } catch (_) {} });
+      if (tap) {
         t.classList.add('tap'); t.setAttribute('role', 'button'); t.tabIndex = 0;
-        const go = () => { kill(); try { closeSheet(-1); opts.onTap(); } catch (_) {} };   // the tap navigates: an open sheet is left behind, not kept on top
+        if (opts.sub) t.setAttribute('aria-label', msg + ': ' + opts.sub + ' (open)');
+        const go = () => { kill(); try { closeSheet(-1); tap(); } catch (_) {} };   // the tap navigates: an open sheet is left behind, not kept on top
         t.addEventListener('click', go);
         t.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } });
       }
-      while (toastHost.children.length >= 4) toastHost.firstChild.remove();
+      const live = Array.from(toastHost.children).filter((x) => !x.classList.contains('out'));
+      while (live.length >= 2) { const o = live.shift(); o.classList.add('out'); setTimeout(() => o.remove(), 200); }
       placeToasts();
       toastHost.appendChild(t);
-      setTimeout(kill, opts.ms || (kind === 'err' ? 4500 : 3200));
+      setTimeout(kill, opts.ms || (act || tap ? 6000 : 4000));
     } catch (_) {}
   }
-  // Wide screens: while the app's side drawer is open, toasts are centred over the
-  // drawer instead of straddling its edge (the page behind is blurred out).
+  // Desk: bottom centre. Phone / drawer with the app open: 12 px above the tab bar (.phone); the
+  // drawer band centres them over the 600 px panel. Phone with the app closed: above the site's bar.
   function placeToasts() {
     if (!toastHost) return;
-    let left = '', width = '';
+    const open = appIsOpen(), L = open ? layout() : '';
+    toastHost.classList.toggle('phone', open && L !== 'desk');
+    toastHost.classList.toggle('site', !open && window.innerWidth < 600);
+    let left = '', maxW = '';
     try {
-      const sh = appIsOpen() && root ? root.querySelector('.omx-shell') : null, r = sh && sh.getBoundingClientRect();
-      if (r && r.width > 0 && r.width < window.innerWidth - 40) { left = Math.round(r.left + r.width / 2) + 'px'; width = Math.round(Math.min(420, r.width - 24)) + 'px'; }
+      const r = open && L === 'drawer' && shellEl ? shellEl.getBoundingClientRect() : null;
+      if (r && r.width > 0 && r.width < window.innerWidth - 40) { left = Math.round(r.left + r.width / 2) + 'px'; maxW = Math.round(r.width - 32) + 'px'; }
     } catch (_) {}
     if (toastHost.style.left !== left) toastHost.style.left = left;
-    if (toastHost.style.width !== width) toastHost.style.width = width;
+    if (toastHost.style.maxWidth !== maxW) toastHost.style.maxWidth = maxW;
   }
+
+  /* ---------- avatar: ONE component (core.av) ----------
+   * av(addr, size) or av({addr, emoji, name, img, online, pending}, size); size xs · sm · (md) · lg · xl · xxl.
+   * Identity colour by address hash; the emoji / initial is drawn by CSS from data-g (so an avatar never adds
+   * text to a button's label); a photo falls back to data-fb when it fails. The presence dot is for friends
+   * only, never for yourself; a contact who has not accepted yet gets the pending ring. */
+  function avHtml(x, size) {
+    const o = (x && typeof x === 'object') ? x : { addr: x || '' };
+    const a = String(o.addr || ''), self = !!a && a === S.address, c = !self && a ? contact(a) : null;
+    const name = o.name != null ? String(o.name) : self ? ((S.profile && S.profile.name) || '') : ((c && c.name) || '');
+    const emoji = o.emoji != null ? String(o.emoji) : self ? ((S.profile && S.profile.emoji) || '') : ((c && c.emoji) || '');
+    let img = o.img || '';
+    if (!img && self && S.profile && S.profile.avatar && o.img !== '') img = API + '/mesh/v1/social/media/' + encodeURIComponent(S.profile.avatar);
+    const dot = !self && (o.online != null ? !!o.online : !!(c && c.state === 'friend' && online(a)));
+    const pend = o.pending != null ? !!o.pending : !!(c && c.state === 'pending-out');
+    const glyph = emoji ? clipEmoji(emoji) : name.trim() ? Array.from(name.trim())[0].toUpperCase() : '';
+    const cls = 'omx-av' + (size && size !== 'md' ? ' ' + String(size).replace(/[^\w -]/g, '') : '') + (emoji && !img ? ' emoji' : '') + (pend ? ' pending' : '');
+    const inner = img ? `<img src="${esc(img)}" alt="" loading="lazy">` : glyph ? '' : icon('user');
+    return `<span class="${cls}" style="--av:var(--omx-id-${hue(a || name || 'x') % 12})"${!img && glyph ? ` data-g="${esc(glyph)}"` : ''}${img ? ` data-fb="${esc(glyph)}"` : ''} aria-hidden="true">${inner}${dot ? '<i class="on"></i>' : ''}</span>`;
+  }
+  // A photo avatar that fails to load shows the emoji / initial instead (never the broken-image glyph).
+  document.addEventListener('error', (e) => {
+    const t = e.target; if (!t || t.tagName !== 'IMG') return;
+    const p = t.parentElement; if (!p || !p.classList || !p.classList.contains('omx-av')) return;
+    const g = p.getAttribute('data-fb') || ''; t.remove(); if (g) p.setAttribute('data-g', g); else p.insertAdjacentHTML('afterbegin', icon('user'));
+  }, true);
 
   /* ---------- state ---------- */
   const S = {
@@ -105,7 +185,8 @@ if (!window.OST_MESH_APP) {
     view: 'chats', peer: null, keys: {}, blobs: {}, ws: null, wsOk: false, wsTries: 0, announced: false, announceErr: '',
     typingFrom: {}, scanStream: null, scanTimer: null, pendingAdd: null, ready: false,
     backApp: 0, backChat: 0, opener: null, hubOkAt: 0, pollOkAt: 0, netErrAt: 0, bootAt: Date.now(), newBelow: 0, friendsAt: 0,
-    dir: {}, hubDown: false, viewIsDefault: false, msgTop: 0
+    dir: {}, hubDown: false, viewIsDefault: false, msgTop: 0,
+    chatFilter: 'all', chatQuery: '', chatSearching: false, addTab: 'invite', unreadFrom: null
   };
   if (!S.profile) { const old = lsGet('ost.mesh.profile.v2', null); S.profile = { name: (old && (old.nickname || old.handle)) || '', emoji: (old && old.avatar && old.avatar.length <= 4 ? old.avatar : '') || EMOJIS[Math.floor(Math.random() * EMOJIS.length)] }; lsSet(K.profile, S.profile); }
   const myName = () => (S.profile && S.profile.name) || shortA(S.address);
@@ -146,15 +227,21 @@ if (!window.OST_MESH_APP) {
     return n;
   }
 
-  /* ---------- plugin surface (ost-social.js, ost-mesh-call.js) ----------
-   * views:     name -> { tab?: {ico, lbl, order}, render(ctx) }   extra tabs/views
+  /* ---------- plugin surface (ost-social.js, ost-mesh-call.js) — phase 2 additions are backwards compatible ----------
+   * views:     name -> { tab?: {ico, lbl, order, home?, railLbl?, avatar?}, rail?: {ico, lbl, order},
+   *                      parent?, hideHead?, noTabs?, render(ctx) }    ctx = { head, body, tabs, layout, band, icon, av }
+   *            ico = a sprite id (an unknown value, e.g. an old plugin's emoji, renders as text)
    * headBtns:  [(peer) -> html]                                    chat header buttons
-   * attach:    [{ ico, lbl, run(peer) }]                           chat "+" menu items
+   * attach:    [{ ico, lbl, sub?, tile?, run(peer) }]              chat "+" tray tiles / popover rows
    * actions:   name -> fn(el, event)                               data-act handlers
    * ws:        [fn(m)]                                             every socket message
-   * badges:    name -> () => number                                tab badges
-   * menu:      [(peer) -> [{ label, sub?, danger?, run() }]]       extra rows in the chat ⋯ sheet */
-  const X = { views: {}, headBtns: [], attach: [], actions: {}, ws: [], badges: {}, menu: [] };
+   * badges:    name -> () => number                                nav badges (rail / tab bar)
+   * menu:      [(peer) -> [{ label, sub?, danger?, ico?, run() }]] extra rows in the chat ⋯ menu
+   * aside:     [{ id, order, views: string[] | (v) => bool, render(ctx) -> html }]   desk right-column modules
+   * info:      [(peer) -> [{ ico, lbl, act }]]                     contact-info pane actions (desk)
+   * viewer:    ({ src, alt, from, ts, download }) => void          image viewer for chat photos
+   * compose:   () => void                                          rail Post / phone header compose */
+  const X = { views: {}, headBtns: [], attach: [], actions: {}, ws: [], badges: {}, menu: [], aside: [], info: [], viewer: null, compose: null };
 
   /* ---------- identity (shared with legacy mesh.js) ---------- */
   async function loadIdentity() {
@@ -412,8 +499,8 @@ if (!window.OST_MESH_APP) {
     if (!m || typeof m !== 'object') return;
     X.ws.forEach((fn) => { try { fn(m); } catch (_) {} });
     if (m.t === 'msg' && m.item) { handleIncoming(m.item).then((ok) => { if (ok !== false) wsSend({ t: 'ack', items: [{ id: m.item.id, ts: m.item.ts }] }); else retryInboxSoon(); }); }
-    else if (m.t === 'typing' && m.from) { S.typingFrom[m.from] = Date.now(); if (S.view === 'chat' && S.peer === m.from) paintTyping(); }
-    else if (m.t === 'presence' && m.presence) { Object.assign(S.presence, m.presence); if (S.view === 'chats') paintChats(); if (S.view === 'chat') paintChatHead(); }
+    else if (m.t === 'typing' && m.from) { S.typingFrom[m.from] = Date.now(); onTypingChange(m.from); }
+    else if (m.t === 'presence' && m.presence) { Object.assign(S.presence, m.presence); onPresence(); }
     else if (m.t === 'hello') { /* authenticated */ }
   }
   // Mailbox poll — single-flight, skipped while the breaker is open. Items whose
@@ -451,7 +538,7 @@ if (!window.OST_MESH_APP) {
     if (hubBusy()) return;
     fetch(API + '/mesh/v1/presence?addrs=' + encodeURIComponent(addrs.join(',')), { cache: 'no-store' })
       .then((r) => r.json().catch(() => null).then((j) => { noteHub(r.status, r.headers, j); return j; }))
-      .then((j) => { if (j && j.presence) { Object.assign(S.presence, j.presence); if (S.view === 'chats') paintChats(); if (S.view === 'chat') paintChatHead(); } }).catch(() => {});
+      .then((j) => { if (j && j.presence) { Object.assign(S.presence, j.presence); onPresence(); } }).catch(() => {});
   }
   const online = (a) => !!(S.presence[a] && S.presence[a].online);
 
@@ -471,8 +558,8 @@ if (!window.OST_MESH_APP) {
       const c = contact(from), pn = clipName(p.profile && p.profile.name), pe = clipEmoji(p.profile && p.profile.emoji);
       if (!c || c.state !== 'friend') upsertContact(from, { state: 'pending-in', name: (c && c.name) || pn, emoji: (c && c.emoji) || pe, ts: item.ts });
       rememberSeen(item.id);
-      toast((pn || shortA(from)) + ' wants to connect', '', { onTap: () => { open('chats'); } });
-      if (S.view === 'chats' || S.view === 'add') render(); else paintBadge();
+      toast((pn || shortA(from)) + ' wants to connect', '', { avatar: from, onTap: () => { S.chatFilter = 'requests'; open('chats'); } });
+      refreshLists();
       return true;
     }
     if (p.t === 'friend-accepted') {
@@ -480,7 +567,7 @@ if (!window.OST_MESH_APP) {
       upsertContact(from, { state: 'friend', name: (c && c.name) || clipName(p.profile && p.profile.name), emoji: (c && c.emoji) || clipEmoji(p.profile && p.profile.emoji) });
       rememberSeen(item.id);
       try { await keyFor(from); } catch (_) {}
-      toast(nameOf(from) + ' accepted — you are connected', '', { onTap: () => openChat(from) });
+      toast(nameOf(from) + ' accepted — you are connected', '', { avatar: from, onTap: () => openChat(from) });
       if (S.view === 'chat' && S.peer === from) { paintChatHead(); paintMsgs(); } else render();
       return true;
     }
@@ -516,20 +603,21 @@ if (!window.OST_MESH_APP) {
         }
       }
       if (!appendMsg(from, msg)) return true;                 // same message again (a sender retry)
-      upsertContact(from, { last: { text: previewOf(msg), ts: msg.ts }, unread: visible ? 0 : ((contact(from) || {}).unread || 0) + 1 });
+      upsertContact(from, { last: { text: previewOf(msg), ts: msg.ts, id: msg.id, kind: msg.kind }, unread: visible ? 0 : ((contact(from) || {}).unread || 0) + 1 });
       if (S.view === 'chat' && S.peer === from && appIsOpen()) {
         const pinned = isPinned(); paintMsgs();
         if (!pinned) { S.newBelow++; paintNewPill(); }
       }
       if (!visible) {
         const pv = previewOf(msg);
-        if (unaccepted) { if (!c) toast(nameOf(from) + ' wants to message you', '', { onTap: () => open('chats') }); }   // once, without the text
+        if (unaccepted) { if (!c) toast(nameOf(from) + ' wants to message you', '', { avatar: from, onTap: () => { S.chatFilter = 'requests'; open('chats'); } }); }   // once, without the text
         else {
-          if (!(S.view === 'chat' && S.peer === from && appIsOpen())) toast(nameOf(from) + ': ' + pv.slice(0, 60), 'msg', { onTap: () => openChat(from), ms: 5000 });
+          if (!(S.view === 'chat' && S.peer === from && appIsOpen())) toast(nameOf(from), 'msg', { avatar: from, sub: pv.slice(0, 80), onTap: () => openChat(from) });
           if (!appIsOpen() || document.hidden) notifyMsg(from, pv);
         }
-        if (S.view === 'chats') paintChats();
       }
+      if (listShown()) paintChats();
+      if (asideShown()) paintAside('friends');
       paintBadge();
       try { window.dispatchEvent(new CustomEvent('ost:mesh-app:message', { detail: { from, kind: msg.kind } })); } catch (_) {}
       return true;
@@ -575,10 +663,10 @@ if (!window.OST_MESH_APP) {
   // Call outcome lives in `cst`; `status` on own messages is the delivery state.
   const callSt = (m) => m.cst || (['missed', 'declined', 'ended', 'busy'].includes(m.status) ? m.status : 'ended');
   function previewOf(m) {
-    if (m.kind === 'file') return '📎 ' + m.name;
-    if (m.kind === 'loc') return m.live ? '📡 Live location' : '📍 Location';
-    if (m.kind === 'pay') return '💸 ' + m.amount + ' ' + m.ccy;
-    if (m.kind === 'call') { const s = callSt(m); return (m.video ? '🎥 ' : '📞 ') + (s === 'missed' ? (m.dir === 'me' ? 'No answer' : 'Missed call') : s === 'declined' ? 'Declined call' : s === 'busy' ? 'Busy' : 'Call'); }
+    if (m.kind === 'file') return /^image\//.test(m.mime || '') ? 'Photo' : /^video\//.test(m.mime || '') ? 'Video' : (m.name || 'File');
+    if (m.kind === 'loc') return m.live ? 'Live location' : 'Location';
+    if (m.kind === 'pay') return (m.dir === 'me' ? 'Sent ' : 'Received ') + m.amount + ' ' + m.ccy + (m.note ? ' · ' + m.note : '');
+    if (m.kind === 'call') { const s = callSt(m), k = m.video ? 'video' : 'voice'; return s === 'missed' ? (m.dir === 'me' ? 'No answer · ' + k + ' call' : 'Missed ' + k + ' call') : s === 'declined' ? 'Declined ' + k + ' call' : s === 'busy' ? 'Busy · ' + k + ' call' : (m.video ? 'Video' : 'Voice') + ' call'; }
     if (m.kind === 'unsupported') return 'Unsupported message';
     return m.text || '';
   }
@@ -611,8 +699,9 @@ if (!window.OST_MESH_APP) {
     if (m.kind === 'call') m.cst = rec.cst || rec.status || 'ended';
     appendMsg(to, m); outboxAdd(to, m.id);
     if (file) outFilePut(m.id, file);
-    upsertContact(to, { last: { text: previewOf(m), ts: m.ts, id: m.id } });
+    upsertContact(to, { last: { text: previewOf(m), ts: m.ts, id: m.id, kind: m.kind } });
     if (S.view === 'chat' && S.peer === to) paintMsgs(true);   // own send always jumps to the newest
+    if (listShown()) paintChats();
     return deliver(to, m.id);
   }
   async function deliver(to, id) {
@@ -692,7 +781,7 @@ if (!window.OST_MESH_APP) {
     deliver(to, id).catch((e) => toast(sendErrText(e), 'err'));
   }
   // The Chats row shows when the newest message of a chat did not go out.
-  function markLast(a, id, fail) { const c = contact(a); if (c && c.last && c.last.id === id && !!c.last.fail !== fail) upsertContact(a, { last: Object.assign({}, c.last, { fail }) }); if (S.view === 'chats') paintChats(); }
+  function markLast(a, id, fail) { const c = contact(a); if (c && c.last && c.last.id === id && !!c.last.fail !== fail) upsertContact(a, { last: Object.assign({}, c.last, { fail }) }); if (listShown()) paintChats(); }
   const sendErrText = (e) => (e && e.scoped && e.message) ? e.message : (e && e.transient && navigator.onLine === false) ? 'You are offline — it will send when you are back.' : (e && e.transient) ? 'Not delivered yet — retrying automatically.' : ((e && e.message) || 'Send failed');
   // Generic sealed send for plugin / rich message kinds (pay, call log, location).
   // With localMsg the message goes through the outbox; without it, it is fire-and-forget.
@@ -754,7 +843,7 @@ if (!window.OST_MESH_APP) {
     const st = LIVE[S.peer];
     if (!st) { el.hidden = true; el.innerHTML = ''; return; }
     const left = Math.max(0, Math.round((st.until - Date.now()) / 60000));
-    el.hidden = false; el.innerHTML = `<span>📡 Sharing live location · ${left >= 60 ? Math.floor(left / 60) + ' h ' + (left % 60) + ' min' : left + ' min'} left</span><button data-act="live-stop">Stop</button>`;
+    el.hidden = false; el.innerHTML = `${icon('live')}<span>Sharing live location · ${left >= 60 ? Math.floor(left / 60) + ' h ' + (left % 60) + ' min' : left + ' min'} left</span><button type="button" class="omx-textbtn" data-act="live-stop">Stop</button>`;
   }
   function lon2x(lng, z) { return (lng + 180) / 360 * Math.pow(2, z); }
   function lat2y(lat, z) { const r = lat * Math.PI / 180; return (1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2 * Math.pow(2, z); }
@@ -763,7 +852,7 @@ if (!window.OST_MESH_APP) {
     const W = 260, Hh = 150, left = Math.round(W / 2 - 256 - px), top = Math.round(Hh / 2 - 256 - py);
     let tiles = '';
     for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) tiles += `<img alt="" loading="lazy" src="https://tile.openstreetmap.org/${z}/${tx + dx}/${ty + dy}.png" style="left:${(dx + 1) * 256}px;top:${(dy + 1) * 256}px">`;
-    return `<div class="omx-map"><div class="omx-tiles" style="left:${left}px;top:${top}px">${tiles}</div><b class="omx-pin">📍</b><small>© OpenStreetMap</small></div>`;
+    return `<div class="omx-map"><div class="omx-tiles" style="left:${left}px;top:${top}px">${tiles}</div><b class="omx-pin" aria-hidden="true">${icon('pin', 'is-on')}</b><small>© OpenStreetMap</small></div>`;
   }
   async function verifyPay(a, m) {
     if (m.verified || !m.sig || !window.OST_WALLET || !OST_WALLET.rpcCall) return;
@@ -853,7 +942,7 @@ if (!window.OST_MESH_APP) {
       if (r && r.state === 'accepted') upsertContact(info.addr, { state: 'friend' });
       // The hub just told us whether they are online — the chat header shows the same thing.
       if (r && typeof r.online === 'boolean') S.presence[info.addr] = Object.assign({}, S.presence[info.addr], { online: r.online });
-      toast((r && r.state === 'accepted') ? 'Connected with ' + nameOf(info.addr) : 'Request sent to ' + nameOf(info.addr) + (r && r.online ? ' (online now)' : ' — they get it when they open OST'));
+      toast((r && r.state === 'accepted') ? 'Connected with ' + nameOf(info.addr) : 'Request sent to ' + nameOf(info.addr) + (r && r.online ? ' (online now)' : ' — they get it when they open OST'), 'ok');
       openChat(info.addr);
       askPresence();
       return true;
@@ -873,7 +962,7 @@ if (!window.OST_MESH_APP) {
       catch (e) { if (!e || e.code !== 'no_pending_request') throw e; r = await signed('POST', '/mesh/v1/friend/request', { from: S.address, to: addr, profile }); }
       const linked = !r || !r.state || r.state === 'accepted';
       upsertContact(addr, { state: 'friend', unread: 0 }); await keyFor(addr).catch(() => {});
-      toast(linked ? 'Connected with ' + nameOf(addr) : 'Accepted — you can chat with ' + nameOf(addr) + ' now'); openChat(addr); askPresence(); return true;
+      toast(linked ? 'Connected with ' + nameOf(addr) : 'Accepted — you can chat with ' + nameOf(addr) + ' now', 'ok'); openChat(addr); askPresence(); return true;
     } catch (e) { toast(e && e.message || 'Could not accept', 'err'); return false; }
   }
   // The hub is told first; the local list changes only when that worked.
@@ -906,7 +995,7 @@ if (!window.OST_MESH_APP) {
           if (rec) upsertContact(a, { bundle: rec.bundle, fp: rec.fingerprint || c.fp || '', name: c.name || clipName(rec.profile && rec.profile.name), emoji: c.emoji || clipEmoji(rec.profile && rec.profile.emoji) });
           await new Promise((res) => setTimeout(res, 400));
         }
-        if (S.view === 'chats' || S.view === 'add') render(); else paintBadge();
+        refreshLists();
       } catch (_) {}
     })().finally(() => { friendsP = null; });
     return friendsP;
@@ -1003,6 +1092,15 @@ if (!window.OST_MESH_APP) {
       }
       return true;
     },
+    // retag(token, meta): a new meta for an entry; when it is the newest written entry and the current
+    // history state, the state is rewritten in place (replaceState) — no new Back step.
+    retag(token, meta) {
+      const e = BK.stack.find((x) => x.token === token); if (!e) return false;
+      e.meta = typeof meta === 'string' ? meta.slice(0, 80) : '';
+      const top = BK.stack.filter((x) => x.written).pop();
+      try { if (e.written && top === e && history.state && Number(history.state.omx) === token) bkWrite(e, true); } catch (_) {}
+      return true;
+    },
     size: () => BK.stack.length
   };
   window.addEventListener('popstate', (ev) => {
@@ -1031,96 +1129,256 @@ if (!window.OST_MESH_APP) {
     });
   }
 
-  /* ---------- action sheet + confirm (contract C6), rendered in #omxSheet ---------- */
-  let sheetEl = null, sheetDone = null, sheetOpener = null;
+  /* ---------- sheets: ONE component, three presentations (contract C6), rendered in #omxSheet ----------
+   * .pop   anchored popover — an anchor and a viewport >= 700 px (menus); no scrim, flips to stay on screen
+   * .sheet bottom sheet     — viewports < 700 px; scrim, grabber, a separate Cancel row
+   * .dlg   dialog           — no anchor, >= 700 px (confirms and forms); 10 vh from the top
+   * .over  raises it above the lightbox / story viewer (12900, contract C5).
+   * actionSheet(o) and confirm(o) keep their phase-1 signatures; o.anchor is optional. The placement
+   * (placePop) and the mode rule (sheetMode) are exported so OST Social's #oslSheet uses the same rules. */
+  let sheetEl = null, sheetDone = null, sheetOpener = null, sheetOff = null, sheetExitT = 0;
+  const sheetMode = (anchor, kind) => window.innerWidth >= 700 ? (anchor && kind !== 'confirm' ? 'pop' : 'dlg') : 'sheet';
+  // Below-end of the anchor with an 8 px gap (or the place asked for), flipped when it does not fit,
+  // clamped 8 px inside the viewport, transform-origin toward the anchor. Layout sizes (offsetWidth),
+  // so the enter animation's scale does not skew the measurement.
+  function placePop(box, anchor, place) {
+    if (!box || !anchor || !anchor.getBoundingClientRect) return;
+    place = place || 'below-end';
+    const r = anchor.getBoundingClientRect(), vw = window.innerWidth, vh = window.innerHeight, g = 8;
+    box.style.left = '0px'; box.style.top = '0px'; box.style.right = 'auto'; box.style.bottom = 'auto';
+    const w = box.offsetWidth, h = box.offsetHeight, start = /start/.test(place), above = /^above/.test(place);
+    let left = start ? r.left : r.right - w;
+    left = Math.max(8, Math.min(vw - w - 8, left));
+    let top = above ? r.top - g - h : r.bottom + g;
+    if (!above && top + h > vh - 8 && r.top - g - h >= 8) top = r.top - g - h;
+    else if (above && top < 8 && r.bottom + g + h <= vh - 8) top = r.bottom + g;
+    top = Math.max(8, Math.min(vh - h - 8, top));
+    box.style.left = Math.round(left) + 'px'; box.style.top = Math.round(top) + 'px';
+    box.style.setProperty('--omx-pop-origin', (top < r.top ? 'bottom ' : 'top ') + (start ? 'left' : 'right'));
+  }
+  // Arrow keys / Home / End move between the menu items of a box (role=menu semantics).
+  function menuKeys(e, box) {
+    if (!box || !/^(ArrowDown|ArrowUp|Home|End)$/.test(e.key)) return false;
+    const items = Array.from(box.querySelectorAll('[role="menuitem"], .omx-mi')).filter((b) => !b.disabled && b.getClientRects().length);
+    if (!items.length) return false;
+    const i = items.indexOf(document.activeElement);
+    const n = e.key === 'Home' ? 0 : e.key === 'End' ? items.length - 1 : e.key === 'ArrowDown' ? (i + 1) % items.length : (i <= 0 ? items.length - 1 : i - 1);
+    e.preventDefault(); try { items[n].focus({ preventScroll: true }); } catch (_) {}
+    return true;
+  }
+  // The sheet's keys: Escape closes (returns true), arrows / Home / End move between items, Tab stays inside.
+  function sheetKey(e) {
+    if (e.key === 'Escape') { e.preventDefault(); closeSheet(-1); return true; }
+    const box = sheetEl.querySelector('.omx-box');
+    if (menuKeys(e, box)) return false;
+    if (e.key === 'Tab') {                                           // keep focus inside the sheet
+      const f = Array.from(sheetEl.querySelectorAll('button, input, a[href]')).filter((b) => !b.disabled && b.getClientRects().length); if (!f.length) return false;
+      const i = f.indexOf(document.activeElement);
+      if (i < 0) { e.preventDefault(); (e.shiftKey ? f[f.length - 1] : f[0]).focus(); }
+      else if (e.shiftKey && i === 0) { e.preventDefault(); f[f.length - 1].focus(); } else if (!e.shiftKey && i === f.length - 1) { e.preventDefault(); f[0].focus(); }
+    }
+    return false;
+  }
+  // A sheet raised above the lightbox / story viewer (.over) is the top layer: it takes Escape, Tab and the
+  // navigation keys before OST Social's overlay handler (window, capture phase) can hand them to the viewer
+  // underneath (Escape closed the lightbox and left the sheet up). Registered when this module loads, so it
+  // runs before social's listener. The call screen above everything keeps its own keys.
+  window.addEventListener('keydown', (e) => {
+    if (!sheetUp() || !sheetEl.classList.contains('over') || document.querySelector('#omxCall')) return;
+    if (e.key === 'Escape' && e.isComposing) return;
+    if (e.key === 'Escape' || e.key === 'Tab' || /^(ArrowUp|ArrowDown|ArrowLeft|ArrowRight|Home|End| )$/.test(e.key) || sheetEl.contains(e.target)) { e.stopImmediatePropagation(); sheetKey(e); }
+  }, true);
   function sheetMount() {
     if (sheetEl && sheetEl.isConnected) return sheetEl;
-    sheetEl = document.createElement('div'); sheetEl.id = 'omxSheet';
-    sheetEl.setAttribute('role', 'dialog'); sheetEl.setAttribute('aria-modal', 'true'); sheetEl.setAttribute('aria-labelledby', 'omxSheetT'); sheetEl.tabIndex = -1;
-    sheetEl.innerHTML = '<div class="omxs-box"><div class="omxs-grab" aria-hidden="true"></div><h3 id="omxSheetT"></h3><p id="omxSheetB"></p><div class="omxs-items" id="omxSheetI"></div><button type="button" class="omxs-cancel" data-v="-1">Cancel</button></div>';
-    document.body.appendChild(sheetEl);
-    sheetEl.addEventListener('click', (e) => { if (e.target === sheetEl) { closeSheet(-1); return; } const b = e.target.closest('[data-v]'); if (b) closeSheet(Number(b.getAttribute('data-v'))); });
-    sheetEl.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closeSheet(-1); return; }
-      if (e.key === 'Tab') {                                         // keep focus inside the sheet
-        const f = Array.from(sheetEl.querySelectorAll('button')); if (!f.length) return;
-        const i = f.indexOf(document.activeElement);
-        if (e.shiftKey && i <= 0) { e.preventDefault(); f[f.length - 1].focus(); } else if (!e.shiftKey && i === f.length - 1) { e.preventDefault(); f[0].focus(); }
-      }
-    });
+    sheetEl = $('omxSheet') || document.createElement('div'); sheetEl.id = 'omxSheet';
+    if (!sheetEl.isConnected) document.body.appendChild(sheetEl);
+    sheetEl.addEventListener('click', (e) => { if (e.target === sheetEl) { closeSheet(-1); return; } const b = e.target.closest('[data-v]'); if (b && sheetEl.contains(b)) closeSheet(Number(b.getAttribute('data-v'))); });
+    sheetEl.addEventListener('keydown', (e) => { if (sheetKey(e)) e.stopPropagation(); });
+    // a popover has no scrim: scrolling the page under it closes it (the layer would otherwise swallow the wheel)
+    sheetEl.addEventListener('wheel', () => { if (sheetEl.classList.contains('pop')) closeSheet(-1); }, { passive: true });
     return sheetEl;
   }
-  function showSheet(title, text, items, cancelLabel) {
-    closeSheet(-1);                                                  // one sheet at a time
+  const sheetUp = () => !!(sheetEl && sheetEl.classList.contains('on') && !sheetEl.classList.contains('closing'));
+  // items: [{label, sub?, danger?, ico?, tile?, value?}]; opts: {anchor, place, cls, note, noteIco, kind:'confirm', mode}
+  function showSheet(title, text, items, cancelLabel, opts) {
+    opts = opts || {}; items = items || [];
+    closeSheet(-1, true);                                            // one sheet at a time
     const el = sheetMount();
+    clearTimeout(sheetExitT);
     return new Promise((resolve) => {
-      const ae = document.activeElement; sheetOpener = ae && ae !== document.body && !el.contains(ae) ? ae : null;
-      const t = $('omxSheetT'), b = $('omxSheetB');
-      t.textContent = title || ''; t.hidden = !title;
-      b.textContent = text || ''; b.hidden = !text;
-      $('omxSheetI').innerHTML = items.map((it, i) => `<button type="button" class="omxs-item${it.danger ? ' danger' : ''}${it.primary ? ' primary' : ''}" data-v="${i}"><span>${esc(it.label)}</span>${it.sub ? `<small>${esc(it.sub)}</small>` : ''}</button>`).join('');
-      el.querySelector('.omxs-cancel').textContent = cancelLabel || 'Cancel';
+      const ae = document.activeElement;
+      sheetOpener = ae && ae !== document.body && !el.contains(ae) ? ae : (opts.anchor || null);
+      const confirmKind = opts.kind === 'confirm';
+      const anchor = opts.anchor && opts.anchor.isConnected && opts.anchor.getClientRects().length ? opts.anchor : null;
+      const mode = opts.mode || sheetMode(anchor, opts.kind);
+      const over = !!document.querySelector('#oslLight.on, #oslStory.on');
+      let h = '';
+      if (mode === 'sheet') h += '<div class="grab" aria-hidden="true"></div>';
+      if (title) h += `<h3 id="omxSheetT">${esc(title)}</h3>`;
+      if (text) h += `<p id="omxSheetB">${esc(text)}</p>`;
+      if (confirmKind) {
+        const it = items[0] || { label: 'OK' };
+        h += `<div class="omx-askrow"><button type="button" class="omx-ghost" data-v="-1">${esc(cancelLabel || 'Cancel')}</button><button type="button" class="omx-primary${it.danger ? ' omx-danger' : ''}" data-v="0">${esc(it.label)}</button></div>`;
+      } else {
+        let rows = '', sawDanger = false;
+        items.forEach((it, i) => {
+          if (it.danger && !sawDanger && i > 0 && mode === 'pop') rows += '<hr>';
+          if (it.danger) sawDanger = true;
+          const lead = it.tile != null ? `<span class="tile" style="--tile:${/^\d+$/.test(String(it.tile)) ? 'var(--omx-id-' + (Number(it.tile) % 12) + ')' : esc(it.tile)}" aria-hidden="true">${icon(it.ico) || ''}</span>` : (it.ico ? icoOrText(it.ico) : '');
+          rows += `<button type="button" class="omx-mi${it.danger ? ' danger' : ''}" role="menuitem" data-v="${i}">${lead}<span>${esc(it.label)}${it.sub ? `<small>${esc(it.sub)}</small>` : ''}</span></button>`;
+        });
+        h += `<div class="grp"${mode === 'pop' ? '' : ' role="menu"'}>${rows}</div>`;
+        if (opts.note) h += `<div class="omx-boxnote">${icon(opts.noteIco || 'lock')}<span>${esc(opts.note)}</span></div>`;
+        if (mode === 'sheet') h += `<button type="button" class="omx-cancel" data-v="-1">${esc(cancelLabel || 'Cancel')}</button>`;
+      }
+      const role = mode === 'pop' ? `role="menu" aria-label="${esc(title || 'Options')}"` : `role="${confirmKind ? 'alertdialog' : 'dialog'}" aria-modal="true"${title ? ' aria-labelledby="omxSheetT"' : ` aria-label="Options"`}${text ? ' aria-describedby="omxSheetB"' : ''}`;
+      el.className = 'on ' + mode + (over ? ' over' : '');
+      el.innerHTML = `<div class="omx-box${opts.cls ? ' ' + esc(opts.cls) : ''}" ${role} tabindex="-1">${h}</div>`;
+      const box = el.firstElementChild;
+      if (mode === 'pop') {
+        placePop(box, anchor, opts.place);
+        const off = () => closeSheet(-1), sc = scroller();
+        if (sc) sc.addEventListener('scroll', off, { passive: true });
+        window.addEventListener('resize', off);
+        sheetOff = () => { if (sc) sc.removeEventListener('scroll', off); window.removeEventListener('resize', off); };
+      }
+      if (mode === 'sheet') document.documentElement.classList.add('omx-sheeton');   // phones: toasts move off the sheet's rows
       sheetDone = (i) => resolve(i >= 0 && items[i] ? items[i] : null);
-      el.classList.add('on'); document.documentElement.classList.add('omx-sheeton');   // phones: toasts move off the sheet's rows
-      setTimeout(() => { try { (el.querySelector('.omxs-item') || el).focus({ preventScroll: true }); } catch (_) {} }, 40);
+      setTimeout(() => {
+        try {
+          if (!sheetUp() || el.firstElementChild !== box) return;
+          const first = confirmKind ? box.querySelector(items[0] && items[0].danger ? '.omx-askrow .omx-ghost' : '.omx-askrow .omx-primary') : box.querySelector('.omx-mi');
+          (first || box).focus({ preventScroll: true });
+        } catch (_) {}
+      }, 30);
     });
   }
-  function closeSheet(i) {
+  function closeSheet(i, immediate) {
     if (!sheetEl || !sheetEl.classList.contains('on')) return;
-    sheetEl.classList.remove('on'); document.documentElement.classList.remove('omx-sheeton');
+    clearTimeout(sheetExitT);
+    if (sheetEl.classList.contains('closing')) { sheetEl.classList.remove('on', 'closing'); return; }   // already resolved; finish the exit now
+    if (sheetOff) { sheetOff(); sheetOff = null; }
+    document.documentElement.classList.remove('omx-sheeton');
     const done = sheetDone; sheetDone = null;
+    const box = sheetEl.querySelector('.omx-box');
+    if (!immediate && sheetEl.classList.contains('pop') && box && !reducedMotion()) {
+      sheetEl.classList.add('closing'); box.classList.add('closing');
+      sheetExitT = setTimeout(() => { sheetEl.classList.remove('on', 'closing'); }, 160);
+    } else sheetEl.classList.remove('on', 'closing');
     if (sheetOpener && sheetOpener.isConnected) { try { sheetOpener.focus({ preventScroll: true }); } catch (_) {} }
     sheetOpener = null;
     if (done) done(i);
   }
-  // actionSheet({title, items:[{label, sub?, danger?, value}]}) -> Promise<value|null>
-  function actionSheet(o) { o = o || {}; const items = (o.items || []).filter(Boolean); return showSheet(o.title, o.body, items, o.cancel).then((it) => (it ? (it.value !== undefined ? it.value : it.label) : null)); }
-  // confirm({title, body, ok, danger}) -> Promise<boolean>
-  function confirmSheet(o) { o = o || {}; return showSheet(o.title, o.body, [{ label: o.ok || 'OK', danger: !!o.danger, primary: !o.danger }], o.cancel).then((it) => !!it); }
+  // actionSheet({title, body, items:[{label, sub?, danger?, ico?, tile?, value}], anchor?, cls?, note?, place?}) -> Promise<value|null>
+  function actionSheet(o) { o = o || {}; const items = (o.items || []).filter(Boolean); return showSheet(o.title, o.body, items, o.cancel, { anchor: o.anchor, place: o.place, cls: o.cls, note: o.note, noteIco: o.noteIco, mode: o.mode }).then((it) => (it ? (it.value !== undefined ? it.value : it.label) : null)); }
+  // confirm({title, body, ok, danger, cancel?}) -> Promise<boolean>: a dialog >= 700 px (Cancel left, action right), a sheet below
+  function confirmSheet(o) { o = o || {}; return showSheet(o.title, o.body, [{ label: o.ok || 'OK', danger: !!o.danger }], o.cancel, { kind: 'confirm', mode: o.mode }).then((it) => !!it); }
 
-  /* ---------- UI ---------- */
-  let root, body, headEl, tabsEl;
+  /* ---------- the app shell (one DOM, three bands) ---------- */
+  let root, shellEl, railEl, paneEl, mainEl, headEl, body, asideEl, infoEl, tabsEl;
   const CORE_VIEWS = ['chats', 'add', 'me', 'settings', 'chat'];
   const SESSION_KEY = 'omx.session.v1', DRAFT_KEY = 'omx.drafts.v1';
   function homeView() { const k = Object.keys(X.views).find((v) => X.views[v].tab && X.views[v].tab.home); return k || 'chats'; }
   function saveSession() { ssSet(SESSION_KEY, { open: appIsOpen(), view: S.view, peer: S.view === 'chat' ? S.peer : null, path: location.pathname, at: Date.now() }); }
+  // Bands (contract C8): computed from three media queries, written as data-layout / data-band on the root;
+  // JS and CSS read the same attribute. render() runs only when the band value changes, never per resize.
+  const MQ = {};
+  function bandNow() {
+    const phone = mq('(max-width: 599.98px)'), desk = mq('(min-width: 1100px)');
+    const L = phone ? 'phone' : desk ? 'desk' : 'drawer';
+    return { layout: L, band: L === 'desk' ? (mq('(min-width: 1280px)') ? 'full' : 'compact') : '' };
+  }
+  function applyBand() {
+    if (!root) return false;
+    const b = bandNow(), changed = root.getAttribute('data-layout') !== b.layout || (root.getAttribute('data-band') || '') !== b.band;
+    if (changed) { root.setAttribute('data-layout', b.layout); if (b.band) root.setAttribute('data-band', b.band); else root.removeAttribute('data-band'); }
+    return changed;
+  }
+  const layout = () => (root && root.getAttribute('data-layout')) || bandNow().layout;
+  const band = () => (root && root.getAttribute('data-band')) || '';
+  const chatLayout = () => !!(root && root.classList.contains('omx-chatlayout'));
+  // The element that scrolls the current main view: the full-width shell on desk outside Chats, else #omxBody.
+  const scroller = () => (root && layout() === 'desk' && !chatLayout() ? shellEl : body) || null;
+  const listShown = () => !!$('omxChats');
+  const asideShown = () => !!(root && appIsOpen() && layout() === 'desk' && !chatLayout());
+  function onBand() {
+    const changed = applyBand();
+    if (changed) { if (appIsOpen()) { closeSheet(-1, true); render(); } else placeToasts(); }
+  }
   function mount() {
     if ($('ostMeshApp')) return;
     root = document.createElement('div'); root.id = 'ostMeshApp';
     root.setAttribute('role', 'dialog'); root.setAttribute('aria-modal', 'true'); root.setAttribute('aria-labelledby', 'omxTitle'); root.setAttribute('aria-label', 'OST Mesh'); root.tabIndex = -1;
-    root.innerHTML = '<div class="omx-shell"><div class="omx-head" id="omxHead"></div><div class="omx-body" id="omxBody"></div><div class="omx-tabs" id="omxTabs" role="navigation" aria-label="OST Mesh sections"></div></div>';
+    root.innerHTML = '<div class="omx-shell"><nav id="omxRail" class="omx-rail" aria-label="OST Mesh"></nav><section id="omxPane" class="omx-pane" aria-label="Chats"></section>' +
+      '<main id="omxMain" class="omx-view"><div class="omx-head" id="omxHead"></div><div class="omx-body" id="omxBody"></div></main>' +
+      '<aside id="omxAside" class="omx-aside" aria-label="Highlights"></aside><aside id="omxInfo" class="omx-info" aria-label="Contact info"></aside>' +
+      '<nav id="omxTabs" class="omx-tabs" aria-label="OST Mesh sections"></nav></div>';
     document.body.appendChild(root);
-    body = $('omxBody'); headEl = $('omxHead'); tabsEl = $('omxTabs');
-    root.addEventListener('click', (e) => { if (e.target === root) close(); });
+    shellEl = root.firstElementChild; railEl = $('omxRail'); paneEl = $('omxPane'); mainEl = $('omxMain');
+    headEl = $('omxHead'); body = $('omxBody'); asideEl = $('omxAside'); infoEl = $('omxInfo'); tabsEl = $('omxTabs');
+    // The icon sprite, once, zero-size (NOT display:none, so <use> resolves in every family root).
+    if (!$('omxSprite')) document.body.insertAdjacentHTML('beforeend', SPRITE);
+    try { if (navigator.deviceMemory && navigator.deviceMemory <= 4) document.documentElement.classList.add('omx-lowfx'); } catch (_) {}
+    applyBand();
+    ['(max-width: 599.98px)', '(min-width: 1100px)', '(min-width: 1280px)'].forEach((q) => {
+      try { const m = window.matchMedia(q); MQ[q] = m; if (m.addEventListener) m.addEventListener('change', onBand); else if (m.addListener) m.addListener(onBand); } catch (_) {}
+    });
+    // The backdrop closes the app only in the drawer band (the desk shell covers the whole screen).
+    root.addEventListener('click', (e) => { if (e.target === root && root.getAttribute('data-layout') === 'drawer') close(); });
     root.addEventListener('click', onClick);
     root.addEventListener('change', onChange);
-    // Failed bubbles are role=button: Enter / Space retry like a tap.
-    root.addEventListener('keydown', (e) => { const t = e.target; if ((e.key === 'Enter' || e.key === ' ') && t && t.classList && t.classList.contains('omx-b') && t.hasAttribute('data-act')) { e.preventDefault(); t.click(); } });
+    root.addEventListener('input', onInput);
+    root.addEventListener('keydown', onRootKey);
+    root.addEventListener('animationend', (e) => { if (e.target === root || e.target === shellEl) root.classList.remove('entering'); });
+    body.addEventListener('scroll', onBodyScroll, { passive: true });
+    try { if (window.ResizeObserver) new ResizeObserver(setAsideTop).observe(asideEl); } catch (_) {}
+    window.addEventListener('resize', () => { setAsideTop(); placeToasts(); }, { passive: true });
+  }
+  // Sticky right column: it scrolls with the page until its bottom shows, then sticks.
+  function setAsideTop() {
+    if (!root || !asideEl) return;
+    const v = Math.min(0, window.innerHeight - (asideEl.offsetHeight || 0)) + 'px';
+    if (root.style.getPropertyValue('--omx-aside-top') !== v) root.style.setProperty('--omx-aside-top', v);
+  }
+  // Phone feed (views registered with hideHead): the 56 px header slides away on scroll-down and back on
+  // scroll-up. Never on desk, never under reduced motion.
+  let hhTop = 0;
+  function onBodyScroll() {
+    const top = body.scrollTop;
+    if (!mainEl.classList.contains('hide-head') || layout() !== 'phone' || reducedMotion()) { hhTop = top; if (mainEl.classList.contains('head-away')) mainEl.classList.remove('head-away'); return; }
+    const d = top - hhTop;
+    if (top <= 56) { mainEl.classList.remove('head-away'); hhTop = top; return; }
+    if (Math.abs(d) <= 8) return;
+    mainEl.classList.toggle('head-away', d > 0);
+    hhTop = top;
   }
   // The app family (contract C1) and the site's own dialogs (which sit above the app and own their keys).
   const FAMILY = '#ostMeshApp, #oslSheet, #oslLight, #oslStory, #omxSheet, #omxCall, .omx-toasts';
   const SITE_DIALOG = '[aria-modal="true"], [role="dialog"], [role="alertdialog"], dialog[open]';
-  const overlayUp = () => !!document.querySelector('#oslSheet.on, #oslLight.on, #oslStory.on, #omxSheet.on, #omxCall');
+  const overlayUp = () => !!document.querySelector('#oslSheet.on, #oslLight.on, #oslStory.on, #omxSheet.on:not(.closing), #omxCall');
   const inSiteDialog = (t) => !!(t && t.nodeType === 1 && t.closest && !t.closest(FAMILY) && t.closest(SITE_DIALOG));
-  // Escape (contract C3): document level, capture phase, so it works wherever focus
-  // is; overlays of the app family (sheets, lightbox, story, call) handle their own.
+  // Escape (contract C3): document level, capture phase, so it works wherever focus is; overlays of the
+  // app family (sheets, lightbox, story, call) handle their own. Order: popover / sheet → contact-info
+  // pane → chat → inner view → app.
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape' || e.defaultPrevented || e.isComposing) return;
     // #omxSheet handles its own Escape; this covers focus having left the sheet (it is the top overlay only
     // while no social overlay / call screen sits above it).
-    if (sheetEl && sheetEl.classList.contains('on') && !sheetEl.contains(e.target) && !document.querySelector('#oslSheet.on, #oslLight.on, #oslStory.on, #omxCall')) { e.preventDefault(); closeSheet(-1); return; }
+    if (sheetUp() && !sheetEl.contains(e.target) && !document.querySelector('#oslSheet.on, #oslLight.on, #oslStory.on, #omxCall')) { e.preventDefault(); closeSheet(-1); return; }
     if (!appIsOpen() || overlayUp()) return;
     if (inSiteDialog(e.target)) return;                              // a site dialog opened above the app
     e.preventDefault();
+    const q = $('omxChatQ');
+    if (q && (S.chatQuery || (e.target === q && q.value))) { S.chatSearching = false; S.chatQuery = ''; q.value = ''; paintChatRows(); return; }   // the search first
+    if (root.classList.contains('info-open')) { toggleInfo(false); const b = headEl.querySelector('[data-act="peer-info"]'); if (b) { try { b.focus({ preventScroll: true }); } catch (_) {} } return; }
     const sxBack = S.view !== 'chat' && headEl && headEl.querySelector('[data-act="sx-back"]');
     if (S.view === 'chat') leaveChat(); else if (sxBack) sxBack.click(); else close();
   }, true);
-  // Focus containment for the modal app (aria-modal): Tab / Shift+Tab wrap inside
-  // it (tappable toasts included), and focus that reaches the page behind (a click
-  // on the backdrop, a site script) is brought back. Overlays above handle their own.
+  // Focus containment for the modal app (aria-modal): Tab / Shift+Tab wrap inside it (rail, pane and aside
+  // included; tappable toasts too), and focus that reaches the page behind is brought back.
   function tabbables() {
     const list = Array.from(root.querySelectorAll('a[href], button, input, textarea, select, video[controls], audio[controls], [tabindex]'))
-      .concat(Array.from(document.querySelectorAll('.omx-toasts .omx-toast.tap:not(.out)')));
+      .concat(Array.from(document.querySelectorAll('.omx-toasts .omx-toast.tap:not(.out), .omx-toasts .omx-toast:not(.out) button')));
     return list.filter((el) => el.tabIndex >= 0 && !el.disabled && el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden');
   }
   document.addEventListener('keydown', (e) => {
@@ -1159,7 +1417,12 @@ if (!window.OST_MESH_APP) {
     // registers the real home tab a moment later (Feed, at a cold #mesh) takes over.
     S.view = view || homeView(); S.viewIsDefault = !view;
     if (S.view !== 'chat') S.peer = null;
+    applyBand();                                                     // the band first, then the first render
     root.classList.add('open'); document.documentElement.classList.add('omx-lock');
+    if (!wasOpen) {
+      // drawer: 260 ms slide-in; desk: 200 ms fade (removed on animationend; a timer covers reduced motion)
+      root.classList.add('entering'); setTimeout(() => { if (root) root.classList.remove('entering'); }, 400);
+    }
     if (!wasOpen && !S.backApp) S.backApp = back.push(appBackFn, 'app', opts);
     render();
     if (!wasOpen) {
@@ -1171,165 +1434,467 @@ if (!window.OST_MESH_APP) {
   // close() always resets to the home tab; focus returns to whatever opened the app.
   function close(fromBack) {
     const wasOpen = appIsOpen();
-    stopScan(); closeSheet(-1);
-    if (root) root.classList.remove('open');
+    stopScan(); closeSheet(-1, true);
+    if (root) { root.classList.remove('open', 'entering', 'info-open'); if (mainEl) mainEl.classList.remove('head-away'); if (infoEl) infoEl.innerHTML = ''; }
     document.documentElement.classList.remove('omx-lock');
     const t = S.backApp; S.backApp = 0; S.backChat = 0;
     if (t && !fromBack) back.pop(t);                                 // also drops the chat entry above it
-    S.view = homeView(); S.viewIsDefault = true; S.peer = null; S.newBelow = 0;
+    S.view = homeView(); S.viewIsDefault = true; S.peer = null; S.newBelow = 0; S.unreadFrom = null; S.chatSearching = false; S.chatQuery = '';
+    lastKey = '';
     if (msgRO) { msgRO.disconnect(); msgRO = null; }
     saveSession(); placeToasts();
     if (wasOpen && S.opener && S.opener.isConnected) { try { S.opener.focus({ preventScroll: true }); } catch (_) {} }
     S.opener = null;
   }
+  // Desk: leaving a chat lands on the Chats pick state (same code path as phones).
   function leaveChat(fromBack) {
     const t = S.backChat; S.backChat = 0;
     if (t && !fromBack) back.pop(t);
-    closeSheet(-1);                                                  // a chat ⋯ sheet must not outlive its chat
-    S.view = S.backTo && S.backTo !== 'chat' ? S.backTo : 'chats'; S.backTo = null; S.peer = null; S.newBelow = 0; S.viewIsDefault = false;
+    closeSheet(-1, true);                                            // a chat ⋯ sheet must not outlive its chat
+    S.view = S.backTo && S.backTo !== 'chat' ? S.backTo : 'chats'; S.backTo = null; S.peer = null; S.newBelow = 0; S.viewIsDefault = false; S.unreadFrom = null;
+    if (root) root.classList.remove('info-open');
     if (body) body.style.padding = '';
     if (msgRO) { msgRO.disconnect(); msgRO = null; }
     render();
   }
-  function tabsHtml() {
-    const u = totalUnread(), req = Object.values(S.contacts).filter((c) => c.state === 'pending-in' || c.state === 'request').length;
-    const tabs = [
-      { v: 'chats', ico: '💬', lbl: 'Chats', order: 20, badge: u },
-      { v: 'add', ico: '➕', lbl: 'Add', order: 30, badge: req },
-      { v: 'me', ico: '🙂', lbl: 'Me', order: 40, badge: 0 }
+
+  /* ---------- navigation: rail (desk) and tab bar (phone / drawer) from ONE model ----------
+   * core items: chats 20, add 30, me 40, settings 60 (rail only) + plugin views with tab {ico, lbl, order,
+   * home?, railLbl?, avatar?} or rail {ico, lbl, order} (rail-only, e.g. Alerts). An unknown ico (an old
+   * plugin's emoji) renders as text. Active = aria-current="page" + solid icon + bold label. */
+  const reqCount = () => Object.values(S.contacts).filter((c) => c && (c.state === 'pending-in' || c.state === 'request')).length;
+  function navModel() {
+    const items = [
+      { v: 'chats', ico: 'chat', lbl: 'Chats', railLbl: 'Chats', tabOrder: 20, railOrder: 20, tab: true, rail: true },
+      { v: 'add', ico: 'user-plus', lbl: 'Add', railLbl: 'Add people', tabOrder: 30, railOrder: 30, tab: true, rail: true },
+      { v: 'me', ico: 'user', lbl: 'Me', railLbl: 'Profile', tabOrder: 40, railOrder: 40, tab: true, rail: true, avatar: true },
+      { v: 'settings', ico: 'settings', lbl: 'Settings', railLbl: 'Settings', tabOrder: 60, railOrder: 60, tab: false, rail: true }
     ];
-    Object.keys(X.views).forEach((k) => { const t = X.views[k].tab; if (!t) return; const i = tabs.findIndex((x) => x.v === k); const row = { v: k, ico: t.ico, lbl: t.lbl, order: t.order, badge: X.badges[k] ? X.badges[k]() : 0 }; if (i >= 0) tabs[i] = row; else tabs.push(row); });
-    tabs.sort((a, b) => a.order - b.order);
-    const active = (v) => S.view === v || (v === 'chats' && S.view === 'chat') || (X.views[S.view] && X.views[S.view].parent === v) || (v === 'me' && S.view === 'settings');
-    return tabs.map((t) => `<button type="button" data-tab="${t.v}" class="${active(t.v) ? 'on' : ''}"${active(t.v) ? ' aria-current="page"' : ''}><b aria-hidden="true">${t.ico}</b><span>${esc(t.lbl)}</span>${t.badge ? `<span class="omx-badge" aria-label="${t.badge} new">${t.badge > 99 ? '99+' : t.badge}</span>` : ''}</button>`).join('');
+    Object.keys(X.views).forEach((k) => {
+      const d = X.views[k] || {}, t = d.tab, r = d.rail; if (!t && !r) return;
+      const i = items.findIndex((x) => x.v === k), base = i >= 0 ? items[i] : null, src = t || r;
+      const row = {
+        v: k, ico: src.ico || (base && base.ico) || '', lbl: (t && t.lbl) || (base && base.lbl) || src.lbl || k,
+        railLbl: (t && t.railLbl) || (r && r.lbl) || (base && base.railLbl) || src.lbl || k,
+        tabOrder: Number(t && t.order) || (base ? base.tabOrder : 50), railOrder: Number((r && r.order) || (t && t.order)) || (base ? base.railOrder : 50),
+        tab: !!t || !!(base && base.tab && !r), rail: true, home: !!(t && t.home),
+        avatar: src.avatar != null ? !!src.avatar : !!(base && base.avatar)
+      };
+      if (i >= 0) items[i] = row; else items.push(row);
+    });
+    items.forEach((it) => { it.badge = navBadge(it.v); });
+    return items;
   }
-  // What the connection really is (dot + one line). "Offline — will send…" only
-  // when the browser says so; "Connected (polling)" when the mailbox poll works
-  // without a socket; never "Connecting…" past the first seconds.
+  function navBadge(v) {
+    if (v === 'chats') return totalUnread() + reqCount();
+    try { return X.badges[v] ? Math.max(0, Number(X.badges[v]()) || 0) : 0; } catch (_) { return 0; }
+  }
+  // The item that is "where you are" in a given nav (a rail-only item wins on the rail; parents otherwise).
+  function activeIn(items) {
+    const has = (v) => items.some((x) => x.v === v);
+    if (has(S.view)) return S.view;
+    if (S.view === 'chat') return 'chats';
+    let p = X.views[S.view] && X.views[S.view].parent, n = 0;
+    while (p && n++ < 5) { if (has(p)) return p; p = X.views[p] && X.views[p].parent; }
+    if (S.view === 'settings' || S.view === 'edit') return has('me') ? 'me' : '';
+    return '';
+  }
+  const navLabel = (lbl, n) => lbl + (n ? ', ' + n + ' new' : '');
+  const badgeHtml = (n) => n ? `<span class="omx-badge" aria-hidden="true">${n > 99 ? '99+' : n}</span>` : '';
+  function navItemHtml(it, host, act) {
+    const on = it.v === act, lbl = host === 'rail' ? it.railLbl : it.lbl;
+    const ic = it.avatar ? avHtml(S.address) : icoOrText(it.ico, on ? 'is-on' : '');
+    return `<button type="button" data-tab="${esc(it.v)}"${on ? ' aria-current="page"' : ''} aria-label="${esc(navLabel(lbl, it.badge))}"${host === 'rail' ? ` title="${esc(lbl)}"` : ''}>${ic}<span>${esc(lbl)}</span>${badgeHtml(it.badge)}</button>`;
+  }
+  const navSig = {};
+  function railHtml(items, act) {
+    const rail = items.filter((x) => x.rail).sort((a, b) => a.railOrder - b.railOrder);
+    const canPost = typeof X.compose === 'function' || !!X.views.compose;
+    const nm = (S.profile && S.profile.name) || '';
+    return `<div class="omx-brand"><span class="omx-brandmark" aria-hidden="true">${icon('logo')}</span><b>Mesh</b>${devnetChip()}<button type="button" class="omx-ib md" data-act="close" aria-label="Close Mesh (Esc)" title="Close Mesh (Esc)">${icon('close')}</button></div>` +
+      rail.map((it) => navItemHtml(it, 'rail', act)).join('') +
+      (canPost ? `<button type="button" class="omx-primary omx-lg omx-rail-post" data-act="nav-post" aria-label="New post" title="New post">${icon('pen')}<span>Post</span></button>` : '') +
+      `<div class="omx-rail-sp"></div><button type="button" class="omx-rail-me" data-act="account-menu" aria-label="Account menu" aria-haspopup="menu" title="${esc(nm || 'Account')}">${avHtml(S.address)}<span class="t"><b>${esc(nm || 'Set your name')}</b><small>${esc(shortA(S.address))}</small></span>${icon('more')}</button>`;
+  }
+  function tabsHtml(items, act) {
+    return items.filter((x) => x.tab).sort((a, b) => a.tabOrder - b.tabOrder).map((it) => navItemHtml(it, 'tabs', act)).join('');
+  }
+  // Rebuild a nav only when its items change; otherwise update the active state and badges in place
+  // (no innerHTML of the nav, so focus and transitions survive).
+  function paintNavHost(host, kind, items) {
+    if (!host) return;
+    const act = activeIn(items.filter((x) => kind === 'rail' ? x.rail : x.tab));
+    const sig = JSON.stringify(items.map((x) => [x.v, x.ico, x.lbl, x.railLbl, x.tab, x.rail, x.avatar, x.tabOrder, x.railOrder])) + '|' + (kind === 'rail' ? [typeof X.compose === 'function' || !!X.views.compose, S.profile && S.profile.name, S.profile && S.profile.emoji, S.profile && S.profile.avatar, S.address, netName()].join('|') : (S.profile && S.profile.emoji) + '|' + (S.profile && S.profile.avatar) + '|' + S.address);
+    if (navSig[kind] !== sig || !host.firstElementChild) { navSig[kind] = sig; host.innerHTML = kind === 'rail' ? railHtml(items, act) : tabsHtml(items, act); return; }
+    host.querySelectorAll('button[data-tab]').forEach((b) => {
+      const v = b.getAttribute('data-tab'), it = items.find((x) => x.v === v); if (!it) return;
+      const on = v === act, lbl = kind === 'rail' ? it.railLbl : it.lbl;
+      if (on) { if (b.getAttribute('aria-current') !== 'page') b.setAttribute('aria-current', 'page'); } else if (b.hasAttribute('aria-current')) b.removeAttribute('aria-current');
+      const ic = b.querySelector(':scope > svg.omx-i'); if (ic) ic.classList.toggle('is-on', on);
+      let bd = b.querySelector(':scope > .omx-badge');
+      if (it.badge) { const tx = it.badge > 99 ? '99+' : String(it.badge); if (!bd) { b.insertAdjacentHTML('beforeend', badgeHtml(it.badge)); } else if (bd.textContent !== tx) bd.textContent = tx; }
+      else if (bd) bd.remove();
+      const al = navLabel(lbl, it.badge); if (b.getAttribute('aria-label') !== al) b.setAttribute('aria-label', al);
+    });
+  }
+  // core.paintNav(): badges (and the active item) in both navs, in place; then the unread event (C2).
+  function paintNav() {
+    if (root) {
+      const items = navModel();
+      if (layout() === 'desk') paintNavHost(railEl, 'rail', items); else paintNavHost(tabsEl, 'tabs', items);
+    }
+    syncUnread();
+  }
+  const paintBadge = paintNav;
+
+  /* ---------- connection: a dot next to the Chats title; a banner ONLY when something is wrong ---------- */
+  // What the connection really is. "Offline" only when the browser says so; "Connected (polling)" when the
+  // mailbox poll works without a socket; never "Connecting…" past the first seconds.
   function netState() {
     if (navigator.onLine === false) return { cls: 'off', txt: 'Offline — will send when you are back' };
     if (hubBusy()) return { cls: 'warn', txt: 'Hub busy — retrying in ' + busySecs() + ' s' };
     if (S.wsOk) return { cls: 'on', txt: 'Connected · end-to-end encrypted' };
     // Polling counts only while it is the newest news: a failed hub call since the last good poll means trouble.
     if (S.pollOkAt && S.pollOkAt > (S.netErrAt || 0) && Date.now() - S.pollOkAt < 60000) return { cls: 'on', txt: 'Connected (polling) · end-to-end encrypted' };
-    if (S.announceErr && !/^(offline|rate_limited)$/.test(S.announceErr) && !/^http_5/.test(S.announceErr)) return { cls: 'off', txt: explain(S.announceErr) };
+    if (S.announceErr && !/^(offline|rate_limited)$/.test(S.announceErr) && !/^http_5/.test(S.announceErr)) return { cls: 'off', txt: explain(S.announceErr), refused: true };
     if (Date.now() - S.bootAt < 12000 && !S.netErrAt) return { cls: '', txt: 'Connecting…' };
     return { cls: 'off', txt: 'Can\'t reach the hub — retrying' };
   }
-  function statusHtml() { const n = netState(); return `<div class="omx-status ${n.cls}" id="omxStatus" role="status"><i aria-hidden="true"></i><span>${esc(n.txt)}</span></div>`; }
-  function paintStatus() { const el = $('omxStatus'); if (el) { const n = netState(); if (el.className !== 'omx-status ' + n.cls) el.className = 'omx-status ' + n.cls; const sp = el.querySelector('span'); if (sp && sp.textContent !== n.txt) sp.textContent = n.txt; } }
-  function paintBadge() { if (tabsEl && S.view !== 'chat' && !tabsEl.hidden) tabsEl.innerHTML = tabsHtml(); syncUnread(); }
-  // Every header gets an h2#omxTitle (the dialog's accessible name).
-  function labelHead() { try { const h = headEl && headEl.querySelector('h2'); if (h && !h.id) h.id = 'omxTitle'; } catch (_) {} }
-  const coreSub = { chats: 'Chats', add: 'Add', me: 'Me', settings: 'Settings' };
+  const connCls = (n) => 'omx-conn' + (n.cls === 'on' ? '' : n.cls === 'off' ? ' off' : ' warn');
+  function connDot() { const n = netState(); return `<span class="${connCls(n)}" role="img" aria-label="${esc(n.txt)}" title="${esc(n.txt)}"></span>`; }
+  function netTrouble() {
+    if (navigator.onLine === false) return { k: 'off', ico: 'wifi-off', txt: 'You’re offline · messages send when you’re back', retry: false };
+    if (hubBusy()) return { k: 'busy', ico: 'clock', txt: 'Hub busy · retrying in ' + busySecs() + ' s', retry: true };
+    const n = netState();
+    if (n.cls === 'off') return n.refused ? { k: 'refused', ico: 'alert', txt: n.txt, retry: true } : { k: 'down', ico: 'alert', txt: 'Can’t reach the hub · retrying', retry: true };
+    return null;
+  }
+  const netBarHtml = (n) => { n = n === undefined ? netTrouble() : n; return n ? `<div class="omx-netbar" role="status" data-k="${n.k}">${icon(n.ico)}<span>${esc(n.txt)}</span>${n.retry ? '<button type="button" class="omx-textbtn" data-act="net-retry">Retry now</button>' : ''}</div>` : ''; };
+  // Where a banner belongs right now: the chats list (pane or body); a thread on phones; any other view only offline.
+  function netSlots(n) {
+    const out = [], list = $('omxChats');
+    if (list) out.push(list);
+    if (n && body && appIsOpen() && !list) {
+      if (S.view === 'chat' && layout() !== 'desk') out.push(body);
+      else if (n.k === 'off' && S.view !== 'chat' && !chatLayout()) out.push(body);
+    }
+    return out;
+  }
+  function paintStatus() {
+    if (!root) return;
+    const n0 = netState(), cc = connCls(n0);
+    root.querySelectorAll('.omx-conn').forEach((d) => { if (d.getAttribute('class') !== cc) d.setAttribute('class', cc); if (d.getAttribute('aria-label') !== n0.txt) { d.setAttribute('aria-label', n0.txt); d.title = n0.txt; } });
+    const n = netTrouble(), slots = netSlots(n);
+    root.querySelectorAll('.omx-netbar').forEach((b) => { if (!n || !slots.includes(b.parentElement)) b.remove(); });
+    if (!n) return;
+    slots.forEach((slot) => {
+      const b = slot.querySelector(':scope > .omx-netbar');
+      if (b && b.getAttribute('data-k') === n.k) { const sp = b.querySelector('span'); if (sp && sp.textContent !== n.txt) sp.textContent = n.txt; return; }
+      if (b) b.remove();
+      const lh = slot.querySelector(':scope > .omx-lhead');
+      if (lh) lh.insertAdjacentHTML('afterend', netBarHtml(n)); else slot.insertAdjacentHTML('afterbegin', netBarHtml(n));
+    });
+  }
+  // "Retry now": one real attempt at once, even while the breaker waits (it re-opens if the hub is still busy).
+  function netRetry() {
+    NET.until = 0; S.netErrAt = 0;
+    if (!S.announced) announce().catch(() => {});
+    wsKick(); syncInbox(); flushOutbox(true); askPresence();
+    paintStatus();
+  }
+
+  /* ---------- render orchestration ---------- */
+  // Every header has an h2#omxTitle (the dialog's accessible name), on every render, in every band.
+  function labelHead() {
+    try {
+      if (!headEl) return;
+      const t = $('omxTitle'), h = headEl.querySelector('h2');
+      if (h) { if (h.id !== 'omxTitle') { if (t && t !== h) t.removeAttribute('id'); h.id = 'omxTitle'; } return; }
+      const text = (t && headEl.contains(t) ? t.textContent : '') || viewLabel(S.view);
+      if (t) t.removeAttribute('id');
+      headEl.insertAdjacentHTML('afterbegin', `<h2 id="omxTitle" class="omx-sr">${esc(text)}</h2>`);
+    } catch (_) {}
+  }
+  function viewLabel(v) {
+    if (v === 'chat') return nameOf(S.peer);
+    const core = { chats: 'Chats', add: 'Add people', me: 'Me', settings: 'Settings' };
+    const d = X.views[v]; const t = d && (d.tab || d.rail || (X.views[d.parent] && (X.views[d.parent].tab || X.views[d.parent].rail)));
+    return (t && (t.railLbl || t.lbl)) || core[v] || 'OST Mesh';
+  }
+  const closeBtn = () => `<button type="button" class="omx-ib" data-act="close" aria-label="Close Mesh">${icon('close')}</button>`;
+  let lastKey = '', renderCount = 0;
   function render() {
     if (!root) return;
+    renderCount++;
+    applyBand();
     if (S.view !== 'add') stopScan();
     if (S.view === 'chat' && !S.peer) S.view = 'chats';
     if (S.view !== 'chat' && S.backChat) { const t = S.backChat; S.backChat = 0; back.pop(t); }   // left the chat some other way
     if (!X.views[S.view] && !CORE_VIEWS.includes(S.view)) { const h = homeView(); S.view = X.views[h] || h === 'chats' ? h : 'chats'; }
+    if (S.view !== 'chat') { S.unreadFrom = null; if (S.view !== 'chats') { S.chatSearching = false; S.chatQuery = ''; } }
     saveSession();
-    if (S.view === 'chat') { renderChat(); labelHead(); return; }
-    if (msgRO) { msgRO.disconnect(); msgRO = null; }
+    const L = layout(), desk = L === 'desk', cl = desk && (S.view === 'chats' || S.view === 'chat');
+    const v = X.views[S.view];
     root.setAttribute('data-view', S.view);
+    root.classList.toggle('omx-chatlayout', cl);
+    if (!cl || S.view !== 'chat') { root.classList.remove('info-open'); if (infoEl.firstChild) infoEl.innerHTML = ''; }
+    const key = S.view + '|' + (S.view === 'chat' ? S.peer : '') + '|' + (S.profileOf || '');
+    const changed = key !== lastKey; lastKey = key;
+    mainEl.classList.toggle('hide-head', L === 'phone' && !!(v && v.hideHead));
+    if (changed) { mainEl.classList.remove('head-away'); hhTop = 0; }
+    if (msgRO && S.view !== 'chat') { msgRO.disconnect(); msgRO = null; }
+    // nav: the rail on desk, the tab bar on phones and in the drawer (hidden in a chat and in the composer)
+    const items = navModel();
+    if (desk) paintNavHost(railEl, 'rail', items); else { paintNavHost(tabsEl, 'tabs', items); if (railEl.firstChild) { railEl.innerHTML = ''; navSig.rail = ''; } }
+    tabsEl.hidden = !desk && (S.view === 'chat' || S.view === 'compose' || !!(v && v.noTabs));
+    if (!cl && paneEl.firstChild) paneEl.innerHTML = '';
+    if (changed) { const sc = scroller(); if (sc) sc.scrollTop = 0; if (cl && shellEl) shellEl.scrollTop = 0; }
     body.style.padding = '';
-    if (X.views[S.view]) {
-      tabsEl.hidden = false; tabsEl.innerHTML = tabsHtml();
-      body.className = 'omx-body omx-v-' + S.view;
-      const tb = X.views[S.view].tab || (X.views[X.views[S.view].parent] && X.views[X.views[S.view].parent].tab);
-      headEl.innerHTML = `<h2 id="omxTitle">OST Mesh<small>${esc(tb ? tb.lbl : '')}</small></h2><button class="omx-ib" data-act="close" aria-label="Close">✕</button>`;
-      try { X.views[S.view].render({ head: headEl, body, tabs: tabsEl }); } catch (e) { console.warn('[mesh-app] view failed', S.view, e); body.innerHTML = '<div class="omx-empty">This view failed to load. <button class="omx-ghost" data-tab="chats">Open chats</button></div>'; }
-      labelHead();
-      return;
-    }
-    headEl.innerHTML = `${S.view === 'settings' && X.actions['sx-back'] ? '<button class="omx-ib" data-act="sx-back" aria-label="Back">‹</button>' : ''}<h2 id="omxTitle">OST Mesh<small>${coreSub[S.view] || ''}</small></h2><button class="omx-ib" data-act="close" aria-label="Close">✕</button>`;
-    tabsEl.hidden = false; tabsEl.innerHTML = tabsHtml();
-    body.className = 'omx-body';
-    if (S.view === 'chats') body.innerHTML = statusHtml() + '<div id="omxChats"></div>', paintChats();
+    headEl.className = 'omx-head';
+    if (cl) paintPane();
+    if (S.view === 'chat') renderChat();
+    else if (cl) renderPick();
+    else if (v) renderPlugin(v);
+    else if (S.view === 'chats') renderChatsView();
     else if (S.view === 'add') renderAdd();
-    else { if (S.view !== 'settings') S.view = 'me'; renderMe(); }
+    else if (S.view === 'settings') renderSettings(false);
+    else renderSettings(true);                                      // 'me' without OST Social: identity + the name / emoji editor
+    labelHead();
+    if (changed) { body.classList.remove('omx-enter'); void body.offsetWidth; body.classList.add('omx-enter'); }
+    if (desk && !cl) paintAside(); else if (asideEl.firstChild) asideEl.innerHTML = '';
+    placeToasts();
+    paintStatus();
   }
-  function requestsHtml() {
-    const reqs = Object.values(S.contacts).filter((c) => c.state === 'pending-in' || c.state === 'request').sort((a, b) => (b.ts || 0) - (a.ts || 0));
-    if (!reqs.length) return '';
-    return reqs.map((c) => `<div class="omx-req"><div class="omx-av" style="${avStyle(c.addr)}">${esc(c.emoji || (c.name || 'm')[0].toUpperCase())}</div><div class="omx-main"><b>${esc(c.name || shortA(c.addr))}</b> ${c.state === 'request' ? 'messaged you' : 'wants to connect'}<br><small>${esc(c.addr)}</small></div><button class="acc" data-act="accept" data-a="${esc(c.addr)}">Accept</button><button class="dec" data-act="decline" data-a="${esc(c.addr)}">✕</button></div>`).join('');
+  function renderPlugin(v) {
+    body.className = 'omx-body omx-v-' + S.view;
+    headEl.innerHTML = `<h2 id="omxTitle">${esc(viewLabel(S.view))}</h2>${layout() === 'desk' ? '' : closeBtn()}`;
+    try { v.render({ head: headEl, body, tabs: tabsEl, layout: layout(), band: band(), icon, av: avHtml }); }
+    catch (e) {
+      console.warn('[mesh-app] view failed', S.view, e);
+      body.innerHTML = `<div class="omx-empty err" role="alert"><span class="ic">${icon('alert')}</span><h3>This view failed to load</h3><p>Something went wrong while showing this screen. Your chats are not affected.</p><button type="button" class="omx-ghost" data-tab="chats">${icon('chat')}Open chats</button></div>`;
+    }
+  }
+
+  /* ---------- right column (desk feed layout): plugin modules ----------
+   * X.aside.push({ id, order, views: string[] | (v) => bool, render: (ctx) => html }); a module returns ''
+   * to hide itself. The core adds the search pill (first), Friends' activity (order 20) and the footer (last). */
+  const CORE_ASIDE = [{ id: 'friends', order: 20, views: (v) => v !== 'profile' && v !== 'edit', render: () => friendsModHtml() }];
+  const asideMods = () => CORE_ASIDE.concat(X.aside.filter((m) => m && typeof m.render === 'function')).filter((m) => {
+    try { return !m.views ? true : typeof m.views === 'function' ? !!m.views(S.view) : Array.isArray(m.views) ? m.views.includes(S.view) : true; } catch (_) { return false; }
+  }).sort((a, b) => (Number(a.order) || 50) - (Number(b.order) || 50));
+  const asideCtx = () => ({ view: S.view, layout: layout(), band: band(), icon, av: avHtml, esc, profileOf: S.profileOf || null });
+  function modHtml(m) { let h = ''; try { h = String(m.render(asideCtx()) || ''); } catch (e) { console.warn('[mesh-app] aside module failed', m.id, e); } return `<div class="omx-modhost" data-mod="${esc(m.id || '')}">${h}</div>`; }
+  // core.paintAside(id?): repaint the whole column, or one module in place.
+  function paintAside(id) {
+    if (!asideEl || !asideShown()) return;
+    if (id) {
+      const host = asideEl.querySelector(`.omx-modhost[data-mod="${CSS && CSS.escape ? CSS.escape(String(id)) : String(id)}"]`);
+      const m = asideMods().find((x) => x.id === id);
+      if (host && m) { const tmp = document.createElement('div'); tmp.innerHTML = modHtml(m); host.replaceWith(tmp.firstElementChild); setAsideTop(); return; }
+      if (!host && !m) return;
+    }
+    const search = (X.actions['sx-search'] || X.views.search) ? `<button type="button" class="omx-search" data-act="sx-search" aria-label="Search people">${icon('search')}Search people</button>` : '';
+    const foot = `<p class="omx-foot">${isDevnet() ? `<span class="omx-devnet">${esc(netName())}</span>OST Mesh runs on ${esc(netName())}. ` : ''}Posts are public and signed with your key; chats are end-to-end encrypted.</p>`;
+    asideEl.innerHTML = search + asideMods().map(modHtml).join('') + foot;
+    setAsideTop();
+  }
+  const isTyping = (a) => !!a && Date.now() - (S.typingFrom[a] || 0) < 4000;
+  // Friends' activity: Active now (presence, typing) and Recent (local chats only; nothing leaves the device).
+  function friendsModHtml() {
+    const fr = Object.values(S.contacts).filter((c) => c && c.state === 'friend');
+    if (!fr.length) return '';
+    const byTs = (a, b) => (((b.last && b.last.ts) || 0) - ((a.last && a.last.ts) || 0));
+    const act = fr.filter((c) => online(c.addr) || isTyping(c.addr)).sort(byTs).slice(0, 3);
+    const rec = fr.filter((c) => !act.includes(c) && c.last && c.last.ts).sort(byTs).slice(0, 3);
+    if (!act.length && !rec.length) return '';
+    const row = (c) => {
+      const typing = isTyping(c.addr), list = typing ? null : msgsOf(c.addr), lm = list && list[list.length - 1];
+      const pv = typing ? 'typing…' : lm ? (lm.dir === 'me' ? 'You: ' : '') + previewOf(lm) : ((c.last && c.last.text) || '');
+      return `<button type="button" class="omx-row" data-act="chat" data-a="${esc(c.addr)}">${avHtml(c.addr, 'sm')}<span class="t"><b>${esc(c.name || shortA(c.addr))}</b><span class="${typing ? 'typing' : c.unread ? 'unr' : ''}">${esc(pv)}</span></span>${c.unread ? `<span class="omx-unread" aria-label="${c.unread} unread">${c.unread > 99 ? '99+' : c.unread}</span>` : ''}</button>`;
+    };
+    return `<section class="omx-mod" aria-labelledby="omxAsFr"><header><h3 id="omxAsFr">Friends’ activity</h3><button type="button" data-tab="chats">Open chats</button></header>` +
+      (act.length ? `<div class="omx-sub">Active now</div>${act.map(row).join('')}` : '') + (rec.length ? `<div class="omx-sub">Recent</div>${rec.map(row).join('')}` : '') + '</section>';
+  }
+
+  /* ---------- chats list (CUI.chatsListHtml): in #omxPane on desk, in #omxBody on phones / the drawer ---------- */
+  const byLast = (a, b) => (((b.last && b.last.ts) || b.ts || 0) - ((a.last && a.last.ts) || a.ts || 0));
+  // The data the chat-ui builders read (BUILD-SPEC §5.2; every field optional on their side).
+  function cuiCtx(extra) {
+    const a = S.view === 'chat' ? S.peer : null, c = a ? contact(a) : null;
+    const seen = (x) => { const p = S.presence[x]; return p && p.lastSeen ? 'Last seen ' + agoText(p.lastSeen) : ''; };
+    const lastMsg = (k) => { if (!k || !k.addr) return null; const list = msgsOf(k.addr); return (k.last && k.last.id && list.find((m) => m.id === k.last.id)) || (k.last ? list[list.length - 1] : null) || null; };
+    let notifText = 'Message alerts are off — turn them on in Settings.';
+    try { if ('Notification' in window && Notification.permission === 'granted') notifText = 'On for this chat while OST is open in the background.'; else if (!('Notification' in window)) notifText = 'This browser cannot show notifications.'; } catch (_) {}
+    return Object.assign({
+      esc, icon, av: avHtml, tTime, tDay, tShort, ago, agoText, shortA, fmtSize, nameOf, emojiOf, contact, online, typing: isTyping, seen,
+      presence: (x) => S.presence[x] || null, lastMsg, findMsg, msgsOf, me: S.address, myName: myName(), peer: a, selected: S.peer || null, now: Date.now(),
+      filter: S.chatFilter || 'all', query: S.chatQuery || '', searching: !!S.chatSearching,
+      network: netName(), devnet: isDevnet(), blobs: S.blobs, mapHtml, payStatus, callSt, previewOf,
+      headBtns: a ? X.headBtns.map((fn) => { try { return fn(a) || ''; } catch (_) { return ''; } }) : [],
+      info: a ? infoItems(a) : [], attach: attachItems(), unreadFrom: S.unreadFrom || null,
+      layout: layout(), band: band(), infoOpen: !!(root && root.classList.contains('info-open')), canProfile: !!X.views.profile,
+      canCallBack: !!X.actions['call-back'], conn: connDot(), netbar: '', reqCount: reqCount(), unreadCount: totalUnread(),
+      draft: a ? (drafts()[a] || '') : '', blocked: !!(c && c.state === 'blocked'), notifText
+    }, extra || {});
+  }
+  function cui(name, args, fb) {
+    try { if (typeof CUI[name] === 'function') return String(CUI[name].apply(null, args)); } catch (e) { console.warn('[mesh-app] chat-ui ' + name + ' failed', e); }
+    return fb.apply(null, args);
+  }
+  function renderChatsView() {
+    body.className = 'omx-body omx-v-chats';
+    headEl.innerHTML = `<h2 id="omxTitle">Chats${devnetChip()}${connDot()}</h2><button type="button" class="omx-ib" data-act="new-chat" aria-label="New chat" aria-haspopup="menu">${icon('edit')}</button>${closeBtn()}`;
+    body.innerHTML = '<div id="omxChats" class="omx-chats"></div>';
+    paintChats();
+  }
+  function paintPane() {
+    if (!$('omxChats') || !paneEl.contains($('omxChats'))) paneEl.innerHTML = '<div id="omxChats" class="omx-chats"></div>';
+    paintChats();
+  }
+  function renderPick() {
+    headEl.className = 'omx-head is-root';
+    headEl.innerHTML = '<h2 id="omxTitle">Chats</h2>';
+    body.className = 'omx-body omx-chat';
+    body.innerHTML = cui('pickHtml', [cuiCtx()], () => `<div class="omx-pick"><div class="omx-empty"><span class="ic">${icon('chat')}</span><h3>Your messages</h3><p>Pick a chat on the left, or add someone with their invite link or QR code.</p><button type="button" class="omx-primary" data-tab="add" data-addtab="someone">${icon('user-plus')}Add a person</button></div></div>`);
   }
   function paintChats() {
     const el = $('omxChats'); if (!el) return;
-    const list = Object.values(S.contacts).filter((c) => c.state !== 'blocked' && c.state !== 'pending-in' && c.state !== 'request').sort((a, b) => ((b.last && b.last.ts) || b.ts || 0) - ((a.last && a.last.ts) || a.ts || 0));
-    let h = requestsHtml();
-    if (!list.length && !h) {
-      h += `<div class="omx-empty"><b>👋</b>No chats yet.<br>Add a real person with your link or QR — it takes one tap on their side.</div><button class="omx-primary" data-tab="add">➕ Add a person</button>`;
-    } else {
-      h += '<div class="omx-list">' + list.map((c) => `<button class="omx-item" data-act="chat" data-a="${esc(c.addr)}"><div class="omx-av ${online(c.addr) ? 'on' : ''}" style="${avStyle(c.addr)}">${esc(c.emoji || (c.name || 'm')[0].toUpperCase())}<i></i></div><div class="omx-main"><b>${esc(c.name || shortA(c.addr))}${c.state === 'pending-out' ? ' <small style="opacity:.7">· request sent</small>' : ''}</b><span>${c.last && c.last.fail ? '<i class="omx-lfail">! Not delivered</i> · ' : ''}${esc((c.last && c.last.text) || (c.state === 'pending-out' ? 'Waiting for them to accept — you can already write' : 'Say hi 👋'))}</span></div><div class="omx-meta"><span>${c.last && c.last.ts ? ago(c.last.ts) : ''}</span>${c.unread ? `<span class="omx-unread">${c.unread}</span>` : ''}</div></button>`).join('') + '</div>';
-      h += `<button class="omx-ghost" style="margin-top:12px" data-tab="add">➕ Add another person</button>`;
-    }
-    el.innerHTML = h;
+    const fs = focusSnap(el);
+    const list = Object.values(S.contacts).filter((c) => c && c.state !== 'blocked').sort(byLast);
+    const ctx = cuiCtx();
+    el.innerHTML = cui('chatsListHtml', [list, ctx], (l, x) => fbChatsList(filterQ(l), x));
+    if (layout() === 'desk' && !el.querySelector('.omx-lhead')) el.insertAdjacentHTML('afterbegin', fbLhead());
+    const lh = el.querySelector('.omx-lhead h2'); if (lh && !lh.querySelector('.omx-conn')) lh.insertAdjacentHTML('beforeend', connDot());
+    if (S.chatSearching || S.chatQuery) mountChatSearch(el);
+    paintStatus();
+    focusRestore(el, fs);
+  }
+  // local name filter (the fallback list; chat-ui filters by ctx.query itself)
+  function filterQ(list) {
+    const q = String(S.chatQuery || '').trim().toLowerCase();
+    return q ? list.filter((c) => (c.name || '').toLowerCase().includes(q) || String(c.addr || '').toLowerCase().includes(q)) : list;
+  }
+  // Typing in the search field repaints only the rows (#omxChatList) when chat-ui offers chatRowsHtml, so the field keeps focus.
+  function paintChatRows() {
+    const host = $('omxChatList');
+    if (!host || typeof CUI.chatRowsHtml !== 'function') { paintChats(); return; }
+    const list = Object.values(S.contacts).filter((c) => c && c.state !== 'blocked').sort(byLast);
+    try { host.innerHTML = String(CUI.chatRowsHtml(list, cuiCtx())); } catch (e) { console.warn('[mesh-app] chat-ui chatRowsHtml failed', e); paintChats(); }
+  }
+  // Keep the focused control (a search field, a chip, a row) focused across an innerHTML repaint.
+  function focusSnap(el) {
+    const a = document.activeElement; if (!a || !el.contains(a)) return null;
+    return { id: a.id, act: a.getAttribute('data-act'), da: a.getAttribute('data-a') || a.getAttribute('data-f') || a.getAttribute('data-t') || '', v: a.value, s: a.selectionStart, e: a.selectionEnd };
+  }
+  function focusRestore(el, f) {
+    if (!f) return;
+    let n = f.id ? $(f.id) : null;
+    if (!n && f.act) n = Array.from(el.querySelectorAll(`[data-act="${f.act}"]`)).find((x) => (x.getAttribute('data-a') || x.getAttribute('data-f') || x.getAttribute('data-t') || '') === f.da) || null;
+    if (!n || !el.contains(n)) return;
+    try { n.focus({ preventScroll: true }); if (f.v != null && 'value' in n && n.value !== f.v) n.value = f.v; if (f.s != null && n.setSelectionRange) n.setSelectionRange(f.s, f.e); } catch (_) {}
+  }
+  // The search pill turns into a field in place (local name filter; nothing is sent anywhere).
+  function mountChatSearch(el) {
+    if ($('omxChatQ')) return;
+    const pill = el.querySelector('[data-act="chat-search"]') || el.querySelector('.omx-search');
+    const html = `<label class="omx-search omx-searchbox">${icon('search')}<input id="omxChatQ" type="search" placeholder="Search chats" aria-label="Search chats" autocomplete="off" spellcheck="false" enterkeyhint="search" value="${esc(S.chatQuery || '')}"></label>`;
+    if (pill && pill.tagName !== 'INPUT') pill.outerHTML = html;
+    else if (!pill) el.insertAdjacentHTML(el.querySelector('.omx-lhead') ? 'beforeend' : 'afterbegin', `<div class="omx-lsearch">${html}</div>`);
+  }
+
+  /* ---------- Add people (V1): requests first, then Your invite | Add someone ---------- */
+  function reqCardsHtml() {
+    const reqs = Object.values(S.contacts).filter((c) => c && (c.state === 'pending-in' || c.state === 'request')).sort((a, b) => (b.ts || 0) - (a.ts || 0));
+    if (!reqs.length) return '';
+    return `<h3 class="omx-sec">Requests · ${reqs.length}</h3>` + reqs.map((c) => { const nm = c.name || shortA(c.addr); return `<div class="omx-req">${avHtml(c.addr)}<span class="t"><b>${esc(nm)}</b><small>${c.state === 'request' ? 'Messaged you' : 'Wants to connect'} · ${esc(shortA(c.addr))}</small></span><span class="acts"><button type="button" class="omx-ib outline" data-act="decline" data-a="${esc(c.addr)}" aria-label="Decline ${esc(nm)}" title="Decline">${icon('close')}</button><button type="button" class="omx-primary omx-sm omx-hit" data-act="accept" data-a="${esc(c.addr)}" aria-label="Accept ${esc(nm)}">Accept</button></span></div>`; }).join('');
   }
   function renderAdd() {
-    const link = inviteLink();
-    body.innerHTML = requestsHtml() +
-      (S.pendingAdd ? `<div class="omx-card"><h3>Add ${esc(S.pendingAdd.name || shortA(S.pendingAdd.addr))}?</h3><p>${esc(S.pendingAdd.addr)}${S.pendingAdd.fp ? '<br>Safety code ' + esc(S.pendingAdd.fp) : ''}</p><div class="omx-row2"><button class="omx-primary" data-act="add-confirm">Add &amp; open chat</button><button class="omx-ghost" data-act="add-cancel">Cancel</button></div></div>` : '') +
-      `<div class="omx-card"><h3>Your invite</h3><p>Let them scan this with their phone camera, or send the link. One tap and you are connected.</p>
-        <div class="omx-qr"><canvas id="omxQr" width="288" height="288"></canvas></div>
-        <div class="omx-link">${esc(link)}</div>
-        <div class="omx-row2"><button class="omx-primary" data-act="copy-link">Copy link</button>${navigator.share ? '<button class="omx-ghost" data-act="share-link">Share…</button>' : '<button class="omx-ghost" data-act="copy-addr">Copy address</button>'}</div></div>
-      <div class="omx-card"><h3>Add someone</h3>
-        <div class="omx-steps"><div><b>1</b>Ask for their invite link or QR (Add person → Your invite on their side).</div><div><b>2</b>Scan it here, or paste the link or ost-mesh address.</div><div><b>3</b>They accept once; after that you both chat and share files any time, even when one of you is offline.</div></div>
-        <div id="omxScanWrap" hidden><div class="omx-scan"><video id="omxVideo" playsinline muted></video></div><div class="omx-note" id="omxScanStatus"></div></div>
-        <div class="omx-row2"><button class="omx-ghost" data-act="scan" id="omxScanBtn">📷 Scan QR</button><button class="omx-ghost" data-act="paste">📋 Paste from clipboard</button></div>
-        <input class="omx-input" id="omxAddInput" style="margin-top:8px" placeholder="Paste invite link or ost-mesh:… address" autocomplete="off" spellcheck="false">
-        <button class="omx-primary" style="margin-top:8px" data-act="add-go">Add person</button>
-        <div class="omx-note">No camera? Their phone camera app can scan <em>your</em> QR instead — it opens OST and adds you automatically.</div></div>`;
-    drawQr($('omxQr'), link).then((ok) => { if (!ok) { const c = $('omxQr'); if (c) c.replaceWith(Object.assign(document.createElement('div'), { className: 'omx-note', textContent: 'QR unavailable — share the link instead.' })); } });
+    const L = layout(), link = inviteLink(), tab = S.addTab === 'someone' ? 'someone' : 'invite';
+    body.className = 'omx-body omx-v-add';
+    headEl.innerHTML = `<h2 id="omxTitle">Add people${L === 'desk' ? '' : devnetChip()}</h2>${L === 'desk' ? '' : closeBtn()}`;
+    const seg = `<div class="omx-seg" role="tablist" aria-label="Add people" data-omx-tabs>${[['invite', 'Your invite'], ['someone', 'Add someone']].map(([k, l]) => `<button type="button" role="tab" id="omxAddTab-${k}" aria-controls="omxAddPanel" aria-selected="${tab === k}" tabindex="${tab === k ? 0 : -1}" data-act="add-tab" data-t="${k}">${l}</button>`).join('')}</div>`;
+    const pend = S.pendingAdd ? `<section class="omx-card" aria-labelledby="omxPendT"><h3 id="omxPendT">Add ${esc(S.pendingAdd.name || shortA(S.pendingAdd.addr))}?</h3><p>${esc(S.pendingAdd.addr)}${S.pendingAdd.fp ? '<br>Safety code ' + esc(S.pendingAdd.fp) : ''}</p><div class="omx-row2"><button type="button" class="omx-ghost" data-act="add-cancel">Cancel</button><button type="button" class="omx-primary" data-act="add-confirm">Add &amp; open chat</button></div></section>` : '';
+    const share = !!navigator.share;
+    const invite = `<section class="omx-card" id="omxAddPanel" role="tabpanel" aria-labelledby="omxAddTab-invite"><div class="omx-invme">${avHtml(S.address, 'lg')}<span class="t"><b>${esc(myName())}</b><small>${esc(shortA(S.address))} · your invite</small></span></div>
+        <div class="omx-qr"><canvas id="omxQr" width="288" height="288" role="img" aria-label="QR code of your invite link"></canvas></div>
+        <p>Let them scan this with their phone camera, or send the link. One tap on their side and you are connected.</p>
+        <div class="omx-linkrow"><span class="omx-code" title="${esc(link)}">${esc(link.replace(/^https?:\/\//, ''))}</span><button type="button" class="omx-ib" data-act="copy-link" aria-label="Copy invite link" title="Copy invite link">${icon('copy')}</button></div>
+        <div class="omx-row2">${share ? `<button type="button" class="omx-primary" data-act="share-link">${icon('share')}Share link</button><button type="button" class="omx-ghost" data-act="copy-link">${icon('copy')}Copy link</button>` : `<button type="button" class="omx-primary" data-act="copy-link">${icon('copy')}Copy link</button><button type="button" class="omx-ghost" data-act="copy-addr">${icon('key')}Copy address</button>`}</div></section>`;
+    const someone = `<section class="omx-card" id="omxAddPanel" role="tabpanel" aria-labelledby="omxAddTab-someone"><h3>Add someone</h3>
+        <ol class="omx-steps"><li><span>Ask for their invite link or QR (Add → Your invite on their side).</span></li><li><span>Scan it here, or paste the link or ost-mesh address.</span></li><li><span>They accept once; after that you both chat and share files any time, even when one of you is offline.</span></li></ol>
+        <div id="omxScanWrap" hidden><div class="omx-scan"><video id="omxVideo" playsinline muted></video></div><p class="omx-note" id="omxScanStatus" role="status"></p></div>
+        <div class="omx-row2"><button type="button" class="omx-ghost" data-act="scan" id="omxScanBtn">${icon('scan')}<span>Scan QR</span></button><button type="button" class="omx-ghost" data-act="paste">${icon('clipboard')}Paste</button></div>
+        <label class="omx-field"><span>Invite link or address</span><input class="omx-input" id="omxAddInput" placeholder="Paste invite link or ost-mesh:… address" autocomplete="off" spellcheck="false" enterkeyhint="go"></label>
+        <button type="button" class="omx-primary omx-block" data-act="add-go">${icon('user-plus')}Add person</button>
+        <p class="omx-note">No camera? Their phone camera app can scan <em>your</em> QR instead — it opens OST and adds you automatically.</p></section>`;
+    body.innerHTML = reqCardsHtml() + pend + seg + (tab === 'someone' ? someone : invite);
+    const qr = $('omxQr');
+    if (qr) drawQr(qr, link).then((ok) => { if (!ok) { const c = $('omxQr'); if (c) c.replaceWith(Object.assign(document.createElement('p'), { className: 'omx-note', textContent: 'QR unavailable — share the link instead.' })); } });
   }
-  function renderMe() {
-    body.innerHTML = statusHtml() +
-      `<div class="omx-card"><div class="omx-me"><div class="omx-av" style="${avStyle(S.address)}">${esc(S.profile.emoji || 'M')}</div><div><b>${esc(myName())}</b><span>${esc(S.address)}</span><span>safety code ${esc(S.fp)}</span></div></div>
-        <label class="omx-note" for="omxName">Display name (what friends see)</label>
-        <input class="omx-input" id="omxName" maxlength="32" value="${esc(S.profile.name || '')}" placeholder="e.g. Nacho">
-        <div class="omx-emojis">${EMOJIS.map((e) => `<button data-act="emoji" data-e="${e}" class="${S.profile.emoji === e ? 'on' : ''}">${e}</button>`).join('')}</div>
-        <button class="omx-primary" data-act="save-profile">Save</button></div>
-      <div class="omx-card"><h3>Notifications</h3>${notifRowHtml()}</div>
-      <div class="omx-card"><h3>How it works</h3><p>Messages are encrypted on your device for one contact (ECDH P-384 + AES-256-GCM) and relayed by the OST hub, which stores only ciphertext for up to 7 days until your friend is online. Files up to 6 MB travel the same way. Your identity lives in this browser — clearing site data loses it.</p>
-        <button class="omx-ghost omx-wide" data-act="open-legacy">Classic mesh (calls · games · location)</button>
-        <button class="omx-ghost omx-wide omx-danger" data-act="reset-id">Reset identity…</button>
-        <div class="omx-note">Wallet: ${esc(window.OST_WALLET_PUBKEY ? window.OST_WALLET_PUBKEY.slice(0, 4) + '…' + window.OST_WALLET_PUBKEY.slice(-4) : 'not connected')} · hub ${esc(API.replace(/^https?:\/\//, ''))}</div></div>`;
+
+  /* ---------- Settings (V2): identity and security; the profile editor lives in Edit profile ---------- */
+  function setRow(ico, b, s, rt, o) {
+    o = o || {};
+    const tag = o.act ? 'button' : 'div';
+    return `<${tag}${tag === 'button' ? ` type="button" data-act="${o.act}"` : ''} class="omx-setrow${o.cls ? ' ' + o.cls : ''}"${o.label ? ` aria-label="${esc(o.label)}"` : ''}>${ico}<span class="t"><b>${esc(b)}</b>${s ? `<small>${s}</small>` : ''}</span><span class="rt">${rt || ''}</span></${tag}>`;
   }
-  // "Turn on notifications": asks the browser only when tapped.
+  function renderSettings(asMe) {
+    const L = layout(), chev = icon('chevron-right'), editor = !!X.views.edit, back = L !== 'desk' && !asMe;
+    body.className = 'omx-body omx-v-settings';
+    headEl.className = 'omx-head' + (back ? ' has-back' : '');
+    headEl.innerHTML = (back ? (X.actions['sx-back'] ? `<button type="button" class="omx-ib" data-act="sx-back" aria-label="Back to your profile">${icon('back')}</button>` : `<button type="button" class="omx-ib" data-tab="me" aria-label="Back to your profile">${icon('back')}</button>`) : '') + `<h2 id="omxTitle">${asMe ? 'Me' : 'Settings'}</h2>${asMe && L !== 'desk' ? closeBtn() : ''}`;
+    const a = S.address, short = a.replace(/^(ost-mesh:)([0-9a-f]{4})[0-9a-f-]*([0-9a-f]{4})$/i, '$1$2…$3');
+    const prof = editor ? setRow(avHtml(a), myName(), 'Edit name, picture, bio and wallet', chev, { act: 'edit-profile' })
+      : `<div class="omx-setrow omx-meedit">${avHtml(a)}<span class="t"><b>${esc(myName())}</b><small>Display name and picture (what friends see)</small></span><span class="rt"></span></div>` +
+        `<div class="omx-meform"><label class="omx-field"><span>Display name</span><input class="omx-input" id="omxName" maxlength="32" value="${esc(S.profile.name || '')}" placeholder="e.g. Sam Rivera"></label>` +
+        `<div class="omx-emojis" role="radiogroup" aria-label="Avatar emoji">${EMOJIS.map((e) => `<button type="button" role="radio" aria-checked="${S.profile.emoji === e}" data-act="emoji" data-e="${e}" aria-label="Emoji ${e}">${e}</button>`).join('')}</div>` +
+        `<button type="button" class="omx-primary" data-act="save-profile">Save</button></div>`;
+    body.innerHTML = `<div class="omx-setgrp"><h3>Profile</h3><div>${prof}</div></div>
+      <div class="omx-setgrp"><h3>Identity</h3><div>${setRow(icon('key'), 'Your address', `<span class="omx-code">${esc(short)}</span>`, icon('copy'), { act: 'copy-addr', label: 'Copy your address ' + a })}${setRow(icon('shield'), 'Safety code', `<span class="omx-code">${esc(S.fp || '…')}</span><br>Compare it with a friend to be sure nobody is in the middle`, '')}</div></div>
+      <div class="omx-setgrp"><h3>Notifications</h3><div>${notifRowHtml()}</div></div>
+      <div class="omx-setgrp"><h3>More</h3><div>${setRow(icon('exit'), 'Classic mesh', 'Games, calls and location tools from the older mesh', icon('external'), { act: 'open-legacy' })}${setRow(icon('trash'), 'Reset identity…', 'A new address and keys; friends must add you again', '', { act: 'reset-id', cls: 'danger' })}</div></div>
+      <p class="omx-note omx-setnote">Messages are encrypted on this device for one contact and relayed by the OST hub, which keeps only ciphertext, for up to 7 days. Your identity lives in this browser: clearing site data loses it.<br>Wallet: ${esc(window.OST_WALLET_PUBKEY ? window.OST_WALLET_PUBKEY.slice(0, 4) + '…' + window.OST_WALLET_PUBKEY.slice(-4) : 'not connected')} · hub ${esc(API.replace(/^https?:\/\//, ''))}</p>`;
+  }
+  // "Turn on notifications": asks the browser only when tapped; when blocked the row explains how to allow them.
   function notifRowHtml() {
-    if (!('Notification' in window)) return '<div class="omx-note">This browser cannot show notifications.</div>';
+    if (!('Notification' in window)) return setRow(icon('bell-off'), 'Notifications are not available', 'This browser cannot show notifications.', '');
     const p = Notification.permission;
     const on = p === 'granted' && (!(window.OST_NOTIFY && typeof window.OST_NOTIFY.enabled === 'function') || window.OST_NOTIFY.enabled());
-    if (on) return '<div class="omx-setrow"><span><b>Notifications are on</b><small>New messages alert this device while OST is open in the background.</small></span><i aria-hidden="true">✓</i></div>';
-    if (p === 'denied') return '<div class="omx-setrow"><span><b>Notifications are blocked</b><small>Allow notifications for this site in your browser settings.</small></span></div>';
-    return '<button type="button" class="omx-setrow" data-act="notif-on"><span><b>Turn on notifications</b><small>Get an alert for new messages while OST is open in the background.</small></span><i aria-hidden="true">›</i></button>';
+    if (on) return setRow(icon('bell'), 'Notifications are on', 'New messages alert this device while OST is open in the background.', icon('check-circle', 'is-on'));
+    if (p === 'denied') return setRow(icon('bell-off'), 'Notifications are blocked', 'Allow notifications for this site in your browser settings, then tap here.', icon('chevron-right'), { act: 'notif-on' });
+    return setRow(icon('bell'), 'Turn on notifications', 'An alert for new messages while OST is open in the background', icon('chevron-right'), { act: 'notif-on' });
   }
+
+  /* ---------- a chat ---------- */
   // opts.app = options for open() (history adoption); opts.chatToken = re-adopted chat entry.
   function openChat(a, opts) {
     if (!validAddr(a)) return;
     opts = opts || {};
-    closeSheet(-1);                                                  // a sheet (e.g. "Reset identity?", another chat's ⋯) never stays over a new chat
+    closeSheet(-1, true);                                            // a sheet (e.g. "Reset identity?", another chat's ⋯) never stays over a new chat
+    const prev = S.view === 'chat' ? S.peer : null, c = contact(a);
+    // the unread divider sits above the first message that arrived while the chat was closed
+    S.unreadFrom = null;
+    if (c && c.unread) { const ins = msgsOf(a).filter((m) => m.dir === 'them'); const f = ins[ins.length - c.unread]; S.unreadFrom = f ? f.id : null; }
     S.peer = a; S.view = 'chat'; S.newBelow = 0; S.viewIsDefault = false;
-    if (contact(a) && contact(a).unread) upsertContact(a, { unread: 0 });
-    paintBadge();
+    if (c && c.unread) upsertContact(a, { unread: 0 });
+    paintNav();
     if (appIsOpen()) render(); else open('chat', opts.app || {});
+    // Desk: switching chats replaces the chat's history entry (no new Back step) and retags it.
     if (!S.backChat) S.backChat = back.push(chatBackFn, 'chat', Object.assign({ meta: a }, opts.chatToken ? { adoptToken: opts.chatToken } : {}));
+    else if (prev && prev !== a) back.retag(S.backChat, a);
     keyFor(a).catch(() => {});
   }
   function paintChatHead() {
-    const a = S.peer, c = contact(a) || { addr: a };
-    const sub = (online(a) ? 'online' : (S.presence[a] && S.presence[a].lastSeen ? 'last seen ' + agoText(S.presence[a].lastSeen) : 'offline — they get your messages later')) + ' · ' + (c.state === 'friend' ? 'encrypted' : c.state === 'pending-out' ? 'request sent' : c.state === 'blocked' ? 'blocked' : 'not accepted yet');
-    const nm = esc(c.name || shortA(a));
-    // The name opens their profile (when OST Social is loaded): a real button, so keyboards reach it too.
-    const title = X.views.profile ? `<h2 id="omxTitle"><button type="button" class="omx-peerbtn" data-act="peer-profile" title="View profile"><span>${nm}</span><small>${esc(sub)}</small></button></h2>` : `<h2 id="omxTitle" title="${nm}">${nm}<small>${esc(sub)}</small></h2>`;
+    const a = S.peer; if (!a || !headEl) return;
     // Keep keyboard focus on the same header control across a repaint (presence updates repaint the header).
     const ae = document.activeElement, keep = ae && headEl.contains(ae) ? ae.getAttribute('data-act') : '';
-    headEl.innerHTML = `<button class="omx-ib" data-act="back" aria-label="Back">‹</button><div class="omx-av omx-av-sm ${online(a) ? 'on' : ''}" style="${avStyle(a)}" aria-hidden="true">${esc(c.emoji || (c.name || 'm')[0].toUpperCase())}<i></i></div>${title}${X.headBtns.map((fn) => { try { return fn(a) || ''; } catch (_) { return ''; } }).join('')}<button class="omx-ib" data-act="peer-menu" aria-label="Chat options">⋯</button>`;
+    headEl.className = 'omx-head omx-thead';
+    headEl.innerHTML = cui('threadHeadHtml', [a, cuiCtx()], fbThreadHead);
+    labelHead();
     if (keep) { const b = headEl.querySelector('[data-act="' + keep + '"]'); if (b) { try { b.focus({ preventScroll: true }); } catch (_) {} } }
   }
   // Keep the newest message in view while the reader is at the bottom.
-  let msgRO = null;
+  let msgRO = null, scrollingT = 0;
   const isPinned = () => S.pinnedChat !== false;
   function pinBottom() { const el = $('omxMsgs'); if (el) { el.scrollTop = el.scrollHeight; S.msgTop = el.scrollTop; } }
   // Only the reader moving UP unpins the thread. Content growing under a pinned
@@ -1338,40 +1903,52 @@ if (!window.OST_MESH_APP) {
   // after that growth: in both cases follow the newest message down.
   function onMsgsScroll() {
     const el = $('omxMsgs'); if (!el) return;
+    // day pills are sticky only WHILE the reader scrolls
+    el.classList.add('scrolling'); clearTimeout(scrollingT); scrollingT = setTimeout(() => { const m = $('omxMsgs'); if (m) m.classList.remove('scrolling'); }, 1200);
     const top = el.scrollTop, gap = el.scrollHeight - top - el.clientHeight, prev = S.msgTop || 0;
     S.msgTop = top;
     if (gap < 80) { S.pinnedChat = true; if (S.newBelow) { S.newBelow = 0; paintNewPill(); } return; }
     if (top < prev - 1) S.pinnedChat = false;
     else if (S.pinnedChat !== false) pinBottom();
   }
-  function paintNewPill() { const b = $('omxNew'); if (!b) return; if (S.newBelow > 0) { b.hidden = false; b.textContent = S.newBelow + (S.newBelow > 1 ? ' new messages ↓' : ' new message ↓'); } else b.hidden = true; }
+  function paintNewPill() { const b = $('omxNew'); if (!b) return; if (S.newBelow > 0) { b.hidden = false; b.innerHTML = `<span>${S.newBelow} new message${S.newBelow > 1 ? 's' : ''}</span>${icon('arrow-down')}`; } else b.hidden = true; }
   const drafts = () => ssGet(DRAFT_KEY, {});
   function saveDraft(a, text) { const d = drafts(); if (text && text.trim()) d[a] = String(text).slice(0, 4000); else delete d[a]; ssSet(DRAFT_KEY, d); }
-  function autoGrow(ta) { ta.style.height = 'auto'; ta.style.height = Math.min(120, ta.scrollHeight) + 'px'; }
+  function autoGrow(ta) { ta.style.height = 'auto'; ta.style.height = Math.min(140, ta.scrollHeight) + 'px'; }
+  // The attach items (tray tiles on phones, popover rows on desk): core kinds + X.attach.
+  function attachItems() {
+    return [
+      { act: 'att-media', ico: 'image', lbl: 'Photo or video', sub: 'Up to 6 MB, encrypted', tile: 7 },
+      { act: 'att-file', ico: 'file', lbl: 'File', sub: 'Any document, up to 6 MB', tile: 9 },
+      { act: 'att-loc', ico: 'pin', lbl: 'Location', sub: 'Your position once', tile: 4 },
+      { act: 'att-live', ico: 'live', lbl: 'Live location', sub: '15 min, 1 hour or 8 hours', tile: 5 }
+    ].concat(X.attach.map((x, i) => ({ act: 'att-x', i, ico: x.ico, lbl: x.lbl, sub: x.sub || '', tile: x.tile != null ? x.tile : 1 })));
+  }
+  // contact-info actions (desk pane) from plugins (X.info: calls); the pane adds Profile itself (ctx.canProfile).
+  function infoItems(a) {
+    const out = [];
+    X.info.forEach((fn) => { try { (typeof fn === 'function' ? fn(a) || [] : []).forEach((x) => { if (x && x.lbl && x.act) out.push(x); }); } catch (_) {} });
+    return out;
+  }
   function renderChat() {
-    const a = S.peer; const c = contact(a);
+    const a = S.peer, c = contact(a);
     paintChatHead();
-    tabsEl.hidden = true;
-    root.setAttribute('data-view', 'chat');
     body.className = 'omx-body omx-chat'; body.style.padding = '0';
-    const attach = [
-      { act: 'att-media', ico: '🖼️', lbl: 'Photo / video' },
-      { act: 'att-file', ico: '📄', lbl: 'File' },
-      { act: 'att-loc', ico: '📍', lbl: 'Location' },
-      { act: 'att-live', ico: '📡', lbl: 'Live location' }
-    ].concat(X.attach.map((x, i) => ({ act: 'att-x', i, ico: x.ico, lbl: x.lbl })));
-    body.innerHTML = `<div class="omx-livebar" id="omxLive" hidden></div><div class="omx-msgwrap"><div class="omx-msgs" id="omxMsgs"></div><button type="button" class="omx-newpill" id="omxNew" data-act="jump-new" hidden></button></div><div class="omx-typing" id="omxTyping" aria-live="polite"></div>` +
-      (c && c.state === 'blocked' ? `<div class="omx-card omx-blocked">You blocked this contact. <button class="omx-ghost" data-act="unblock">Unblock</button></div>` :
-      `<div class="omx-attach" id="omxAttach" hidden>${attach.map((x) => `<button type="button" data-act="${x.act}"${x.i != null ? ` data-i="${x.i}"` : ''}><b aria-hidden="true">${x.ico}</b>${esc(x.lbl)}</button>`).join('')}<div class="omx-livepick" id="omxLivePick" hidden><span>Share live location for</span><button type="button" data-act="live-go" data-m="15">15 min</button><button type="button" data-act="live-go" data-m="60">1 hour</button><button type="button" data-act="live-go" data-m="480">8 hours</button></div></div>` +
-      `<div class="omx-compose"><button type="button" class="omx-ib" data-act="attach" aria-label="Attach" aria-expanded="false">＋</button><input type="file" id="omxFile" hidden multiple accept="image/*,video/*"><input type="file" id="omxFileAny" hidden multiple><textarea id="omxText" rows="1" placeholder="Message…" enterkeyhint="send" aria-label="Message"></textarea><button type="button" class="omx-ib omx-send" data-act="send" id="omxSend" aria-label="Send">➤</button></div>`);
+    const ctx = cuiCtx(), items = ctx.attach;
+    const comp = (ctx.blocked ? '' : cui('attachTrayHtml', [items, ctx], fbTray)) + cui('composerHtml', [ctx], fbComposer);
+    body.innerHTML = `<div class="omx-livebar" id="omxLive" hidden></div><div class="omx-msgwrap"><div class="omx-msgs" id="omxMsgs" role="log" aria-label="Messages with ${esc(nameOf(a))}"><div class="omx-msgcol"></div></div><button type="button" class="omx-newpill" id="omxNew" data-act="jump-new" hidden></button></div>${comp}`;
+    if (!$('omxFile')) body.insertAdjacentHTML('beforeend', '<input type="file" id="omxFile" hidden multiple accept="image/*,video/*">');
+    if (!$('omxFileAny')) body.insertAdjacentHTML('beforeend', '<input type="file" id="omxFileAny" hidden multiple>');
+    const tray = body.querySelector('.omx-attach'); if (tray) { tray.id = 'omxAttach'; tray.hidden = true; }
     const ta = $('omxText');
     if (ta) {
       const d = drafts()[a]; if (d) { ta.value = d; autoGrow(ta); }
-      ta.addEventListener('input', () => { autoGrow(ta); throttleTyping(); saveDraft(a, ta.value); });
+      ta.addEventListener('input', () => { autoGrow(ta); throttleTyping(); saveDraft(a, ta.value); syncSendBtn(); });
       ta.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing && !isPhone()) { e.preventDefault(); doSend(); } });
       // Desktop only: focusing on phones pops the keyboard over the thread.
-      if (!isPhone()) setTimeout(() => { try { if (S.view === 'chat' && S.peer === a) ta.focus({ preventScroll: true }); } catch (_) {} }, 50);
+      if (!isPhone()) setTimeout(() => { try { if (S.view === 'chat' && S.peer === a && !sheetUp()) ta.focus({ preventScroll: true }); } catch (_) {} }, 50);
     }
+    syncSendBtn();
     const ml = $('omxMsgs');
     S.pinnedChat = true;
     ml.addEventListener('scroll', onMsgsScroll, { passive: true });
@@ -1380,131 +1957,328 @@ if (!window.OST_MESH_APP) {
     msgRO = window.ResizeObserver ? new ResizeObserver(() => { if (isPinned()) pinBottom(); }) : null;   // keyboard, attach tray, live bar
     if (msgRO) msgRO.observe(ml);
     paintMsgs(true); paintLiveBar(); paintNewPill();
+    if (root.classList.contains('info-open')) paintInfo();
+  }
+  // The right composer button: a photo button while the field is empty, Send once there is text.
+  function syncSendBtn() {
+    const b = $('omxSend'), ta = $('omxText'); if (!b) return;
+    const empty = !(ta && ta.value.trim());
+    b.classList.toggle('photo', empty);
+    const lbl = empty ? 'Send a photo or video' : 'Send';
+    if (b.getAttribute('aria-label') !== lbl) b.setAttribute('aria-label', lbl);
+    b.title = lbl;
+    // one icon: swap it; two icons (photo + send, the stylesheet shows one per state): leave them
+    const uses = b.querySelectorAll('use'), want = empty ? '#i-image' : '#i-send';
+    if (uses.length === 1 && uses[0].getAttribute('href') !== want) uses[0].setAttribute('href', want);
+    else if (!uses.length && !b.textContent.trim()) b.innerHTML = icon(empty ? 'image' : 'send');
   }
   let typingAt = 0; function throttleTyping() { const n = Date.now(); if (n - typingAt > 2500) { typingAt = n; wsSend({ t: 'typing', to: S.peer }); } }
-  function paintTyping() { const el = $('omxTyping'); if (!el) return; const t = S.typingFrom[S.peer] || 0; el.textContent = Date.now() - t < 4000 ? nameOf(S.peer) + ' is typing…' : ''; if (Date.now() - t < 4000) setTimeout(paintTyping, 4200); }
-  function msgHtml(m, from) {
-    if (m.dir === 'sys') return `<div class="omx-b sys">${esc(m.text)}</div>`;
-    const failed = m.dir === 'me' && m.status === 'failed';
-    const st = m.dir === 'me' ? (failed ? '' : m.status === 'delivered' ? ' ✓✓' : m.status === 'sent' ? ' ✓' : m.status === 'sending' ? ' · sending…' : '') : '';
-    let inner = '';
-    if (m.kind === 'loc') {
-      const live = m.live && !m.ended && (!m.until || m.until > Date.now());
-      inner = `<a class="omx-locc" href="https://www.openstreetmap.org/?mlat=${m.lat}&mlon=${m.lng}#map=16/${m.lat}/${m.lng}" target="_blank" rel="noopener">${mapHtml(m.lat, m.lng)}</a><div class="omx-loct"><b>${m.live ? (live ? '📡 Live location' : '📡 Live location ended') : '📍 Location'}</b><span>±${m.acc || '?'} m${m.live && m.upd ? ' · updated ' + agoText(m.upd) : ''}${live && m.until ? ' · until ' + tTime(m.until) : ''}</span><a href="https://www.google.com/maps/search/?api=1&query=${m.lat},${m.lng}" target="_blank" rel="noopener">Open in Maps ↗</a></div>`;
-    } else if (m.kind === 'pay') {
-      if (!m.verified) setTimeout(() => verifyPay(from, m), 0);
-      const cl = (window.OST_CONFIG && OST_CONFIG.network) || 'devnet';
-      inner = `<div class="omx-payc"><b>💸 ${esc(m.amount)} ${esc(m.ccy)}</b><span>${m.dir === 'me' ? 'You sent' : 'You received'} · devnet${m.note ? ' · ' + esc(m.note) : ''}</span><span>${m.verified === 'confirmed' ? '✅ confirmed on-chain' : m.verified === 'failed' ? '❌ transaction failed' : m.verified === 'pending' ? '⏳ not confirmed yet' : '…checking chain'}</span><a href="https://explorer.solana.com/tx/${esc(m.sig)}${cl === 'mainnet-beta' ? '' : '?cluster=' + esc(cl)}" target="_blank" rel="noopener">View transaction ↗</a></div>`;
-    } else if (m.kind === 'call') {
-      const cs = callSt(m);
-      const lbl = cs === 'missed' ? (m.dir === 'me' ? 'No answer' : 'Missed call') : cs === 'declined' ? 'Declined' : cs === 'busy' ? 'Busy' : 'Call';
-      inner = `<div class="omx-callc"><b>${m.video ? '🎥' : '📞'} ${m.video ? 'Video' : 'Voice'} call · ${lbl}${m.dur ? ' · ' + Math.floor(m.dur / 60) + ':' + String(m.dur % 60).padStart(2, '0') : ''}</b>${X.actions['call-back'] ? `<button data-act="call-back" data-video="${m.video ? 1 : 0}">Call back</button>` : ''}</div>`;
-    } else if (m.kind === 'file') {
-      const cached = S.blobs[m.blob] || S.blobs['local:' + m.id];
-      const isImg = /^image\//.test(m.mime || ''), isVid = /^video\//.test(m.mime || ''), isAud = /^audio\//.test(m.mime || '');
-      if (cached && isImg) inner += `<img src="${cached.url}" alt="${esc(m.name)}" loading="lazy">`;
-      else if (cached && isVid) inner += `<video src="${cached.url}" controls playsinline></video>`;
-      else if (cached && isAud) inner += `<audio src="${cached.url}" controls style="width:100%"></audio>`;
-      // Own file not on the relay yet (sending / failed): nothing to download — the
-      // whole failed bubble is one "tap to retry" target, with no competing hint.
-      const unsent = m.dir === 'me' && (failed || m.status === 'sending');
-      const dlAttr = unsent ? '' : ` data-act="dl" data-id="${esc(m.id)}"`;
-      if (!(cached && (isImg || isVid || isAud)) && m.thumb && isImg) inner += `<img src="${esc(m.thumb)}" alt="" style="filter:blur(2px);opacity:.8"${dlAttr}>`;
-      const ico = `<b>${isImg ? '🖼️' : isVid ? '🎬' : isAud ? '🎵' : /pdf/.test(m.mime || '') ? '📄' : '📎'}</b>`;
-      const hint = failed ? '' : unsent && !m.blob ? ' · encrypting & uploading…' : cached ? ' · tap to save' : unsent ? '' : ' · tap to download';
-      const row = `${ico}<div style="min-width:0"><span>${esc(m.name)}</span><small>${fmtSize(m.size || 0)}${hint}</small></div>`;
-      inner += failed ? `<div class="omx-file">${row}</div>` : cached ? `<a class="omx-file" href="${cached.url}" download="${esc(m.name)}">${row}</a>` : unsent ? `<div class="omx-file">${row}</div>` : `<a class="omx-file" href="#"${dlAttr}>${row}</a>`;
-      if (m.status === 'sending') inner += '<div class="omx-prog ind" role="progressbar" aria-label="Uploading"><i></i></div>';   // honest: no fake percentage
-    } else if (m.kind === 'unsupported' || (m.kind && m.kind !== 'text')) inner = '<i class="omx-unsup">Unsupported message — update OST</i>';
-    else inner = esc(m.text).replace(/(https?:\/\/[^\s<]+)/g, (u) => `<a href="${u}" target="_blank" rel="noopener" class="omx-a">${u}</a>`);
-    const tail = failed ? `<span class="omx-t omx-tfail"><b class="omx-fail" aria-hidden="true">!</b>Not delivered · tap to retry</span>` : `<span class="omx-t">${tTime(m.ts)}${st}</span>`;
-    return `<div class="omx-b ${m.dir}${failed ? ' failed' : ''}" data-id="${esc(m.id)}"${failed ? ' data-act="retry" role="button" tabindex="0" title="' + esc(m.err || 'Not delivered') + '"' : ''}>${inner}${tail}</div>`;
+  // Typing is a them-bubble at the end of the column, present only while they type (no reserved strip).
+  let typingT = 0;
+  function paintTyping() {
+    const el = $('omxMsgs'); if (!el) return;
+    const col = el.querySelector('.omx-msgcol') || el, on = isTyping(S.peer);
+    const cur = col.querySelector(':scope > .omx-typing');
+    if (on && !cur) { col.insertAdjacentHTML('beforeend', cui('typingHtml', [nameOf(S.peer)], fbTyping)); if (isPinned()) pinBottom(); }
+    else if (!on && cur) cur.remove();
+    clearTimeout(typingT);
+    if (on) typingT = setTimeout(() => { paintTyping(); if (S.view === 'chat') paintChatHead(); if (listShown()) paintChats(); }, Math.max(100, 4000 - (Date.now() - (S.typingFrom[S.peer] || 0)) + 60));
+  }
+  // The pay card only RE-PRESENTS the verdict of verifyPay() (money team): state + their words.
+  function payStatus(m) {
+    const v = m && m.verified;
+    if (v === 'confirmed') return { state: 'confirmed', text: 'Confirmed on-chain' };
+    if (v === 'failed') return { state: 'failed', text: 'Transaction failed' };
+    if (v === 'pending') return { state: 'pending', text: 'Not confirmed yet' };
+    if (v === 'unverified') return { state: 'unverified', text: 'Not verified — ' + String(m.vReason || 'the transfer could not be matched') };
+    return { state: '', text: 'Checking the chain…' };
   }
   function paintMsgs(jump) {
     const el = $('omxMsgs'); if (!el) return;
+    const col = el.querySelector('.omx-msgcol') || el;
     const a = S.peer; const list = msgsOf(a);
     const stick = jump || isPinned(), keep = el.scrollTop;
-    let h = '', day = '';
-    if (!list.length) h = `<div class="omx-b sys">Messages are end-to-end encrypted. ${contact(a) && contact(a).state === 'pending-out' ? 'You can write now; ' + esc(nameOf(a)) + ' sees it as soon as they open OST.' : 'Say hi 👋'}</div>`;
-    for (const m of list) { const d = tDay(m.ts); if (d !== day) { day = d; h += `<div class="omx-day">${d}</div>`; } h += msgHtml(m, a); }
+    // Payment verification is the money team's verifyPay(): run it for pay messages that are not final yet,
+    // BEFORE the markup is built (the markup module never calls it).
+    list.forEach((m) => { if (m.kind === 'pay' && !m.verified) setTimeout(() => verifyPay(a, m), 0); });
+    const h = cui('threadHtml', [list, cuiCtx()], fbThread);
     // Media that is already on screen is carried over, not rebuilt: a rebuilt <img>
     // is 0 px tall until it decodes again, which collapses the thread for a frame
     // (the scroll position clamps — a reader scrolled up got pulled to the bottom)
     // and restarts playing videos.
     const reuse = new Map();
-    el.querySelectorAll('img, video, audio').forEach((x) => { const k = x.outerHTML; if (!reuse.has(k)) reuse.set(k, x); });
-    el.innerHTML = h;
-    if (reuse.size) el.querySelectorAll('img, video, audio').forEach((n) => { const k = n.outerHTML, o = reuse.get(k); if (o) { reuse.delete(k); n.replaceWith(o); } });
+    col.querySelectorAll('img, video, audio').forEach((x) => { const k = x.outerHTML; if (!reuse.has(k)) reuse.set(k, x); });
+    col.innerHTML = h;
+    if (reuse.size) col.querySelectorAll('img, video, audio').forEach((n) => { const k = n.outerHTML, o = reuse.get(k); if (o) { reuse.delete(k); n.replaceWith(o); } });
+    if (isTyping(a)) col.insertAdjacentHTML('beforeend', cui('typingHtml', [nameOf(a)], fbTyping));
     if (stick) { el.scrollTop = el.scrollHeight; S.pinnedChat = true; if (S.newBelow) { S.newBelow = 0; paintNewPill(); } }
     else el.scrollTop = keep;
     S.msgTop = el.scrollTop;
     // Auto-fetch small images so the chat feels alive.
     list.filter((m) => m.kind === 'file' && m.blob && /^image\//.test(m.mime || '') && (m.size || 0) <= AUTO_FETCH_IMG && !S.blobs[m.blob] && !S.blobs['local:' + m.id] && !S.blobs['pending:' + m.blob]).slice(-6).forEach((m) => { fetchBlob(m.dir === 'me' ? S.address : a, m).then(() => paintMsgs()).catch(() => {}); });
   }
-  function doSend() { const ta = $('omxText'); if (!ta) return; const text = ta.value.trim(); if (!text) return; ta.value = ''; ta.style.height = 'auto'; saveDraft(S.peer, ''); sendText(S.peer, text); }
+  function doSend() { const ta = $('omxText'); if (!ta) return; const text = ta.value.trim(); if (!text) return; ta.value = ''; ta.style.height = 'auto'; saveDraft(S.peer, ''); syncSendBtn(); sendText(S.peer, text); }
+
+  /* ---------- contact info pane (desk chat, from (i)); phones use the ⋯ sheet ---------- */
+  function paintInfo() { if (!infoEl || !S.peer) return; infoEl.innerHTML = cui('infoPaneHtml', [S.peer, cuiCtx()], fbInfo); }
+  function toggleInfo(force) {
+    const on = force != null ? !!force : !root.classList.contains('info-open');
+    if (on && !(layout() === 'desk' && S.view === 'chat' && S.peer)) return;
+    root.classList.toggle('info-open', on);
+    if (on) paintInfo(); else infoEl.innerHTML = '';
+    const b = headEl.querySelector('[data-act="peer-info"]'); if (b) b.setAttribute('aria-pressed', on ? 'true' : 'false');
+  }
+
+  /* ---------- chat-ui fallbacks: used only when ost-mesh-chat-ui.js lacks a builder (same classes, plainer) ---------- */
+  const tickIco = (m) => m.status === 'delivered' ? icon('check-double') : m.status === 'sent' ? icon('check') : icon('clock');
+  const tickWord = (m) => m.status === 'delivered' ? 'delivered' : m.status === 'sent' ? 'sent' : 'sending';
+  function fbLhead() { return `<div class="omx-lhead"><h2>Chats</h2><button type="button" class="omx-ib md" data-act="new-chat" aria-label="New chat" aria-haspopup="menu">${icon('edit')}</button></div>`; }
+  function fbRow(c, ctx) {
+    const a = c.addr, typing = isTyping(a), last = c.last || null, sel = ctx.selected === a;
+    let pv;
+    if (typing) pv = '<span class="pv typing"><span>typing…</span></span>';
+    else if (last && last.fail) pv = `<span class="pv fail">${icon('alert')}<span>Not delivered · ${esc(last.text || '')}</span></span>`;
+    else if (c.state === 'pending-out') pv = `<span class="pv">${icon('clock')}<span>Request sent · you can already write</span></span>`;
+    else if (last) {
+      const list = msgsOf(a), lm = list.find((m) => m.id === last.id) || list[list.length - 1];
+      pv = lm && lm.dir === 'me' ? `<span class="pv"><span class="you">You:</span>${tickIco(lm)}<span>${esc(last.text || previewOf(lm))}</span></span>` : `<span class="pv"><span>${esc(last.text || '')}</span></span>`;
+    } else pv = '<span class="pv"><span>Say hi</span></span>';
+    return `<button type="button" class="omx-item${c.unread ? ' unread' : ''}" data-act="chat" data-a="${esc(a)}"${sel ? ' aria-current="true"' : ''}>${avHtml(a, 'lg')}<span class="omx-main"><span class="nm">${esc(c.name || shortA(a))}</span><span class="tm">${esc(tShort((last && last.ts) || c.ts))}</span>${pv}<span class="rt">${c.unread ? `<span class="omx-unread" aria-label="${c.unread} unread">${c.unread}</span>` : ''}</span></span></button>`;
+  }
+  function fbChatsList(list, ctx) {
+    const reqs = list.filter((c) => c.state === 'pending-in' || c.state === 'request'), chats = list.filter((c) => !reqs.includes(c));
+    const unread = chats.filter((c) => c.unread).length, f = ctx.filter || 'all';
+    if (!list.length && !ctx.query) return `<div class="omx-empty"><span class="ic">${icon('chat')}</span><h3>No chats yet</h3><p>Chats are end-to-end encrypted. Share your invite so a friend can add you in one tap.</p><button type="button" class="omx-primary" data-act="add-tab" data-t="invite">${icon('share')}Share your invite</button><button type="button" class="omx-textbtn" data-act="add-tab" data-t="someone">I have a link or code</button></div>`;
+    const chip = (k, l, n) => `<button type="button" class="omx-chip omx-hit" role="tab" aria-selected="${f === k}" tabindex="${f === k ? 0 : -1}" data-act="chat-filter" data-f="${k}">${l}${n ? ` <b>${n}</b>` : ''}</button>`;
+    let h = (ctx.layout === 'desk' ? fbLhead() : '') + `<div class="omx-lsearch"><button type="button" class="omx-search" data-act="chat-search" aria-label="Search chats">${icon('search')}Search chats</button></div>`;
+    h += `<div class="omx-chips" role="tablist" aria-label="Filter chats">${chip('all', 'All')}${chip('unread', 'Unread', unread)}${chip('requests', 'Requests', reqs.length)}</div>`;
+    if (f === 'requests') return h + (reqs.length ? reqs.map((c) => { const nm = c.name || shortA(c.addr); return `<div class="omx-req">${avHtml(c.addr)}<span class="t"><b>${esc(nm)}</b><small>${c.state === 'request' ? 'Messaged you' : 'Wants to connect'} · ${esc(shortA(c.addr))}</small></span><span class="acts"><button type="button" class="omx-ib outline" data-act="decline" data-a="${esc(c.addr)}" aria-label="Decline ${esc(nm)}">${icon('close')}</button><button type="button" class="omx-primary omx-sm omx-hit" data-act="accept" data-a="${esc(c.addr)}">Accept</button></span></div>`; }).join('') : `<div class="omx-empty"><span class="ic">${icon('user-plus')}</span><h3>No requests</h3><p>People who want to connect show up here.</p></div>`);
+    if (reqs.length) h += `<button type="button" class="omx-reqrow" data-act="chat-filter" data-f="requests"><span class="ic">${icon('user-plus')}</span><span><b>Message requests</b><small>${esc(reqs.slice(0, 2).map((c) => c.name || shortA(c.addr)).join(' and '))} ${reqs.length > 1 ? 'want' : 'wants'} to connect</small></span><span class="rt"><span class="omx-unread">${reqs.length}</span>${icon('chevron-right')}</span></button>`;
+    const rows = (f === 'unread' ? chats.filter((c) => c.unread) : chats);
+    return h + (rows.length ? `<div class="omx-list" role="list">${rows.map((c) => fbRow(c, ctx)).join('')}</div>` : `<div class="omx-empty"><span class="ic">${icon(ctx.query ? 'search' : 'check-circle')}</span><h3>${ctx.query ? 'No chats match' : 'All caught up'}</h3><p>${ctx.query ? 'Try another name.' : 'No unread messages.'}</p></div>`);
+  }
+  function fbThreadHead(a, ctx) {
+    const c = contact(a) || { addr: a }, phone = ctx.layout !== 'desk', nm = c.name || shortA(a);
+    const pres = isTyping(a) ? '<span class="typing">typing…</span>' : online(a) ? '<span class="on">Online</span>' : esc(S.presence[a] && S.presence[a].lastSeen ? 'Last seen ' + agoText(S.presence[a].lastSeen) : 'Offline');
+    const st = c.state === 'friend' ? `${icon('lock')}encrypted` : c.state === 'pending-out' ? 'request sent' : c.state === 'blocked' ? 'blocked' : 'not accepted yet';
+    return `${phone ? `<button type="button" class="omx-ib" data-act="back" aria-label="Back to chats">${icon('back')}</button>` : ''}<button type="button" class="omx-peerbtn" data-act="peer-profile" aria-label="${esc(nm)}${ctx.hasProfile ? ', open profile' : ''}">${avHtml(a, phone ? 'sm' : '')}<span class="t"><b>${esc(nm)}</b><small>${pres} · ${st}</small></span></button>${ctx.headBtns.join('')}${phone ? '' : `<button type="button" class="omx-ib md" data-act="peer-info" aria-label="Contact info" aria-pressed="${ctx.infoOpen}">${icon('info')}</button>`}<button type="button" class="omx-ib${phone ? '' : ' md'}" data-act="peer-menu" aria-label="Chat options" aria-haspopup="menu">${icon('more')}</button>`;
+  }
+  function fbComposer(ctx) { if (ctx && ctx.blocked) return `<div class="omx-blocked"><span>${icon('ban')}You blocked this contact.</span><button type="button" class="omx-ghost" data-act="unblock">Unblock</button></div>`; return `<div class="omx-compose"><div class="omx-compose-in"><button type="button" class="omx-ib filled attach" data-act="attach" aria-label="Attach" aria-expanded="false">${icon('plus')}</button><div class="omx-fieldpill"><textarea id="omxText" rows="1" placeholder="Message" enterkeyhint="send" aria-label="Message"></textarea></div><button type="button" class="omx-send photo" data-act="send" id="omxSend" aria-label="Send a photo or video">${icon('image')}</button></div></div>`; }
+  function fbTray(items) { return `<div class="omx-attach" role="group" aria-label="Attach">${items.map((x) => `<button type="button" data-act="${x.act}"${x.i != null ? ` data-i="${x.i}"` : ''}><span class="tile" style="--tile:var(--omx-id-${Number(x.tile) % 12 || 0})" aria-hidden="true">${icoOrText(x.ico)}</span>${esc(x.lbl)}</button>`).join('')}<p class="omx-traynote">${icon('lock')}Encrypted on this device before it leaves</p></div>`; }
+  function fbTyping(name) { return `<div class="omx-typing" role="status" aria-label="${esc(name)} is typing"><i></i><i></i><i></i></div>`; }
+  function fbInfo(a, ctx) {
+    const c = contact(a) || { addr: a }, nm = c.name || shortA(a), blocked = c.state === 'blocked';
+    const acts = (ctx.canProfile ? [{ ico: 'user', lbl: 'Profile', act: 'peer-profile' }] : []).concat(ctx.info || []);
+    return `<div class="ih"><h2>Contact info</h2><button type="button" class="omx-ib md" data-act="info-close" aria-label="Close contact info">${icon('close')}</button></div>` +
+      `<div class="who">${avHtml(a, 'xl')}<b>${esc(nm)}</b><small>${esc(shortA(a))}${online(a) ? ' · Online' : ''}</small></div>` +
+      (acts.length ? `<div class="acts">${acts.map((x) => `<button type="button" data-act="${esc(x.act)}">${icoOrText(x.ico)}${esc(x.lbl)}</button>`).join('')}</div>` : '') +
+      `<div class="sec"><h3>Safety code</h3><div class="code">${esc(c.fp || 'Not known yet')}</div><p>Compare it with ${esc(nm)} in person or on a call. If it matches, nobody is in the middle.</p></div>` +
+      `<div class="sec"><h3>Notifications</h3><p>New messages alert this device while OST is open in the background (Settings).</p></div>` +
+      `<div class="sec danger">${blocked ? `<button type="button" data-act="unblock">${icon('ban')}Unblock ${esc(nm)}</button>` : `<button type="button" data-act="peer-block">${icon('ban')}Block ${esc(nm)}</button>`}<button type="button" data-act="peer-remove">${icon('user-x')}Remove contact</button><button type="button" data-act="peer-clear">${icon('trash')}Clear chat on this device</button></div>`;
+  }
+  function fbBubble(m, a) {
+    if (m.dir === 'sys') return `<div class="omx-b sys">${esc(m.text)}</div>`;
+    const failed = m.dir === 'me' && m.status === 'failed';
+    let inner = '', cls = '';
+    if (m.kind === 'loc') {
+      const live = m.live && !m.ended && (!m.until || m.until > Date.now());
+      cls = ' loc';
+      inner = `<a class="omx-locc" href="https://www.openstreetmap.org/?mlat=${m.lat}&mlon=${m.lng}#map=16/${m.lat}/${m.lng}" target="_blank" rel="noopener">${mapHtml(m.lat, m.lng)}</a><div class="omx-loct"><b>${m.live ? (live ? 'Live location' : 'Live location ended') : 'Location'}</b><span>±${m.acc || '?'} m${m.live && m.upd ? ' · updated ' + agoText(m.upd) : ''}${live && m.until ? ' · until ' + tTime(m.until) : ''}</span><a href="https://www.google.com/maps/search/?api=1&query=${m.lat},${m.lng}" target="_blank" rel="noopener">Open in Maps</a></div>`;
+    } else if (m.kind === 'pay') {
+      const cl = netName(), st = payStatus(m);
+      cls = ' pay';
+      inner = `<div class="omx-payc"><span class="top">${icon('coin')}Payment<span class="omx-devnet">${esc(cl.toUpperCase())}</span></span><span class="amt">${esc(m.amount)} ${esc(m.ccy)}</span><span class="note">${m.dir === 'me' ? 'You sent' : 'You received'}${m.note ? ' · ' + esc(m.note) : ''}</span><span class="st">${icon(st.state === 'confirmed' ? 'check-circle' : st.state === 'failed' ? 'x-circle' : st.state ? (st.state === 'pending' ? 'clock' : 'alert') : 'loader')}${esc(st.text)}</span><a class="tx" href="https://explorer.solana.com/tx/${esc(m.sig)}${/^mainnet/.test(cl) ? '' : '?cluster=' + esc(cl)}" target="_blank" rel="noopener"><span>View transaction</span>${icon('external')}</a></div>`;
+    } else if (m.kind === 'call') {
+      const cs = callSt(m), lbl = cs === 'missed' ? (m.dir === 'me' ? 'No answer' : 'Missed') : cs === 'declined' ? 'Declined' : cs === 'busy' ? 'Busy' : 'Ended';
+      cls = ' call';
+      inner = `<span class="tile">${icon(m.video ? 'video' : 'phone')}</span><span><b>${m.video ? 'Video' : 'Voice'} call · ${lbl}</b><small>${tTime(m.ts)}${m.dur ? ' · ' + Math.floor(m.dur / 60) + ':' + String(m.dur % 60).padStart(2, '0') : ''}</small></span>${X.actions['call-back'] ? `<button type="button" class="omx-ghost omx-sm" data-act="call-back" data-video="${m.video ? 1 : 0}">${icon(m.video ? 'video' : 'phone')}Call back</button>` : ''}`;
+    } else if (m.kind === 'file') {
+      const cached = S.blobs[m.blob] || S.blobs['local:' + m.id];
+      const isImg = /^image\//.test(m.mime || ''), isVid = /^video\//.test(m.mime || ''), isAud = /^audio\//.test(m.mime || '');
+      const unsent = m.dir === 'me' && (failed || m.status === 'sending');
+      if (cached && (isImg || isVid)) { cls = ' media'; inner = isImg ? `<img src="${cached.url}" alt="${esc(m.name)}" loading="lazy">` : `<video src="${cached.url}" controls playsinline></video>`; }
+      else {
+        if (cached && isAud) inner += `<audio src="${cached.url}" controls></audio>`;
+        const hint = failed ? '' : unsent && !m.blob ? ' · encrypting & uploading…' : cached ? ' · tap to save' : unsent ? '' : ' · tap to download';
+        const row = `<span class="tile">${icon(isImg ? 'image' : isVid ? 'film' : isAud ? 'music' : /pdf/.test(m.mime || '') ? 'file-text' : 'file')}</span><span class="t"><b>${esc(m.name)}</b><small>${fmtSize(m.size || 0)}${hint}</small></span>`;
+        inner += failed || unsent ? `<div class="omx-file">${row}</div>` : cached ? `<a class="omx-file" href="${cached.url}" download="${esc(m.name)}">${row}</a>` : `<a class="omx-file" href="#" data-act="dl" data-id="${esc(m.id)}">${row}</a>`;
+      }
+      if (m.status === 'sending') inner += '<div class="omx-prog ind" role="progressbar" aria-label="Uploading"><i></i></div>';
+    } else if (m.kind === 'unsupported' || (m.kind && m.kind !== 'text')) inner = '<i class="omx-unsup">Unsupported message — update OST</i>';
+    else inner = esc(m.text).replace(/(https?:\/\/[^\s<]+)/g, (u) => `<a href="${u}" target="_blank" rel="noopener" class="omx-a">${u}</a>`);
+    const who = m.dir === 'me' ? 'You' : nameOf(a);
+    if (failed) return `<div class="omx-brow"><button type="button" class="omx-failbtn" data-act="fail-menu" data-id="${esc(m.id)}" aria-label="Not delivered: options">${icon('alert', 'is-on')}</button><div class="omx-b me failed g-solo${cls}" data-id="${esc(m.id)}" data-act="retry" role="button" tabindex="0" aria-label="Not delivered: ${esc(m.text || previewOf(m))}. Tap to retry" title="${esc(m.err || 'Not delivered')}">${inner}</div></div><span class="omx-fcap">Not delivered · Tap to retry</span>`;
+    const meta = `<span class="omx-t">${tTime(m.ts)}${m.dir === 'me' ? ' ' + tickIco(m) : ''}</span>`;
+    return `<div class="omx-b ${m.dir} g-solo${cls}" data-id="${esc(m.id)}" aria-label="${esc(who + ', ' + tTime(m.ts) + (m.dir === 'me' ? ', ' + tickWord(m) : ''))}">${inner}${meta}</div>`;
+  }
+  function fbThread(list, ctx) {
+    const a = S.peer, c = contact(a);
+    let h = `<div class="omx-b sys e2e">${icon('lock')}<span>Messages with ${esc(nameOf(a))} are end-to-end encrypted.${c && c.state === 'pending-out' ? ' You can write now; they see it as soon as they accept.' : ''}</span></div>`;
+    let day = '', open = false;
+    list.forEach((m) => {
+      const d = tDay(m.ts);
+      if (d !== day) { if (open) h += '</section>'; day = d; open = true; h += `<section class="omx-dayblock" aria-label="${esc(d)}"><h3 class="omx-day">${esc(d)}</h3>`; }
+      if (ctx.unreadFrom && m.id === ctx.unreadFrom) h += '<div class="omx-unreaddiv" role="separator">New messages</div>';
+      h += fbBubble(m, a);
+    });
+    if (open) h += '</section>';
+    return h;
+  }
+
+  /* ---------- live repaints (presence, typing, new mail): in place, never a view change ---------- */
+  function onPresence() {
+    if (!root || !appIsOpen()) return;
+    if (listShown()) paintChats();
+    if (S.view === 'chat') paintChatHead();
+    if (asideShown()) paintAside('friends');
+    if (root.classList.contains('info-open')) paintInfo();
+  }
+  let typingListT = 0;
+  function onTypingChange(from) {
+    if (!root || !appIsOpen()) return;
+    if (S.view === 'chat' && S.peer === from) { paintTyping(); paintChatHead(); }
+    if (listShown()) paintChats();
+    if (asideShown()) paintAside('friends');
+    clearTimeout(typingListT);
+    typingListT = setTimeout(() => { if (!appIsOpen()) return; if (listShown()) paintChats(); if (asideShown()) paintAside('friends'); }, 4100);
+  }
+  // Contacts changed (a request, an accept, the friend list): the views that list people repaint.
+  function refreshLists() {
+    if (!root || !appIsOpen()) { paintNav(); return; }
+    if (S.view === 'chats' || S.view === 'add') render();
+    else { paintNav(); if (listShown()) paintChats(); if (asideShown()) paintAside('friends'); }
+  }
 
   /* ---------- events ---------- */
   function onChange(e) {
     const t = e.target;
-    if (t && (t.id === 'omxFile' || t.id === 'omxFileAny') && t.files && t.files.length) { Array.from(t.files).slice(0, 6).forEach((f) => sendFile(S.peer, f)); t.value = ''; const am = $('omxAttach'); if (am) am.hidden = true; }
+    if (t && (t.id === 'omxFile' || t.id === 'omxFileAny') && t.files && t.files.length) { Array.from(t.files).slice(0, 6).forEach((f) => sendFile(S.peer, f)); t.value = ''; closeTray(); }
+  }
+  function onInput(e) {
+    const t = e.target;
+    if (t && t.id === 'omxChatQ') { S.chatQuery = t.value.slice(0, 60); S.chatSearching = true; paintChatRows(); }
+  }
+  // Failed bubbles are role=button (Enter / Space retry like a tap); core tablists move with the arrow keys.
+  function onRootKey(e) {
+    const t = e.target; if (!t || !t.getAttribute) return;
+    if ((e.key === 'Enter' || e.key === ' ') && t.classList && t.classList.contains('omx-b') && t.hasAttribute('data-act')) { e.preventDefault(); t.click(); return; }
+    if (t.getAttribute('role') === 'tab' && /^(ArrowRight|ArrowLeft|ArrowDown|ArrowUp|Home|End)$/.test(e.key)) {
+      const list = t.closest('[role="tablist"]');
+      if (!list || !(list.hasAttribute('data-omx-tabs') || list.classList.contains('omx-chips'))) return;
+      const tabs = Array.from(list.querySelectorAll('[role="tab"]')), i = tabs.indexOf(t); if (i < 0) return;
+      const n = e.key === 'Home' ? 0 : e.key === 'End' ? tabs.length - 1 : /Right|Down/.test(e.key) ? (i + 1) % tabs.length : (i - 1 + tabs.length) % tabs.length;
+      e.preventDefault();
+      const nt = tabs[n], act = nt.getAttribute('data-act'), k = nt.getAttribute('data-t') || nt.getAttribute('data-f') || '';
+      nt.click();
+      setTimeout(() => { const m = Array.from(root.querySelectorAll(`[role="tab"][data-act="${act}"]`)).find((x) => (x.getAttribute('data-t') || x.getAttribute('data-f') || '') === k) || nt; try { m.focus({ preventScroll: true }); } catch (_) {} }, 0);
+    }
+  }
+  function closeTray() { const m = $('omxAttach'); if (m) m.hidden = true; const b = body && body.querySelector('[data-act="attach"]'); if (b) b.setAttribute('aria-expanded', 'false'); }
+  const ALIAS = { 'remove-contact': 'peer-remove', 'clear-chat': 'peer-clear', 'contact-info': 'peer-info', 'close-info': 'info-close', 'view-media': 'media-open', 'open-media': 'media-open', 'search-chats': 'chat-search', 'retry-now': 'net-retry' };
+  function navTo(v, el) {
+    const sub = el && (el.getAttribute('data-addtab') || el.getAttribute('data-t'));
+    if (v === 'add' && sub) S.addTab = /some|code|link|paste|add/i.test(sub) ? 'someone' : 'invite';
+    if (v !== 'chat') S.peer = null;
+    S.view = v; S.viewIsDefault = false; render();
+    // The nav may have been redrawn: keep keyboard focus on the item instead of dropping it to <body>.
+    const ae = document.activeElement, host = el && el.closest ? el.closest('#omxRail, #omxTabs') : null;
+    if (host && (!ae || ae === document.body || !ae.isConnected)) { const b = host.querySelector('[data-tab="' + v + '"]'); if (b && b.getClientRects().length) { try { b.focus({ preventScroll: true }); } catch (_) {} } }
+  }
+  function msgIdOf(t) {
+    if (!t) return '';
+    const own = t.getAttribute('data-id'); if (own) return own;
+    const row = t.closest('.omx-brow'), b = row && row.querySelector('.omx-b[data-id]'); if (b) return b.getAttribute('data-id');
+    const p = t.closest('.omx-b[data-id]'); return p ? p.getAttribute('data-id') : '';
   }
   async function onClick(e) {
     // A tap anywhere on a failed bubble retries it (its file row / map / links included); its own buttons keep their action.
     const fb = e.target.closest('.omx-b.failed[data-act="retry"]');
     const t = fb && !e.target.closest('button') ? fb : e.target.closest('[data-act],[data-tab]'); if (!t) return;
-    if (t.hasAttribute('data-tab')) {
-      const v = t.getAttribute('data-tab'); S.view = v; S.viewIsDefault = false; render();
-      // The tab bar was redrawn: keep keyboard focus on the tab instead of dropping it to <body>.
-      const ae = document.activeElement;
-      if (!ae || ae === document.body || !ae.isConnected) { const b = tabsEl.querySelector('[data-tab="' + v + '"]'); if (b && !tabsEl.hidden) { try { b.focus({ preventScroll: true }); } catch (_) {} } }
-      return;
-    }
-    const act = t.getAttribute('data-act'), a = t.getAttribute('data-a');
+    if (t.hasAttribute('data-tab') && !t.hasAttribute('data-act')) { navTo(t.getAttribute('data-tab'), t); return; }
+    let act = t.getAttribute('data-act'); const a = t.getAttribute('data-a');
     if (X.actions[act]) { try { await X.actions[act](t, e); } catch (err) { toast((err && err.message) || 'Action failed', 'err'); } return; }
+    if (t.hasAttribute('data-tab') && !/^(add-tab|chat-filter)$/.test(act)) { navTo(t.getAttribute('data-tab'), t); return; }
+    act = ALIAS[act] || act;
     switch (act) {
-      case 'attach': { const m = $('omxAttach'); if (m) { const pin = isPinned(); m.hidden = !m.hidden; t.setAttribute('aria-expanded', m.hidden ? 'false' : 'true'); const lp = $('omxLivePick'); if (lp) lp.hidden = true; if (pin) pinBottom(); } break; }
-      case 'att-media': { const f = $('omxFile'); if (f) f.click(); break; }
-      case 'att-file': { const f = $('omxFileAny'); if (f) f.click(); break; }
-      case 'att-loc': { const m = $('omxAttach'); if (m) m.hidden = true; shareLocation(S.peer); break; }
-      case 'att-live': { const lp = $('omxLivePick'); if (lp) lp.hidden = !lp.hidden; break; }
-      case 'live-go': { const m = $('omxAttach'); if (m) m.hidden = true; startLive(S.peer, Number(t.getAttribute('data-m')) || 15); break; }
+      case 'attach': {
+        if (deskPointer()) {
+          closeTray();
+          const items = attachItems();
+          let rows = null; try { if (typeof CUI.attachSheetItems === 'function') rows = CUI.attachSheetItems(items); } catch (_) { rows = null; }
+          if (!Array.isArray(rows) || !rows.length) rows = items.map((x) => ({ label: x.lbl, sub: x.sub, ico: x.ico, tile: x.tile, value: x.act === 'att-x' ? 'att-x:' + x.i : x.act }));
+          t.setAttribute('aria-expanded', 'true');
+          const v = await actionSheet({ title: 'Attach', items: rows, anchor: t, place: 'above-start', cls: 'attach', note: (typeof CUI.ATTACH_NOTE === 'string' && CUI.ATTACH_NOTE) || 'Encrypted on this device before it leaves' });
+          if (t.isConnected) t.setAttribute('aria-expanded', 'false');
+          if (typeof v === 'string' && v) { const m = v.match(/^att-x:(\d+)$/); runAttach(m ? { act: 'att-x', i: m[1] } : { act: v }, t); }
+          break;
+        }
+        const m = $('omxAttach'); if (m) { const pin = isPinned(); m.hidden = !m.hidden; t.setAttribute('aria-expanded', m.hidden ? 'false' : 'true'); if (pin) pinBottom(); }
+        break;
+      }
+      case 'att-live': {   // the tray's own duration picker (second step) when it has one; else a small menu
+        const lp = $('omxLivePick'), tr = $('omxAttach');
+        if (lp && tr && !tr.hidden && tr.contains(t)) { lp.hidden = !lp.hidden; if (isPinned()) pinBottom(); break; }
+        closeTray(); runAttach({ act }, t); break;
+      }
+      case 'att-media': case 'att-file': case 'att-loc': case 'att-x': closeTray(); runAttach({ act, i: t.getAttribute('data-i') }, t); break;
+      case 'peer-act': { const pv = t.getAttribute('data-v'); if (pv === 'block') await doBlock(S.peer); else if (pv === 'unblock') await doUnblock(S.peer); else if (pv === 'remove') await doRemove(S.peer); else if (pv === 'clear') await doClear(S.peer); break; }
+      case 'live-go': closeTray(); startLive(S.peer, Number(t.getAttribute('data-m')) || 15); break;
       case 'live-stop': stopLive(S.peer); break;
-      case 'att-x': { const m = $('omxAttach'); if (m) m.hidden = true; const x = X.attach[Number(t.getAttribute('data-i'))]; if (x) { try { await x.run(S.peer); } catch (err) { toast(err.message || 'Failed', 'err'); } } break; }
       case 'peer-profile': if (X.views.profile) { const p = S.peer; S.profileOf = p; S.view = 'profile'; S.viewIsDefault = false; render(); } break;
+      case 'peer-info': toggleInfo(); break;
+      case 'info-close': toggleInfo(false); { const b = headEl.querySelector('[data-act="peer-info"]'); if (b) { try { b.focus({ preventScroll: true }); } catch (_) {} } } break;
       case 'close': close(); break;
       case 'back': leaveChat(); break;
       case 'jump-new': S.newBelow = 0; S.pinnedChat = true; pinBottom(); paintNewPill(); break;
       case 'chat': openChat(a); break;
       case 'accept': acceptPerson(a); break;
       case 'decline': declinePerson(a, false); break;
-      case 'send': doSend(); break;
+      case 'send': if (t.classList.contains('photo') || !(($('omxText') || {}).value || '').trim()) { const f = $('omxFile'); if (f) f.click(); } else doSend(); break;
       case 'retry': e.preventDefault(); retryMsg(S.peer, t.getAttribute('data-id')); break;   // a tap anywhere on a failed bubble (map / file links included) retries
-      case 'dl': { e.preventDefault(); const id = t.getAttribute('data-id'); const m = msgsOf(S.peer).find((x) => x.id === id); if (!m) return; t.style.opacity = '.6'; try { await fetchBlob(m.dir === 'me' ? S.address : S.peer, m); paintMsgs(); } catch (err) { toast(err && err.message || 'Download failed', 'err'); t.style.opacity = ''; } break; }
+      case 'fail-menu': await failMenu(msgIdOf(t), t); break;
+      case 'dl': case 'media-open': { e.preventDefault(); const id = t.getAttribute('data-id') || msgIdOf(t); await openMedia(id, t, act === 'media-open'); break; }
+      case 'chat-filter': { const f = t.getAttribute('data-f') || t.getAttribute('data-filter') || t.getAttribute('data-v') || t.getAttribute('data-t') || 'all'; S.chatFilter = /req/i.test(f) ? 'requests' : /unr/i.test(f) ? 'unread' : 'all'; if (!listShown()) { S.view = 'chats'; render(); } else paintChats(); break; }
+      case 'chat-search': if (t.tagName !== 'INPUT') { S.chatSearching = true; paintChats(); const q = $('omxChatQ'); if (q) { try { q.focus(); } catch (_) {} } } break;
+      case 'add-tab': { const k = t.getAttribute('data-t') || t.getAttribute('data-tab') || t.getAttribute('data-v') || t.getAttribute('data-addtab') || 'invite'; S.addTab = /some|code|link|paste|add/i.test(k) ? 'someone' : 'invite'; if (S.view !== 'add') { S.peer = null; S.view = 'add'; S.viewIsDefault = false; } render(); break; }
+      case 'nav-post': if (typeof X.compose === 'function') { try { await X.compose(); } catch (err) { toast((err && err.message) || 'Could not open the composer', 'err'); } } else if (X.views.compose) { S.view = 'compose'; S.viewIsDefault = false; render(); } break;
+      case 'account-menu': await accountMenu(t); break;
+      case 'net-retry': netRetry(); break;
+      case 'new-chat': await newChatMenu(t); break;
+      case 'edit-profile': if (X.views.edit) { S.view = 'edit'; S.viewIsDefault = false; render(); } else { const n = $('omxName'); if (n) n.focus(); } break;
+      case 'peer-block': await doBlock(S.peer); break;
+      case 'peer-remove': await doRemove(S.peer); break;
+      case 'peer-clear': await doClear(S.peer); break;
       case 'copy-link': copyText(inviteLink(), 'Invite link copied — send it to your friend'); break;
       case 'copy-addr': copyText(S.address, 'Address copied'); break;
-      case 'share-link': try { await navigator.share({ title: 'Chat with me on OST Mesh', text: 'Add me on OST Mesh: ' + inviteLink() }); } catch (_) {} break;
-      case 'scan': { const w = $('omxScanWrap'); if (!w) return; if (!w.hidden && S.scanStream) { stopScan(); w.hidden = true; t.textContent = '📷 Scan QR'; return; } w.hidden = false; t.textContent = '■ Stop camera'; startScan($('omxVideo'), (info) => { S.pendingAdd = info; render(); }, (s) => { const st = $('omxScanStatus'); if (st) st.textContent = s; }); break; }
+      case 'share-link': if (navigator.share) { try { await navigator.share({ title: 'Chat with me on OST Mesh', text: 'Add me on OST Mesh: ' + inviteLink() }); } catch (_) {} } else copyText(inviteLink(), 'Invite link copied — send it to your friend'); break;
+      case 'scan': {
+        const w = $('omxScanWrap'); if (!w) return;
+        const lbl = (s) => { const sp = t.querySelector('span'); if (sp) sp.textContent = s; else t.textContent = s; const u = t.querySelector('use'); if (u) u.setAttribute('href', s === 'Scan QR' ? '#i-scan' : '#i-stop'); };
+        if (!w.hidden && S.scanStream) { stopScan(); w.hidden = true; lbl('Scan QR'); return; }
+        w.hidden = false; lbl('Stop camera');
+        startScan($('omxVideo'), (info) => { S.pendingAdd = info; render(); }, (s) => { const st = $('omxScanStatus'); if (st) st.textContent = s; }); break;
+      }
       case 'paste': try { const txt = await navigator.clipboard.readText(); const info = parseAddText(txt); if (!info) { toast('Clipboard has no OST Mesh link.', 'err'); return; } S.pendingAdd = info; render(); } catch (_) { toast('Clipboard not available — paste into the box.', 'err'); } break;
-      case 'add-go': { const info = parseAddText(($('omxAddInput') || {}).value); if (!info) { toast('Paste an invite link or an ost-mesh: address.', 'err'); return; } t.disabled = true; t.textContent = 'Adding…'; await addPerson(info); break; }
+      case 'add-go': { const info = parseAddText(($('omxAddInput') || {}).value); if (!info) { const inp = $('omxAddInput'); if (inp) { inp.setAttribute('aria-invalid', 'true'); inp.focus(); } toast('Paste an invite link or an ost-mesh: address.', 'err'); return; } t.disabled = true; t.textContent = 'Adding…'; await addPerson(info); if (S.view === 'add') render(); break; }
       case 'add-confirm': { const info = S.pendingAdd; S.pendingAdd = null; t.disabled = true; t.textContent = 'Adding…'; await addPerson(info); if (S.view === 'add') render(); break; }
       case 'add-cancel': S.pendingAdd = null; render(); break;
       case 'emoji': {   // toggled in place: re-rendering would wipe a name being typed
         S.profile.emoji = t.getAttribute('data-e'); lsSet(K.profile, S.profile);
-        t.parentNode.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b === t));
-        const av = body.querySelector('.omx-me .omx-av'); if (av) av.textContent = S.profile.emoji;
+        t.parentNode.querySelectorAll('button').forEach((b) => b.setAttribute('aria-checked', b === t ? 'true' : 'false'));
+        const av = body.querySelector('.omx-meedit .omx-av'); if (av) av.setAttribute('data-g', S.profile.emoji);
         saveProfile({ emoji: S.profile.emoji }).catch((err) => toast(err.message, 'err')); break;
       }
       case 'save-profile': {
         const n = ($('omxName') || {}).value || ''; S.profile.name = n.trim().slice(0, 32); lsSet(K.profile, S.profile);
         t.disabled = true;
-        try { await saveProfile({ name: S.profile.name, emoji: S.profile.emoji || '' }); toast('Saved — friends see “' + (S.profile.name || shortA(S.address)) + '”'); renderMe(); }
+        try { await saveProfile({ name: S.profile.name, emoji: S.profile.emoji || '' }); toast('Saved — friends see “' + (S.profile.name || shortA(S.address)) + '”', 'ok'); render(); }
         catch (err) { toast(err.message, 'err'); t.disabled = false; }
         break;
       }
       case 'notif-on': {
         let perm = '';
         try { perm = window.OST_NOTIFY && typeof window.OST_NOTIFY.request === 'function' ? await window.OST_NOTIFY.request() : ('Notification' in window ? await Notification.requestPermission() : 'unsupported'); } catch (_) { perm = 'unsupported'; }
-        toast(perm === 'granted' ? 'Notifications are on for this device' : perm === 'denied' ? 'Notifications are blocked — allow them in your browser settings.' : perm === 'unsupported' ? 'This browser cannot show notifications.' : 'Notifications were not turned on.', perm === 'granted' ? '' : 'err');
+        toast(perm === 'granted' ? 'Notifications are on for this device' : perm === 'denied' ? 'Notifications are blocked — allow them in your browser settings.' : perm === 'unsupported' ? 'This browser cannot show notifications.' : 'Notifications were not turned on.', perm === 'granted' ? 'ok' : 'err');
         if (S.view === 'settings' || S.view === 'me') render();
         break;
       }
@@ -1512,46 +2286,125 @@ if (!window.OST_MESH_APP) {
       case 'reset-id': {
         const ok = await confirmSheet({ title: 'Reset your mesh identity?', body: 'You get a new address and new keys; friends must add you again. Chats stay on this device.', ok: 'Reset identity', danger: true });
         if (!ok) break;
-        try { await resetIdentity(); toast('New identity: ' + shortA(S.address)); } catch (err) { toast((err && err.message) || 'Reset failed', 'err'); }
+        try { await resetIdentity(); toast('New identity: ' + shortA(S.address), 'ok'); } catch (err) { toast((err && err.message) || 'Reset failed', 'err'); }
         render(); break;
       }
-      case 'peer-menu': await peerMenu(S.peer); break;
-      case 'unblock': try { await signed('POST', '/mesh/v1/friend/respond', { wallet: S.address, other: S.peer, action: 'unblock' }); upsertContact(S.peer, { state: 'friend' }); render(); } catch (err) { toast(err.message, 'err'); } break;
+      case 'peer-menu': await peerMenu(S.peer, t); break;
+      case 'unblock': await doUnblock(S.peer); break;
     }
   }
-  function copyText(text, msg) { const done = () => toast(msg || 'Copied'); try { if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text).then(done, fallback); return; } } catch (_) {} fallback(); function fallback() { try { const ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); done(); } catch (_) { toast('Copy failed — long-press the link to copy it.', 'err'); } } }
-  // Chat ⋯ sheet: Block / Remove contact / Clear chat… (+ plugin rows, e.g. calls on narrow phones).
-  async function peerMenu(p) {
+  // An attach choice (tray tile, desk popover row or a plugin's tile).
+  async function runAttach(x, anchor) {
+    const act = x.act;
+    if (act === 'att-media') { const f = $('omxFile'); if (f) f.click(); }
+    else if (act === 'att-file') { const f = $('omxFileAny'); if (f) f.click(); }
+    else if (act === 'att-loc') shareLocation(S.peer);
+    else if (act === 'att-live') {
+      const p = S.peer;
+      const m = await actionSheet({ title: 'Share live location for', items: [{ label: '15 minutes', value: 15, ico: 'live' }, { label: '1 hour', value: 60, ico: 'live' }, { label: '8 hours', value: 480, ico: 'live' }], anchor: deskPointer() ? anchor : null, place: 'above-start' });
+      if (m && S.peer === p) startLive(p, m);
+    } else if (act === 'att-x') {
+      const it = X.attach[Number(x.i)];
+      if (it) { try { await it.run(S.peer); } catch (err) { toast((err && err.message) || 'Failed', 'err'); } }
+    }
+  }
+  // A tap on a chat photo opens the viewer (OST Social's X.viewer) when there is one; other files are saved.
+  async function openMedia(id, el, view) {
+    const m = msgsOf(S.peer).find((x) => x.id === id); if (!m) return;
+    let rec = S.blobs[m.blob] || S.blobs['local:' + m.id];
+    const media = /^(image|video)\//.test(m.mime || '');
+    if (!rec) {
+      if (el) el.style.opacity = '.6';
+      try { rec = await fetchBlob(m.dir === 'me' ? S.address : S.peer, m); paintMsgs(); }
+      catch (err) { toast((err && err.message) || 'Download failed', 'err'); if (el) el.style.opacity = ''; return; }
+      if (!view) return;                                             // first tap downloads; the picture now shows in the bubble
+    }
+    if (media && typeof X.viewer === 'function') { try { X.viewer({ src: rec.url, alt: m.name || (m.mime && /^video/.test(m.mime) ? 'Video' : 'Photo'), from: m.dir === 'me' ? myName() : nameOf(S.peer), ts: m.ts, download: rec.url, name: m.name || '', mime: m.mime || '' }); return; } catch (_) {} }
+    const d = document.createElement('a'); d.href = rec.url; d.download = m.name || 'file'; d.rel = 'noopener'; document.body.appendChild(d); d.click(); d.remove();
+  }
+  // The failed (!) sheet: Try again now · Copy text · Delete from this device.
+  async function failMenu(id, anchor) {
+    const p = S.peer, m = id && findMsg(p, id); if (!m) return;
+    const quote = m.text ? '“' + (m.text.length > 60 ? m.text.slice(0, 58) + '…' : m.text) + '”' : 'This ' + (m.kind === 'file' ? 'file' : 'message');
+    let spec = null; try { if (typeof CUI.failedSheet === 'function') spec = CUI.failedSheet(m, nameOf(p)); } catch (_) { spec = null; }
+    if (!spec || !Array.isArray(spec.items)) {
+      const items = [{ label: 'Try again now', ico: 'refresh', value: 'retry' }];
+      if (m.text) items.push({ label: 'Copy text', ico: 'copy', value: 'copy' });
+      items.push({ label: 'Delete from this device', sub: 'It was never delivered, so ' + nameOf(p) + ' never sees it', ico: 'trash', danger: true, value: 'delete' });
+      spec = { title: 'Not delivered', body: quote + ' is saved on this device and retries automatically when the hub can be reached.', items };
+    }
+    // honest: a message that will NOT retry by itself (a permanent refusal, or older than a week) says so
+    if (m.perm) spec.body = quote + ' was not delivered' + (m.err ? ' (' + String(m.err).replace(/\.$/, '') + ')' : '') + '. It stays on this device until you try again or delete it.';
+    const v = await actionSheet({ title: spec.title || 'Not delivered', body: spec.body, items: spec.items, anchor: deskPointer() ? anchor : null });
+    if (!v || S.peer !== p) return;
+    if (v === 'retry') retryMsg(p, id);
+    else if (v === 'copy') copyText(m.text, 'Copied');
+    else if (v === 'delete' || v === 'del') {
+      INFLIGHT.delete(id); outboxDel(id); outFileDel(id);
+      const list = msgsOf(p).filter((x) => x.id !== id); saveMsgs(p, list);
+      const c = contact(p), lm = list[list.length - 1];
+      if (c && c.last && c.last.id === id) upsertContact(p, { last: lm ? { text: previewOf(lm), ts: lm.ts, id: lm.id, kind: lm.kind, fail: lm.dir === 'me' && lm.status === 'failed' } : null });
+      if (S.view === 'chat' && S.peer === p) paintMsgs();
+      if (listShown()) paintChats();
+      toast('Deleted from this device', 'ok');
+    }
+  }
+  async function accountMenu(anchor) {
+    const v = await actionSheet({ title: 'Account', items: [{ label: 'Edit profile', ico: 'pen', value: 'edit' }, { label: 'Copy my address', ico: 'copy', value: 'addr' }, { label: 'Settings', ico: 'settings', value: 'settings' }], anchor });
+    if (v === 'edit') { S.view = X.views.edit ? 'edit' : 'settings'; S.viewIsDefault = false; S.peer = null; render(); }
+    else if (v === 'addr') copyText(S.address, 'Address copied');
+    else if (v === 'settings') { S.view = 'settings'; S.viewIsDefault = false; S.peer = null; render(); }
+  }
+  async function newChatMenu(anchor) {
+    const fr = Object.values(S.contacts).filter((c) => c && (c.state === 'friend' || c.state === 'pending-out')).sort((a, b) => (a.name || shortA(a.addr)).localeCompare(b.name || shortA(b.addr))).slice(0, 12);
+    const items = fr.map((c) => ({ label: c.name || shortA(c.addr), sub: shortA(c.addr) + (online(c.addr) ? ' · Online' : ''), ico: 'chat', value: c.addr }));
+    items.push({ label: 'Add someone new', sub: 'With their invite link or QR code', ico: 'user-plus', value: '__add' });
+    const v = await actionSheet({ title: 'New chat', items, anchor: deskPointer() ? anchor : null });
+    if (v === '__add') { S.addTab = 'someone'; S.peer = null; S.view = 'add'; S.viewIsDefault = false; render(); }
+    else if (v) openChat(v);
+  }
+  function copyText(text, msg) { const done = () => toast(msg || 'Copied', 'ok'); try { if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text).then(done, fallback); return; } } catch (_) {} fallback(); function fallback() { try { const ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); done(); } catch (_) { toast('Copy failed — long-press the link to copy it.', 'err'); } } }
+  // Block / Remove / Clear / Unblock: the same confirms from the ⋯ menu and the contact-info pane.
+  async function doUnblock(p) { if (!p) return; try { await signed('POST', '/mesh/v1/friend/respond', { wallet: S.address, other: p, action: 'unblock' }); upsertContact(p, { state: 'friend' }); render(); } catch (err) { toast(err.message, 'err'); } }
+  async function doBlock(p) {
+    if (!p) return; const name = nameOf(p);
+    if (!(await confirmSheet({ title: 'Block ' + name + '?', body: 'They can no longer message or call you. Their messages are dropped without a notification.', ok: 'Block', danger: true }))) return;
+    if (await declinePerson(p, true)) { toast(name + ' is blocked', 'ok'); if (S.peer === p) leaveChat(); }
+  }
+  async function doRemove(p) {
+    if (!p) return; const name = nameOf(p);
+    if (!(await confirmSheet({ title: 'Remove ' + name + '?', body: 'They leave your contacts and this chat is deleted on this device. You can add them again later.', ok: 'Remove contact', danger: true }))) return;
+    if (await declinePerson(p, false)) { try { localStorage.removeItem(K.msgs + p); } catch (_) {} lsSet(OUTBOX_KEY, outboxList().filter((x) => x.a !== p)); toast(name + ' removed', 'ok'); if (S.peer === p) leaveChat(); }
+  }
+  async function doClear(p) {
+    if (!p) return; const name = nameOf(p);
+    if (!(await confirmSheet({ title: 'Clear this chat?', body: 'Deletes every message with ' + name + ' on this device. ' + name + ' keeps their copy.', ok: 'Clear chat', danger: true }))) return;
+    try { localStorage.removeItem(K.msgs + p); } catch (_) {}
+    lsSet(OUTBOX_KEY, outboxList().filter((x) => x.a !== p));
+    upsertContact(p, { last: null, unread: 0 }); saveDraft(p, '');
+    if (S.view === 'chat' && S.peer === p) paintMsgs(true);
+    toast('Chat cleared', 'ok');
+  }
+  // Chat ⋯ menu: plugin rows (e.g. calls on narrow phones) + Block / Remove contact / Clear chat…;
+  // an anchored popover on desk, a sheet on phones.
+  async function peerMenu(p, anchor) {
     if (!p) return;
     const c = contact(p) || {}, name = nameOf(p);
     const extra = [];
     X.menu.forEach((fn) => { try { (fn(p) || []).forEach((x) => { if (x && x.label && typeof x.run === 'function') extra.push(x); }); } catch (_) {} });
-    const items = extra.map((x, i) => ({ label: x.label, sub: x.sub, danger: !!x.danger, value: 'x' + i }));
-    items.push(c.state === 'blocked' ? { label: 'Unblock', sub: 'They can message and call you again', value: 'unblock' } : { label: 'Block', sub: 'They can no longer message or call you', danger: true, value: 'block' });
-    items.push({ label: 'Remove contact', sub: 'Also deletes this chat on this device', danger: true, value: 'remove' });
-    items.push({ label: 'Clear chat…', sub: 'Deletes the messages on this device only', danger: true, value: 'clear' });
-    const v = await actionSheet({ title: name, items });
+    const items = extra.map((x, i) => ({ label: x.label, sub: x.sub, danger: !!x.danger, ico: x.ico, value: 'x' + i }));
+    if (X.views.profile) items.unshift({ label: 'View profile', ico: 'user', value: 'profile' });
+    items.push(c.state === 'blocked' ? { label: 'Unblock', sub: 'They can message and call you again', ico: 'ban', value: 'unblock' } : { label: 'Block', sub: 'They can no longer message or call you', ico: 'ban', danger: true, value: 'block' });
+    items.push({ label: 'Remove contact', sub: 'Also deletes this chat on this device', ico: 'user-x', danger: true, value: 'remove' });
+    items.push({ label: 'Clear chat…', sub: 'Deletes the messages on this device only', ico: 'trash', danger: true, value: 'clear' });
+    const v = await actionSheet({ title: name, items, anchor: deskPointer() ? anchor : null });
     if (!v || S.peer !== p) return;
     if (v[0] === 'x') { const x = extra[Number(v.slice(1))]; if (x) { try { await x.run(p); } catch (err) { toast((err && err.message) || 'Failed', 'err'); } } return; }
-    if (v === 'unblock') { try { await signed('POST', '/mesh/v1/friend/respond', { wallet: S.address, other: p, action: 'unblock' }); upsertContact(p, { state: 'friend' }); render(); } catch (err) { toast(err.message, 'err'); } return; }
-    if (v === 'block') {
-      if (!(await confirmSheet({ title: 'Block ' + name + '?', body: 'They can no longer message or call you. Their messages are dropped without a notification.', ok: 'Block', danger: true }))) return;
-      if (await declinePerson(p, true)) { toast(name + ' is blocked'); if (S.peer === p) leaveChat(); }
-      return;
-    }
-    if (v === 'remove') {
-      if (!(await confirmSheet({ title: 'Remove ' + name + '?', body: 'They leave your contacts and this chat is deleted on this device. You can add them again later.', ok: 'Remove contact', danger: true }))) return;
-      if (await declinePerson(p, false)) { try { localStorage.removeItem(K.msgs + p); } catch (_) {} lsSet(OUTBOX_KEY, outboxList().filter((x) => x.a !== p)); toast(name + ' removed'); if (S.peer === p) leaveChat(); }
-      return;
-    }
-    if (v === 'clear') {
-      if (!(await confirmSheet({ title: 'Clear this chat?', body: 'Deletes every message with ' + name + ' on this device. ' + name + ' keeps their copy.', ok: 'Clear chat', danger: true }))) return;
-      try { localStorage.removeItem(K.msgs + p); } catch (_) {}
-      lsSet(OUTBOX_KEY, outboxList().filter((x) => x.a !== p));
-      upsertContact(p, { last: null, unread: 0 }); saveDraft(p, '');
-      if (S.view === 'chat' && S.peer === p) paintMsgs(true);
-      toast('Chat cleared');
-    }
+    if (v === 'profile') { S.profileOf = p; S.view = 'profile'; S.viewIsDefault = false; render(); return; }
+    if (v === 'unblock') return doUnblock(p);
+    if (v === 'block') return doBlock(p);
+    if (v === 'remove') return doRemove(p);
+    if (v === 'clear') return doClear(p);
   }
   // Classic mesh: the legacy scripts load on demand (contract C4: OST_LAZY.group('mesh')).
   async function openLegacy() {
@@ -1646,13 +2499,16 @@ if (!window.OST_MESH_APP) {
   }
   const core = {
     S, X, API, K, signed, signHeaders, announce, saveProfile, lookup, keyFor, sealPayload, sendInner, signal, wsSend,
-    toast, esc, shortA, ago, tTime, avStyle, nameOf, emojiOf, contact, upsertContact, myName, fmtSize, uid, lsGet, lsSet,
+    toast, esc, shortA, ago, tTime, tDay, tShort, avStyle, nameOf, emojiOf, contact, upsertContact, myName, fmtSize, uid, lsGet, lsSet,
     appendMsg, updateMsg, msgsOf, paintMsgs, paintChatHead, render, open, close: () => close(), openChat, addPerson, copyText, loadScript, inviteLink,
     back, actionSheet, confirm: confirmSheet, whenReady, hubBusy, noteHub, explain, flushOutbox, unread: totalUnread,
     isOpen: () => appIsOpen(),
+    // phase 2 (BUILD-SPEC §5.6): icons, the avatar component, bands, the scroller, in-place repaints
+    icon, hasIcon, av: avHtml, EMOJIS, layout, band, scroller, paintNav, paintBadge, paintAside,
+    sheetMode, placePop, menuKeys, renderCount: () => renderCount,
     // A home tab that registers after the app opened on the DEFAULT view (a cold
     // #mesh link runs before the plugins load) takes over — never a view the user chose.
-    register(name, def) { X.views[name] = def; if (def.tab && def.tab.home && (!S.opened || (S.viewIsDefault && S.view !== 'chat'))) S.view = name; if (appIsOpen() && !S.peer) render(); else paintBadge(); },
+    register(name, def) { X.views[name] = def; if (def.tab && def.tab.home && (!S.opened || (S.viewIsDefault && S.view !== 'chat'))) S.view = name; if (appIsOpen() && !S.peer) render(); else paintNav(); },
     go(view, extra) { Object.assign(S, extra || {}); S.viewIsDefault = false; if (appIsOpen()) { S.view = view; render(); } else open(view); }
   };
   window.OST_MESH_APP = {

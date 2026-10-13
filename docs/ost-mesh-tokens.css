@@ -1,0 +1,268 @@
+/* =====================================================================================
+ * OST Mesh · design tokens · Phase 2 FINAL (base: direction A "Town square", with grafts)
+ * Repo path: docs/ost-mesh-tokens.css — linked in index.html and markets.html BEFORE
+ * ost-mesh-app.css (index.html:282), and precached in sw.js next to it.
+ *
+ * Scope (contract C1): the app-family roots only. The site never styles the app and the app
+ * never styles the site. `.omx-scope` is an opt-in hook for any other node the family mounts
+ * (the mockup frames, a test harness). Every rule here has zero specificity (:where), so
+ * component rules always win and nothing here can override a site rule outside the family.
+ *
+ * Rules of use
+ *  - Components read ROLE tokens (--omx-text, --omx-surface-2, --omx-accent …), never raw hex.
+ *  - Sizes are px, not rem: the site sets html{font-size:15px} on phones (ost-mobile-scale.css:21),
+ *    which used to shrink rem sizes only. Every size below renders the same on every device.
+ *  - Weights stop at 700: index.html:241 loads Inter 300-700 only (800/900 would be synthesized).
+ *  - Ratios in comments are WCAG 2.x, measured by tools/contrast.js (table: BUILD-SPEC.md §6.3).
+ *    Text >= 4.5:1; icons, control borders, focus rings >= 3:1.
+ *  - Phase-1 names (--omx-surface, --omx-surface2, --omx-border, --omx-ok, --omx-me1/2,
+ *    --omx-cta1/2) stay as aliases at the end until both CSS files read the new names.
+ * ===================================================================================== */
+
+:where(#ostMeshApp, #omxSheet, #oslSheet, #oslLight, #oslStory, #omxCall, .omx-toasts, .omx-scope) {
+  color-scheme: dark;
+
+  /* ---------- 1. Surfaces (luminance steps, not boxes) ---------- */
+  --omx-bg:            #0c0f1a;                      /* page; equals the site's --bg-alt */
+  --omx-bg-glass:      rgba(12, 15, 26, .86);        /* sticky header, feed tabs, tab bar (+ --omx-blur) */
+  --omx-surface-1:     #111627;                      /* right-column modules, cards, sheets */
+  --omx-surface-2:     #171d32;                      /* inputs, chips, sheet groups */
+  --omx-surface-3:     #1e2540;                      /* selected row, hover on surface-1 */
+  --omx-elev:          #161c2f;                      /* popovers, dialogs, toasts (+ shadow) */
+  --omx-hover:         rgba(255, 255, 255, .04);     /* row / post hover wash */
+  --omx-press:         rgba(255, 255, 255, .08);     /* pressed wash */
+  --omx-scrim:         rgba(4, 6, 12, .64);          /* behind dialogs and bottom sheets */
+  --omx-scrim-drawer:  rgba(3, 6, 15, .72);          /* behind the 600 px drawer (600-1099 band) */
+  --omx-scrim-strong:  rgba(0, 0, 0, .92);           /* behind the lightbox; story fallback */
+  --omx-media-scrim:   linear-gradient(180deg, rgba(0,0,0,.55) 0, rgba(0,0,0,0) 22%, rgba(0,0,0,0) 62%, rgba(0,0,0,.72) 100%);
+  --omx-media-chip:    rgba(0, 0, 0, .62);           /* duration / mute / "Sample" chips on media: white 6.19:1 over white */
+  --omx-blur:          saturate(160%) blur(12px);
+
+  /* ---------- 2. Lines ---------- */
+  --omx-line:          rgba(255, 255, 255, .08);     /* hairlines between posts and rows (decorative) */
+  --omx-line-2:        rgba(255, 255, 255, .12);     /* card and media outlines (decorative) */
+  --omx-line-strong:   #646c8a;                      /* control borders: 3.69:1 bg · 3.22:1 surface-2 */
+
+  /* ---------- 3. Text ---------- */
+  --omx-text:          #e7eaf3;                      /* 15.89:1 bg · 12.53:1 surface-3 */
+  --omx-text-2:        #b4bacf;                      /* bios, previews: 9.9:1 bg · 7.80:1 surface-3 */
+  --omx-muted:         #8b92ad;                      /* meta, times, placeholders: 6.20 bg · 5.41 surface-2 · 4.89 surface-3 */
+  --omx-disabled:      #6b7290;                      /* disabled labels only (exempt from 1.4.3) */
+  --omx-on-accent:     #ffffff;                      /* on --omx-accent-fill 5.91:1 */
+  --omx-on-media:      #ffffff;
+
+  /* ---------- 4. The ONE accent (text form + filled form) ---------- */
+  --omx-accent:        #6d9fff;                      /* links, active nav, focus, icons: 7.33:1 bg */
+  --omx-accent-fill:   #2c5bd4;                      /* primary button, sent bubble, badges: white 5.91:1 */
+  --omx-accent-hover:  #3463dc;                      /* white 5.30:1 */
+  --omx-accent-press:  #244fbd;                      /* white 7.17:1 */
+  --omx-accent-tint:   rgba(109, 159, 255, .14);     /* selected chip / active nav wash; accent text on it 5.99:1 */
+  --omx-accent-tint-2: rgba(109, 159, 255, .08);     /* hover on accent actions */
+
+  /* ---------- 5. Status ---------- */
+  --omx-success:       #34d399;                      /* presence, "confirmed", price up: 9.9:1 bg */
+  --omx-success-fill:  #15803d;                      /* accept-call fill: white 5.02:1 */
+  --omx-success-tint:  rgba(52, 211, 153, .12);
+  --omx-danger:        #f87171;                      /* danger text + icons: 6.91 bg · 6.03 surface-2 */
+  --omx-danger-fill:   #c62828;                      /* the ONE destructive fill: white 5.62:1 */
+  --omx-danger-hover:  #b42222;                      /* white 6.58:1 */
+  --omx-danger-tint:   rgba(248, 113, 113, .12);     /* error block / inline error bar wash */
+  --omx-warning:       #f5c468;                      /* devnet chip, pending request, offline bar: 11.8:1 bg */
+  --omx-warning-tint:  rgba(245, 196, 104, .12);     /* warning text on it 9.41:1 */
+  --omx-like:          #f472b6;                      /* liked heart + count only: 7.22:1 bg */
+
+  /* ---------- 6. Focus ---------- */
+  --omx-focus:         #6d9fff;                      /* 2 px outline, 2 px offset: 7.33:1 on bg */
+  /* elements that clip outlines, and controls drawn over media: dark 2 px gap + accent 2 px ring, so the
+     ring keeps >= 3:1 against any photo behind it (the dark gap is the adjacent colour) */
+  --omx-focus-ring:    0 0 0 2px var(--omx-bg), 0 0 0 4px var(--omx-focus);
+  --omx-focus-inset:   inset 0 0 0 2px var(--omx-focus);
+
+  /* ---------- 7. Chat ---------- */
+  --omx-bubble-me:        var(--omx-accent-fill);    /* solid, no gradient: white 5.91:1 */
+  --omx-bubble-me-text:   #ffffff;
+  --omx-bubble-me-meta:   #e6edff;                   /* time + ticks inside sent bubbles: 5.04:1 (was #dbe4ff 4.66) */
+  --omx-bubble-them:      #1b2238;                   /* text 13.10:1 */
+  --omx-bubble-them-meta: #959cb6;                   /* 5.79:1 */
+  --omx-bubble-failed:    #2a1520;                   /* + 1 px danger ring; text 14.24:1 */
+  --omx-tick-read:        #a5f3fc;                   /* RESERVED for phase-4 "Read" (unused in phase 2) */
+
+  /* ---------- 8. Identity colours: one per person (avatars without a photo, profile banner, attach tiles)
+     12 hues, 30 deg apart, each the lightest shade that keeps WHITE initials >= 4.74:1, so all 12 share
+     one brightness and differ only by hue. JS: avStyle(a) -> `--av:var(--omx-id-${hue(a) % 12})`. */
+  --omx-id-0:  #d83131;   /* red     4.77 */
+  --omx-id-1:  #b05d21;   /* orange  4.74 */
+  --omx-id-2:  #8b6f1b;   /* amber   4.79 */
+  --omx-id-3:  #5b7d18;   /* olive   4.78 */
+  --omx-id-4:  #198434;   /* green   4.78 */
+  --omx-id-5:  #198267;   /* teal    4.74 */
+  --omx-id-6:  #1c7d91;   /* cyan    4.78 */
+  --omx-id-7:  #2773ca;   /* sky     4.78 */
+  --omx-id-8:  #5567df;   /* blue    4.78 */
+  --omx-id-9:  #8058df;   /* indigo  4.80 */
+  --omx-id-10: #b037d9;   /* violet  4.78 */
+  --omx-id-11: #ce279c;   /* pink    4.78 */
+  --omx-av-fg: #ffffff;
+  --omx-av-ring: inset 0 0 0 1px rgba(255, 255, 255, .10);
+
+  /* ---------- 9. Icons (sprite symbols read these; see icons.svg header) ---------- */
+  /* --omx-ic-fill: fill of the "solid" parts (none = outline icon). --omx-ic-cut: colour of inner details
+     drawn over a filled shape (must equal the surface behind the icon). Set by state classes, never inline. */
+  --omx-stroke: 1.75; --omx-stroke-on: 2;
+
+  /* ---------- 10. Typography ---------- */
+  --omx-font:       inherit;   /* Inter from the site (index.html:241) */
+  --omx-font-stack: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --omx-font-mono:  ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+  --omx-fs-11: 11px;   /* tab-bar labels, badges, bubble time */
+  --omx-fs-12: 12px;   /* chips, day pills, captions, counters */
+  --omx-fs-13: 13px;   /* meta lines, previews, helper text */
+  --omx-fs-15: 15px;   /* BODY: posts (15/21), rows, buttons, menus, desktop bubbles (15/20) */
+  --omx-fs-17: 17px;   /* view titles, rail labels, empty-state headline, phone composer text */
+  --omx-fs-20: 20px;   /* profile name, list titles, payment amount */
+  --omx-fs-24: 24px;   /* hero (call name) */
+  --omx-fs-emoji: 40px;         /* 1-3 emoji message (content, not chrome) */
+  --omx-fs-input-phone: 16px;   /* phone text inputs and phone bubbles: never below 16 (iOS zoom) */
+  --omx-lh-tight: 1.2;  --omx-lh-snug: 1.33;  --omx-lh-text: 1.4;
+  --omx-fw-regular: 400; --omx-fw-medium: 500; --omx-fw-semibold: 600; --omx-fw-bold: 700;
+  --omx-tracking-title: -.01em;
+  --omx-num: tabular-nums;
+
+  /* ---------- 11. Spacing (4-pt grid) ---------- */
+  --omx-sp-2: 2px; --omx-sp-4: 4px; --omx-sp-6: 6px; --omx-sp-8: 8px; --omx-sp-12: 12px; --omx-sp-16: 16px;
+  --omx-sp-20: 20px; --omx-sp-24: 24px; --omx-sp-32: 32px; --omx-sp-40: 40px; --omx-sp-48: 48px;
+  --omx-gutter: 16px;
+
+  /* ---------- 12. Radius (7 values, was 14) ---------- */
+  --omx-r-xs: 4px;  --omx-r-sm: 8px;  --omx-r-md: 12px;  --omx-r-lg: 16px;
+  --omx-r-bubble: 18px; --omx-r-join: 6px;   /* chat bubbles; joined corner on the sender's side */
+  --omx-r-full: 999px;
+
+  /* ---------- 13. Sizes ---------- */
+  --omx-hit: 44px;          /* phone / touch minimum */
+  --omx-hit-desk: 36px;     /* inline post actions with a fine pointer (WCAG 2.5.8 AA >= 24) */
+  --omx-bar: 56px;          /* phone header, phone tab bar (+ safe area) */
+  --omx-tabs-h: 48px;       /* sticky feed tabs (44 on phone) */
+  --omx-icon: 20px; --omx-icon-nav: 24px; --omx-icon-sm: 16px;
+  --omx-av-xs: 24px; --omx-av-sm: 32px; --omx-av-md: 40px; --omx-av-lg: 48px; --omx-av-ring-d: 64px; --omx-av-xl: 96px; --omx-av-2xl: 120px;
+  --omx-rail-w: 240px;      /* >= 1280 labelled rail; 72 at 1100-1279 */
+  --omx-rail-w-compact: 72px;
+  --omx-col-w: 600px;       /* centre column */
+  --omx-aside-w: 340px;     /* right column; 300 at 1100-1279 */
+  --omx-gap: 32px;          /* column gap; 24 at 1100-1279 */
+  --omx-list-w: 360px;      /* chats list pane; 320 at 1100-1279 */
+  --omx-info-w: 340px;      /* contact-info pane (desk chat, on demand) */
+  --omx-thread-max: 720px;  /* message column inside the thread */
+  --omx-drawer-w: 600px;    /* 600-1099 band */
+  --omx-pop-min: 220px; --omx-pop-max: 320px;
+  --omx-dialog-w: 600px; --omx-dialog-sm: 480px;
+
+  /* ---------- 14. Shadows ---------- */
+  --omx-shadow-1: 0 1px 2px rgba(0, 0, 0, .4);
+  --omx-shadow-2: 0 8px 24px rgba(0, 0, 0, .45), 0 0 0 1px rgba(255, 255, 255, .06);
+  --omx-shadow-3: 0 18px 56px rgba(0, 0, 0, .6), 0 0 0 1px rgba(255, 255, 255, .06);
+
+  /* ---------- 15. Motion (only transform + opacity are ever animated) ---------- */
+  --omx-dur-1: 100ms;   /* press feedback, hover tint */
+  --omx-dur-2: 160ms;   /* tab underline, popover + toast EXIT */
+  --omx-dur-3: 200ms;   /* popover enter, view fade, dialog enter */
+  --omx-dur-4: 260ms;   /* bottom sheet, drawer, attach tray */
+  --omx-dur-5: 320ms;   /* story card switch, like pop */
+  --omx-ease:     cubic-bezier(.2, 0, 0, 1);
+  --omx-ease-in:  cubic-bezier(.3, 0, .8, .15);
+  --omx-ease-out: cubic-bezier(.05, .7, .1, 1);
+  --omx-ease-pop: cubic-bezier(.34, 1.56, .64, 1);   /* like heart only */
+  --omx-move: 8px;          /* travel of enters (views, dialogs, toasts) */
+  --omx-move-sm: 4px;       /* travel of popovers */
+  --omx-scale-from: .98;    /* popovers, dialogs */
+  --omx-press-scale: .97;
+  --omx-shimmer: 1.4s;      /* skeleton sweep; skeletons appear only after 300 ms */
+
+  /* ---------- 16. Z-index ----------
+   * Family roots (page level, contract C5, unchanged from phase 1):
+   *   #ostMeshApp 12000 < #omxSheet 12500 < #oslSheet 12600 < #oslLight 12700 < #oslStory 12800
+   *   < sheets opened FROM the lightbox / story (.over) 12900 < #omxCall 13000 < .omx-toasts 13500.
+   * Anchored popovers are #omxSheet / #oslSheet in "pop" mode and keep their sheet's level. */
+  --omx-z-app: 12000; --omx-z-sheet: 12500; --omx-z-osheet: 12600; --omx-z-light: 12700;
+  --omx-z-story: 12800; --omx-z-over: 12900; --omx-z-call: 13000; --omx-z-toast: 13500;
+  /* inside #ostMeshApp (its own stacking context) */
+  --omx-z-content: 0; --omx-z-media-ui: 1; --omx-z-sticky: 10; --omx-z-pill: 20; --omx-z-nav: 40;
+
+  /* ---------- 17. Phase-1 aliases (delete when both CSS files read the new names) ---------- */
+  --omx-surface: var(--omx-surface-1);
+  --omx-surface2: var(--omx-surface-2);
+  --omx-border: var(--omx-line-2);
+  --omx-ok: var(--omx-success);
+  --omx-me1: var(--omx-accent-fill); --omx-me2: var(--omx-accent-fill);
+  --omx-cta1: var(--omx-accent-fill); --omx-cta2: var(--omx-accent-fill);   /* the violet stop is retired */
+}
+
+/* Desktop compact band (1100-1279): icon rail, narrower aside and list. The core also sets
+   [data-band=compact] on #ostMeshApp from the same matchMedia, for rules that change structure. */
+@media (min-width: 1100px) and (max-width: 1279.98px) {
+  :where(#ostMeshApp, .omx-scope) { --omx-rail-w: var(--omx-rail-w-compact); --omx-aside-w: 300px; --omx-gap: 24px; --omx-list-w: 320px; }
+}
+
+/* Reduced motion: no travel, no scale, no loops. Opacity fades stay, capped at 120 ms. */
+@media (prefers-reduced-motion: reduce) {
+  :where(#ostMeshApp, #omxSheet, #oslSheet, #oslLight, #oslStory, #omxCall, .omx-toasts, .omx-scope) {
+    --omx-dur-1: 0ms; --omx-dur-2: 80ms; --omx-dur-3: 120ms; --omx-dur-4: 120ms; --omx-dur-5: 0ms;
+    --omx-move: 0px; --omx-move-sm: 0px; --omx-scale-from: 1; --omx-press-scale: 1; --omx-shimmer: 0s;
+  }
+  /* backstop for anything a component forgot: loops run once, programmatic scrolling jumps */
+  :where(#ostMeshApp, #omxSheet, #oslSheet, #oslLight, #oslStory, #omxCall, .omx-toasts, .omx-scope) :where(*, *::before, *::after) {
+    animation-iteration-count: 1 !important; scroll-behavior: auto !important;
+  }
+}
+
+/* Reduced transparency, or a low-memory device (the core adds .omx-lowfx when navigator.deviceMemory <= 4):
+   glass bars and the story backdrop become solid. */
+@media (prefers-reduced-transparency: reduce) {
+  :where(#ostMeshApp, #omxSheet, #oslSheet, #oslLight, #oslStory, #omxCall, .omx-toasts, .omx-scope) { --omx-bg-glass: #0c0f1a; --omx-blur: none; }
+}
+:where(.omx-lowfx) { --omx-bg-glass: #0c0f1a; --omx-blur: none; }
+
+/* ---------- Reset block (contract C1): the family styles itself; zero specificity so components win ---------- */
+:where(#ostMeshApp, #omxSheet, #oslSheet, #oslLight, #oslStory, #omxCall, .omx-toasts, .omx-scope) {
+  font-family: var(--omx-font); font-size: var(--omx-fs-15); line-height: var(--omx-lh-snug); font-weight: var(--omx-fw-regular);
+  color: var(--omx-text); text-align: left; letter-spacing: normal; -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent;
+}
+:where(#ostMeshApp, #omxSheet, #oslSheet, #oslLight, #oslStory, #omxCall, .omx-toasts, .omx-scope) :where(*, *::before, *::after) { box-sizing: border-box; }
+:where(#ostMeshApp, #omxSheet, #oslSheet, #oslLight, #oslStory, #omxCall, .omx-toasts, .omx-scope) :where(h1, h2, h3, h4, p, ul, ol, li, figure, blockquote, dl, dd) { margin: 0; padding: 0; font: inherit; color: inherit; letter-spacing: inherit; }
+:where(#ostMeshApp, #omxSheet, #oslSheet, #oslLight, #oslStory, #omxCall, .omx-toasts, .omx-scope) :where(ul, ol) { list-style: none; }
+:where(#ostMeshApp, #omxSheet, #oslSheet, #oslLight, #oslStory, #omxCall, .omx-toasts, .omx-scope) :where(button, input, textarea, select) {
+  font: inherit; color: inherit; letter-spacing: normal; text-transform: none; margin: 0; min-height: 0; min-width: 0; max-width: none; box-shadow: none; -webkit-appearance: none; appearance: none;
+}
+:where(#ostMeshApp, #omxSheet, #oslSheet, #oslLight, #oslStory, #omxCall, .omx-toasts, .omx-scope) :where(button) { background: none; border: 0; padding: 0; cursor: pointer; border-radius: 0; text-align: inherit; }
+:where(#ostMeshApp, #omxSheet, #oslSheet, #oslLight, #oslStory, #omxCall, .omx-toasts, .omx-scope) :where(button:disabled) { cursor: default; }
+:where(#ostMeshApp, #omxSheet, #oslSheet, #oslLight, #oslStory, #omxCall, .omx-toasts, .omx-scope) :where(a) { color: var(--omx-accent); text-decoration: none; }
+:where(#ostMeshApp, #omxSheet, #oslSheet, #oslLight, #oslStory, #omxCall, .omx-toasts, .omx-scope) :where(a:hover) { text-decoration: underline; text-underline-offset: 2px; }
+:where(#ostMeshApp, #omxSheet, #oslSheet, #oslLight, #oslStory, #omxCall, .omx-toasts, .omx-scope) :where(img, video) { display: block; max-width: 100%; }
+:where(#ostMeshApp, #omxSheet, #oslSheet, #oslLight, #oslStory, #omxCall, .omx-toasts, .omx-scope) :where([hidden]) { display: none !important; }
+:where(#ostMeshApp, #omxSheet, #oslSheet, #oslLight, #oslStory, #omxCall, .omx-toasts, .omx-scope) :where(:focus-visible) { outline: 2px solid var(--omx-focus); outline-offset: 2px; }
+:where(#ostMeshApp, #omxSheet, #oslSheet, #oslLight, #oslStory, #omxCall, .omx-toasts, .omx-scope) :where(:focus:not(:focus-visible)) { outline: none; }
+:where(#ostMeshApp, #omxSheet, #oslSheet, #oslLight, #oslStory, #omxCall, .omx-toasts, .omx-scope) :where(::selection) { background: rgba(109, 159, 255, .35); color: #fff; }
+:where(#ostMeshApp, #omxSheet, #oslSheet, #oslLight, #oslStory, #omxCall, .omx-toasts, .omx-scope) :where(::placeholder) { color: var(--omx-muted); opacity: 1; }
+
+/* Icons: <svg class="omx-i" aria-hidden="true" focusable="false"><use href="#i-heart"/></svg> (core.icon(id)) */
+:where(#ostMeshApp, #omxSheet, #oslSheet, #oslLight, #oslStory, #omxCall, .omx-toasts, .omx-scope) :where(.omx-i) {
+  width: var(--omx-icon); height: var(--omx-icon); flex: 0 0 auto; display: inline-block; vertical-align: middle;
+  fill: none; stroke: currentColor; stroke-width: var(--omx-stroke); stroke-linecap: round; stroke-linejoin: round; overflow: visible; pointer-events: none;
+}
+/* Solid ("on") state: active tab / rail item, liked, following, selected. Shape filled, inner details cut out
+   in the surface colour, so state never relies on colour alone (WCAG 1.4.1). */
+:where(#ostMeshApp, #omxSheet, #oslSheet, #oslLight, #oslStory, #omxCall, .omx-toasts, .omx-scope) :where(.omx-i.is-on) {
+  --omx-ic-fill: currentColor; --omx-ic-cut: var(--omx-ic-surface, var(--omx-bg)); stroke-width: var(--omx-stroke-on);
+}
+
+/* Windows High Contrast / forced colours: system colours take over; keep shapes, rings and state visible. */
+@media (forced-colors: active) {
+  :where(#ostMeshApp, #omxSheet, #oslSheet, #oslLight, #oslStory, #omxCall, .omx-toasts, .omx-scope) {
+    --omx-focus: Highlight; --omx-line-strong: CanvasText; --omx-accent: LinkText; --omx-ic-surface: Canvas;
+  }
+  :where(#ostMeshApp, #omxSheet, #oslSheet, #oslLight, #oslStory, #omxCall, .omx-toasts, .omx-scope) :where(:focus-visible) { outline: 2px solid Highlight; }
+  :where(#ostMeshApp, #omxSheet, #oslSheet, #oslLight, #oslStory, #omxCall, .omx-toasts, .omx-scope) :where(.omx-badge, .omx-unread) { forced-color-adjust: none; background: Highlight; color: HighlightText; }
+  :where(#ostMeshApp, #omxSheet, #oslSheet, #oslLight, #oslStory, #omxCall, .omx-toasts, .omx-scope) :where(.omx-b, .omx-primary, .omx-ghost, .omx-chip, .omx-input, .omx-pop, .omx-sheetbox, .omx-dialog, .omx-toast, .omx-mod) { border: 1px solid CanvasText; }
+  :where(#ostMeshApp, #omxSheet, #oslSheet, #oslLight, #oslStory, #omxCall, .omx-toasts, .omx-scope) :where(.osl-ring) { box-shadow: none; outline: 2px solid CanvasText; outline-offset: -2px; }
+  :where(#ostMeshApp, #omxSheet, #oslSheet, #oslLight, #oslStory, #omxCall, .omx-toasts, .omx-scope) :where([aria-current="page"], [aria-selected="true"], [aria-pressed="true"]) { outline: 2px solid Highlight; outline-offset: -2px; }
+}

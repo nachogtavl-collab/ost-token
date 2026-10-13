@@ -18,8 +18,18 @@ import { importPeerBundle } from './mesh/mesh-crypto.js?v=1';
   if (window.OST_MESH_CALL) return;
   const core = window.OST_MESH_APP && window.OST_MESH_APP.core;
   if (!core) { window.addEventListener('ost:mesh-app:core', boot, { once: true }); return; }
-  const { S, X, API, esc, toast, nameOf, emojiOf, avStyle, contact, lookup, signal } = core;
+  const { S, X, API, esc, toast, nameOf, emojiOf, contact, lookup, signal } = core;
   const RING_MS = 45000;
+  // Phase-2 core helpers (core.icon / core.av), with local stand-ins so an older core still renders.
+  const icon = (id, cls) => (typeof core.icon === 'function' ? core.icon(id, cls) : '<svg class="omx-i' + (cls ? ' ' + cls : '') + '" aria-hidden="true" focusable="false"><use href="#i-' + id + '"/></svg>');
+  const idColor = (a) => { a = String(a || ''); let h = 0; for (let i = 0; i < a.length; i++) h = (h * 31 + a.charCodeAt(i)) >>> 0; return (h % 360) % 12; };   // = core hue() % 12
+  function avHtml(peer) {
+    const c = contact(peer) || {};
+    // no presence dot or pending ring on the call screen: the call itself says they are there
+    if (typeof core.av === 'function') { try { return core.av({ addr: peer, emoji: c.emoji || emojiOf(peer) || '', name: c.name || nameOf(peer), img: c.img || '', online: false, pending: false }, 'xxl'); } catch (_) {} }
+    const e = emojiOf(peer) || '', t = e || (Array.from(String(nameOf(peer) || 'M').trim())[0] || 'M').toUpperCase();
+    return '<span class="omx-av xxl' + (e ? ' emoji' : '') + '" style="--av:var(--omx-id-' + idColor(peer) + ')" aria-hidden="true">' + esc(t) + '</span>';
+  }
   const enc = new TextEncoder();
   const hex = (b) => Array.from(new Uint8Array(b)).map((x) => x.toString(16).padStart(2, '0')).join('');
   const b64 = (buf) => { let s = ''; const u = new Uint8Array(buf); for (let i = 0; i < u.length; i++) s += String.fromCharCode(u[i]); return btoa(s); };
@@ -61,8 +71,8 @@ import { importPeerBundle } from './mesh/mesh-crypto.js?v=1';
     if (!el) {
       el = document.createElement('div'); el.id = 'omxCall';
       el.innerHTML = `<video id="omxCallRemote" autoplay playsinline></video><audio id="omxCallAudio" autoplay></audio>
-        <div class="omxc-top"><div class="omxc-av" id="omxCallAv"></div><b id="omxCallName"></b><span id="omxCallState"></span></div>
-        <video id="omxCallLocal" autoplay playsinline muted></video>
+        <div class="omxc-top"><div class="omxc-avw" id="omxCallAv"></div><b id="omxCallName"></b><span id="omxCallState" aria-live="polite"></span><span class="omxc-sec">${icon('lock')}Encrypted call</span></div>
+        <video id="omxCallLocal" autoplay playsinline muted hidden></video>
         <div class="omxc-btns" id="omxCallBtns"></div>`;
       document.body.appendChild(el);
       el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-labelledby', 'omxCallName'); el.tabIndex = -1;
@@ -86,7 +96,9 @@ import { importPeerBundle } from './mesh/mesh-crypto.js?v=1';
     const el = ui(), shown = el.classList.contains('on');
     const ae = document.activeElement, keep = ae && el.contains(ae) ? ae.getAttribute('data-c') : '';
     el.classList.add('on'); el.classList.toggle('video', !!C.video); el.classList.toggle('live', C.phase === 'live');
-    const av = $('omxCallAv'); av.setAttribute('style', avStyle(C.peer)); av.textContent = emojiOf(C.peer) || nameOf(C.peer)[0].toUpperCase();
+    // The caller's identity colour is the backdrop (CSS V4); the avatar is the one avatar component.
+    el.style.setProperty('--av', 'var(--omx-id-' + idColor(C.peer) + ')');
+    const av = $('omxCallAv'); if (av.getAttribute('data-peer') !== C.peer) { av.innerHTML = avHtml(C.peer); av.setAttribute('data-peer', C.peer); }
     $('omxCallName').textContent = nameOf(C.peer);
     const st = C.phase === 'incoming' ? (C.video ? 'Incoming video call…' : 'Incoming voice call…')
       : C.phase === 'calling' ? (C.ringing ? 'Ringing…' : 'Calling…')
@@ -94,16 +106,18 @@ import { importPeerBundle } from './mesh/mesh-crypto.js?v=1';
       : C.phase === 'live' ? timer() + (C.relay ? ' · relayed' : '') + (C.muted ? ' · muted' : '')
       : C.phase === 'reconnecting' ? 'Reconnecting…' : '';
     $('omxCallState').textContent = st;
+    // 64 px circle + a 12 px label UNDER it (never text on red); the visible label is the button's name.
+    const btn = (c, cls, ico, label, extra) => `<button type="button" class="${cls}" data-c="${c}"${extra || ''}><b>${icon(ico)}</b>${label}</button>`;
     const b = [];
     if (C.phase === 'incoming') {
-      b.push('<button class="omxc-no" data-c="decline" aria-label="Decline">✕<small>Decline</small></button>');
-      b.push('<button class="omxc-yes" data-c="accept" aria-label="Accept">📞<small>Accept</small></button>');
-      if (C.video) b.push('<button class="omxc-yes" data-c="accept-video" aria-label="Accept with video">🎥<small>Video</small></button>');
+      b.push(btn('decline', 'omxc-no', 'phone-down', 'Decline'));
+      b.push(btn('accept', 'omxc-yes', 'phone', 'Accept', ' aria-label="Accept with audio"'));
+      if (C.video) b.push(btn('accept-video', 'omxc-yes', 'video', 'Video', ' aria-label="Accept with video"'));
     } else {
-      b.push(`<button data-c="mute" class="${C.muted ? 'off' : ''}" aria-label="Mute">${C.muted ? '🔇' : '🎙️'}<small>${C.muted ? 'Unmute' : 'Mute'}</small></button>`);
+      b.push(btn('mute', C.muted ? 'off' : '', C.muted ? 'mic-off' : 'mic', 'Mute', ` aria-pressed="${!!C.muted}"`));
       const hasCam = !!(C.local && C.local.getVideoTracks().length);
-      if (hasCam) { b.push(`<button data-c="cam" class="${C.camOff ? 'off' : ''}" aria-label="Camera">${C.camOff ? '🚫' : '📷'}<small>Camera</small></button>`); b.push('<button data-c="flip" aria-label="Flip camera">🔄<small>Flip</small></button>'); }
-      b.push('<button class="omxc-no" data-c="hangup" aria-label="Hang up">✕<small>End</small></button>');
+      if (hasCam) { b.push(btn('cam', C.camOff ? 'off' : '', C.camOff ? 'video-off' : 'video', 'Camera off', ` aria-pressed="${!!C.camOff}"`)); b.push(btn('flip', '', 'switch', 'Flip', ' aria-label="Flip camera"')); }
+      b.push(btn('hangup', 'omxc-no', 'phone-down', 'End', ' aria-label="End call"'));
     }
     $('omxCallBtns').innerHTML = b.join('');
     // Keyboard focus: the screen itself when it appears; the same button across repaints (the timer repaints every second).
@@ -162,7 +176,8 @@ import { importPeerBundle } from './mesh/mesh-crypto.js?v=1';
       C.local.addTrack(nt); $('omxCallLocal').srcObject = C.local;
     } catch (_) { toast('Could not switch camera', 'err'); }
   }
-  function attachLocal() { const v = $('omxCallLocal'); if (v && C && C.local) { v.srcObject = C.local; v.hidden = !C.video; } }
+  // The self-view shows only when there is a camera track to show (never an empty black box).
+  function attachLocal() { const v = $('omxCallLocal'); if (v && C && C.local) { v.srcObject = C.local; v.hidden = !C.video || !C.local.getVideoTracks().length; } }
   function newPc(servers) {
     const pc = new RTCPeerConnection({ iceServers: servers });
     pc.onicecandidate = (e) => { if (e.candidate && C && C.pc === pc) send(C.peer, { type: 'ice', callId: C.callId, c: e.candidate.toJSON() }); };
@@ -305,12 +320,13 @@ import { importPeerBundle } from './mesh/mesh-crypto.js?v=1';
   }
   // Local call log line (no network). `cst` = call outcome (Declined / No answer /
   // Missed stay visible); `status` is never a delivery state for these.
-  const outcomeText = (status, mine) => status === 'missed' ? (mine ? 'No answer' : 'Missed call') : status === 'declined' ? 'Declined call' : status === 'busy' ? 'Busy' : 'Call';
+  // The list row draws the phone / video icon from `kind`, so the text carries no emoji.
+  const outcomeText = (status, mine, dur) => status === 'missed' ? (mine ? 'No answer' : 'Missed') : status === 'declined' ? 'Declined' : status === 'busy' ? 'Busy' : dur ? Math.floor(dur / 60) + ':' + String(dur % 60).padStart(2, '0') : 'Ended';
   function logLocal(status, dur) {
     if (!C) return;
     const m = { id: 'call-' + C.callId + '-' + status, dir: C.caller ? 'me' : 'them', kind: 'call', status, cst: status, video: !!C.video, dur: dur || 0, ts: Date.now() };
     core.appendMsg(C.peer, m);
-    core.upsertContact(C.peer, { last: { text: (C.video ? '🎥 ' : '📞 ') + outcomeText(status, C.caller), ts: m.ts } });
+    core.upsertContact(C.peer, { last: { id: m.id, text: (C.video ? 'Video call' : 'Voice call') + ' · ' + outcomeText(status, C.caller, m.dur), ts: m.ts, kind: 'call', video: !!C.video, dir: m.dir } });
     if (S.view === 'chat' && S.peer === C.peer) core.paintMsgs();
   }
   // Durable record for the other side (offline users see "Missed call").
@@ -348,10 +364,12 @@ import { importPeerBundle } from './mesh/mesh-crypto.js?v=1';
   schedule(3000);
 
   /* ---------- hooks into the chat ---------- */
-  // Header buttons; under 400 px they are hidden by CSS and offered in the chat ⋯ sheet instead.
-  const narrow = () => !!(window.matchMedia && window.matchMedia('(max-width: 399.98px)').matches);
-  X.headBtns.push((peer) => `<button type="button" class="omx-ib omx-hide-narrow" data-act="call-voice" aria-label="Voice call" title="Voice call">📞</button><button type="button" class="omx-ib omx-hide-narrow" data-act="call-video" aria-label="Video call" title="Video call">🎥</button>`);
-  if (Array.isArray(X.menu)) X.menu.push((peer) => narrow() ? [{ label: '📞 Voice call', run: () => start(peer, false) }, { label: '🎥 Video call', run: () => start(peer, true) }] : []);
+  // Header buttons; under 360 px they are hidden by CSS (ost-mesh-chat.css, same query) and offered in the chat ⋯ sheet instead.
+  const narrow = () => !!(window.matchMedia && window.matchMedia('(max-width: 359.98px)').matches);
+  X.headBtns.push((peer) => `<button type="button" class="omx-ib omx-hide-narrow" data-act="call-voice" aria-label="Voice call" title="Voice call">${icon('phone')}</button><button type="button" class="omx-ib omx-hide-narrow" data-act="call-video" aria-label="Video call" title="Video call">${icon('video')}</button>`);
+  if (Array.isArray(X.menu)) X.menu.push((peer) => narrow() ? [{ ico: 'phone', label: 'Voice call', run: () => start(peer, false) }, { ico: 'video', label: 'Video call', run: () => start(peer, true) }] : []);
+  // Contact-info pane tiles (desk): Profile · Voice · Video.
+  (X.info = Array.isArray(X.info) ? X.info : []).push((peer) => [{ ico: 'phone', lbl: 'Voice', act: 'call-voice' }, { ico: 'video', lbl: 'Video', act: 'call-video' }]);
   X.actions['call-voice'] = () => start(S.peer, false);
   X.actions['call-video'] = () => start(S.peer, true);
   X.actions['call-back'] = (el) => start(S.peer, el.getAttribute('data-video') === '1');

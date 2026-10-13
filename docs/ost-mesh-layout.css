@@ -1,0 +1,75 @@
+/* =====================================================================================
+ * OST Mesh · bands and grid (docs/ost-mesh-layout.css, core-owned) · Phase 2
+ * Loaded LAST of the mesh stylesheets (tokens → app → chat → social → layout) so band rules win ties.
+ * The core (ost-mesh-app.js) writes on #ostMeshApp: data-layout = phone (< 600) | drawer (600-1099) |
+ * desk (>= 1100), data-band = compact (1100-1279) | full (>= 1280), data-view = the current view, and
+ * .omx-chatlayout when the view is chats/chat on desk (.info-open with the contact-info pane).
+ * One DOM in every band: .omx-shell > #omxRail · #omxPane · main#omxMain (#omxHead + #omxBody) ·
+ * #omxAside · #omxInfo · #omxTabs. Selectors keep the #ostMeshApp prefix (contract C1).
+ * ===================================================================================== */
+
+/* hosts that are not part of the current layout never take a grid cell (the component sheets hide them
+   too; repeated here so the grid holds even before they load) */
+#ostMeshApp .omx-pane, #ostMeshApp .omx-aside, #ostMeshApp .omx-info { display: none; }
+/* right-column module hosts (one per X.aside module) take no box of their own */
+#ostMeshApp .omx-modhost { display: contents; }
+
+/* ---------- U. Bands and grid (docs/ost-mesh-layout.css, core-owned). The core sets on #ostMeshApp:
+     data-layout = phone (< 600) | drawer (600-1099) | desk (>= 1100), data-band = compact (1100-1279) | full,
+     data-view = the current view; .omx-chatlayout when the view is chats/chat on desk. ---------- */
+/* phone: full screen, header + body + tab bar */
+#ostMeshApp[data-layout="phone"] .omx-shell { inset: 0; }
+/* phone root views that opt in (feed): the header slides away on scroll-down and back on scroll-up, the sticky
+   feed tabs slide with it (transform only). JS toggles .head-away on #omxMain; never under reduced motion. */
+#ostMeshApp[data-layout="phone"] .omx-view.hide-head > .omx-head { position: absolute; left: 0; right: 0; top: 0; transition: transform var(--omx-dur-3) var(--omx-ease); }
+#ostMeshApp[data-layout="phone"] .omx-view.hide-head > .omx-body { padding-top: var(--omx-bar); scroll-padding-top: calc(var(--omx-bar) + 44px); }
+#ostMeshApp[data-layout="phone"] .omx-view.hide-head .omx-seg { top: 0; transition: transform var(--omx-dur-3) var(--omx-ease); }   /* sticky offsets count from the padding edge, which already clears the header */
+#ostMeshApp[data-layout="phone"] .omx-view.hide-head.head-away > .omx-head { transform: translateY(-100%); }
+#ostMeshApp[data-layout="phone"] .omx-view.hide-head.head-away .omx-seg { transform: translateY(calc(var(--omx-bar) * -1)); }
+/* drawer (phase-1 600 px panel, restyled): the site shows through the scrim; a backdrop click closes */
+#ostMeshApp[data-layout="drawer"] { background: var(--omx-scrim-drawer); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+#ostMeshApp[data-layout="drawer"] .omx-shell { left: auto; right: 0; width: var(--omx-drawer-w); box-shadow: -1px 0 0 var(--omx-line-2), var(--omx-shadow-3); }
+#ostMeshApp[data-layout="drawer"].entering .omx-shell { animation: omx-drawer-in var(--omx-dur-4) var(--omx-ease-out) both; }
+/* desk: an opaque full-screen app (no blur, no backdrop close). Feed layout: rail | 600 | aside, centred;
+   the FULL-WIDTH shell is the scroller (core.scroller()), so the side margins scroll the feed and a click
+   there lands on the shell, never on the #ostMeshApp root. */
+#ostMeshApp[data-layout="desk"] .omx-shell { display: grid; grid-template-columns: var(--omx-rail-w) var(--omx-col-w) var(--omx-aside-w); grid-template-rows: auto; column-gap: var(--omx-gap); justify-content: center; align-items: start; overflow: hidden auto; overscroll-behavior: contain; touch-action: pan-y; scroll-padding-top: 104px; }
+#ostMeshApp[data-layout="desk"] .omx-rail { position: sticky; top: 0; z-index: var(--omx-z-nav); display: flex; flex-direction: column; gap: 2px; height: 100vh; padding: 4px 0 12px; }
+#ostMeshApp[data-layout="desk"] .omx-view { display: block; min-height: 100vh; border-left: 1px solid var(--omx-line); border-right: 1px solid var(--omx-line); }
+#ostMeshApp[data-layout="desk"] .omx-view > .omx-head { position: sticky; top: 0; }
+#ostMeshApp[data-layout="desk"] .omx-view > .omx-head.is-root { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); box-shadow: none; }   /* desk feed: the rail says where you are; h2#omxTitle stays for aria-labelledby */
+#ostMeshApp[data-layout="desk"] .omx-body { overflow: visible; min-height: 0; }
+#ostMeshApp[data-layout="desk"] .omx-head:not(.is-root) + .omx-body .omx-seg { top: var(--omx-bar); }
+#ostMeshApp[data-layout="desk"] .omx-aside { position: sticky; top: var(--omx-aside-top, 0px); display: flex; flex-direction: column; gap: var(--omx-sp-16); padding: var(--omx-sp-12) 0 var(--omx-sp-24); }
+#ostMeshApp[data-layout="desk"] .omx-tabs { display: none; }
+/* desk compact band: icon rail, labels become title + aria-label */
+#ostMeshApp[data-band="compact"] .omx-rail { align-items: center; }
+#ostMeshApp[data-band="compact"] .omx-rail .omx-brand { flex-direction: column; justify-content: center; height: auto; gap: 6px; padding: 8px 0 4px; margin-bottom: 4px; }
+#ostMeshApp[data-band="compact"] .omx-rail .omx-brand b { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+#ostMeshApp[data-band="compact"] .omx-rail .omx-brand .omx-ib { margin: 0; }
+#ostMeshApp[data-band="compact"] .omx-rail > button[data-tab] { width: 52px; height: 52px; padding: 0; justify-content: center; }
+#ostMeshApp[data-band="compact"] .omx-rail > button[data-tab] > span:not(.omx-badge):not(.omx-av) { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+#ostMeshApp[data-band="compact"] .omx-rail > button[data-tab] > .omx-badge { left: 30px; top: 6px; }
+#ostMeshApp[data-band="compact"] .omx-rail .omx-rail-post { width: 52px; height: 52px; padding: 0; margin: 12px 0 0; }
+#ostMeshApp[data-band="compact"] .omx-rail .omx-rail-post span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+#ostMeshApp[data-band="compact"] .omx-rail .omx-rail-post .omx-i { display: block; width: 24px; height: 24px; }
+#ostMeshApp[data-band="compact"] .omx-rail .omx-rail-me { width: 52px; padding: 6px; grid-template-columns: 40px; justify-content: center; }
+#ostMeshApp[data-band="compact"] .omx-rail .omx-rail-me > :is(.t, .omx-i) { display: none; }
+/* desk Chats layout (data-view chats | chat): rail | list | thread [| contact info]; full width, no max-width
+   wrapper; the list (#omxPane) and the thread (#omxMsgs) scroll on their own */
+#ostMeshApp.omx-chatlayout[data-layout="desk"] .omx-shell { grid-template-columns: var(--omx-rail-w) var(--omx-list-w) minmax(0, 1fr); column-gap: 0; justify-content: stretch; align-items: stretch; height: 100%; overflow: hidden; }
+#ostMeshApp.omx-chatlayout[data-layout="desk"].info-open .omx-shell { grid-template-columns: var(--omx-rail-w) var(--omx-list-w) minmax(0, 1fr) var(--omx-info-w); }
+#ostMeshApp.omx-chatlayout[data-layout="desk"][data-band="full"] .omx-rail { padding-left: 12px; padding-right: 20px; }
+#ostMeshApp.omx-chatlayout[data-layout="desk"] .omx-rail { width: auto; }
+#ostMeshApp.omx-chatlayout[data-layout="desk"] .omx-pane { display: flex; flex-direction: column; min-height: 0; height: 100vh; border-left: 1px solid var(--omx-line); border-right: 1px solid var(--omx-line); overflow: hidden auto; overscroll-behavior: contain; touch-action: pan-y; }
+#ostMeshApp.omx-chatlayout[data-layout="desk"] .omx-view { display: flex; flex-direction: column; height: 100vh; min-height: 0; border: 0; }
+#ostMeshApp.omx-chatlayout[data-layout="desk"] .omx-view > .omx-head { position: relative; }
+#ostMeshApp.omx-chatlayout[data-layout="desk"] .omx-body { overflow: hidden; display: flex; flex-direction: column; }
+#ostMeshApp.omx-chatlayout[data-layout="desk"] .omx-aside { display: none; }
+#ostMeshApp.omx-chatlayout[data-layout="desk"].info-open .omx-info { display: flex; flex-direction: column; height: 100vh; overflow: hidden auto; border-left: 1px solid var(--omx-line); }
+#ostMeshApp.omx-chatlayout[data-layout="desk"] .omx-compose { padding: 12px 24px 16px; }
+#ostMeshApp.omx-chatlayout[data-layout="desk"] .omx-msgs { padding: 16px 24px 12px; }
+#ostMeshApp:not([data-layout="desk"]) :is(.omx-rail, .omx-pane, .omx-aside, .omx-info) { display: none !important; }
+
+/* desk app open: a 200 ms fade (the drawer slides in, above); .entering is removed on animationend */
+#ostMeshApp[data-layout="desk"].entering { animation: omx-fade var(--omx-dur-3) var(--omx-ease) both; }
