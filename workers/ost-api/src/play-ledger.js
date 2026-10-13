@@ -145,6 +145,34 @@ export class PlayLedger {
 
   async balOf(wallet) { return Number((await this.state.storage.get('bal:' + wallet)) || 0); }
 
+  // OSTG RESERVED for open prediction tickets: the most they can still credit
+  // back (one OSTG per share). Every solvency check counts it, so a game win,
+  // a perp close or a loan can never spend OSTG an open ticket may be owed.
+  // Solvency is:  pool OSTG  >=  Σ play balances + reserved.
+  async reservedOf() { return Math.max(0, Number((await this.state.storage.get('reserved')) || 0)); }
+
+  // The cached pool reading follows the money this ledger itself moves, and
+  // only ever errs LOW (a low reading refuses a bet; a high one backs a win
+  // with OSTG that is not there):
+  //  · a deposit expires the cache, so the next check reads the chain with the
+  //    deposit in it (a bet right after a deposit was compared with the
+  //    pre-deposit pool and its new balance looked unbacked); if that read
+  //    fails, the older (lower) value is still the fallback;
+  //  · a cash-out lowers it by the amount as it is debited (the OSTG is
+  //    leaving), and a refund expires it so the chain is read again.
+  async dropPoolCache() {
+    try {
+      const cached = await this.state.storage.get('poolOstgCache');
+      if (cached && Number.isFinite(cached.v)) await this.state.storage.put('poolOstgCache', { v: cached.v, at: 0 });
+    } catch (_) {}
+  }
+  async lowerPoolCache(amount) {
+    try {
+      const cached = await this.state.storage.get('poolOstgCache');
+      if (cached && Number.isFinite(cached.v)) await this.state.storage.put('poolOstgCache', { v: round9(cached.v - Math.max(0, Number(amount) || 0)), at: cached.at });
+    } catch (_) {}
+  }
+
   /* ---- generic stake / settle with fund provenance -------------------------
    * Used by predictions, stocks and any product that is not a faucet game, so
    * every OSTG product spends the SAME money instead of each inventing a rail.
@@ -200,7 +228,7 @@ export class PlayLedger {
       return json({ ok: false, error: 'bankroll_unreadable', note: 'refusing to lend against an unknown pool' }, 503);
     }
     const total = await this.total();
-    const buffer = Math.round((bankroll - total) * 1e6) / 1e6;
+    const buffer = Math.round((bankroll - total - (await this.reservedOf())) * 1e6) / 1e6;
 
     // LENDING RESERVE. The buffer is the pool's whole backed surplus, and it is
     // ALSO what pays winners. Lending 100% of it would mean one large draw
@@ -233,8 +261,9 @@ export class PlayLedger {
       const credited = await this.state.blockConcurrencyWhile(async () => {
         const bal = Number((await this.state.storage.get('bal:' + wallet)) || 0);
         const t = Number((await this.state.storage.get('total')) || 0);
+        const rsv = await this.reservedOf();
         // Re-check under the lock: a concurrent draw could have taken the buffer.
-        if (Math.round((t + wantOstg) * 1e6) / 1e6 > bankroll + 1e-9) return null;
+        if (Math.round((t + rsv + wantOstg) * 1e6) / 1e6 > bankroll + 1e-9) return null;
         const nextBal = Math.round((bal + lr.loan.principalOstg) * 1e6) / 1e6;
         await this.state.storage.put('bal:' + wallet, nextBal);
         await this.state.storage.put('total', Math.round((t + lr.loan.principalOstg) * 1e6) / 1e6);
@@ -347,6 +376,14 @@ export class PlayLedger {
     const bucket = cleanText(b.bucket, 64) || 'clean';
     if (!isPubkey(wallet)) return json({ error: 'invalid_wallet' }, 400);
     if (!(amount > 0)) return json({ error: 'invalid_amount' }, 400);
+    // reserve = the most this stake's ticket can credit back later (prediction
+    // tickets: shares). It is held against the pool so the win is always backed.
+    const reserve = Number.isFinite(Number(b.reserve)) && Number(b.reserve) > 0 ? Math.round(Number(b.reserve) * 1e6) / 1e6 : 0;
+    let bankroll = null;
+    if (reserve > 0) {
+      bankroll = await this.poolBankroll();   // UNLOCKED (RPC, cached)
+      if (bankroll == null) return json({ ok: false, error: 'bankroll_unreadable', retryable: true, message: 'Could not read the play pool on Solana right now, so no ticket was opened and nothing was taken. Try again in a moment.' }, 503);
+    }
 
     if (bucket !== 'clean') {
       const lr = await this.loanOp('stake', { address: wallet, amount, bucket });
@@ -360,11 +397,33 @@ export class PlayLedger {
         if (bucket !== 'clean') await this.loanOp('settle', { address: wallet, payout: amount, bucket });
         return json({ ok: false, error: 'insufficient_bucket', balance: bal }, 409);
       }
+      const total0 = Number((await this.state.storage.get('total')) || 0);
+      const reserved0 = await this.reservedOf();
+      if (reserve > 0) {
+        // After the stake the pool must still cover every balance, every open
+        // ticket's reserve and this ticket's reserve.
+        const avail = Math.round((bankroll - (total0 - amount) - reserved0) * 1e6) / 1e6;
+        if (reserve > avail + 1e-9) {
+          if (bucket !== 'clean') await this.loanOp('settle', { address: wallet, payout: amount, bucket });
+          // Largest stake at this price that still fits: stake·(reserve/amount − 1) ≤ room.
+          const room = Math.round((bankroll - total0 - reserved0) * 1e6) / 1e6;
+          const perStake = reserve / amount - 1;
+          const maxStake = room > 0 && perStake > 0 ? Math.floor((room / perStake) * 100) / 100 : 0;
+          return json({
+            ok: false, error: 'bankroll_cap', code: 'bankroll_cap', retryable: false,
+            availableOstg: Math.max(0, room), maxStake: Math.max(0, maxStake),
+            message: maxStake >= 0.01
+              ? 'The play pool cannot back a win this size right now. The most you can stake on this ticket is ' + maxStake.toFixed(2) + ' OSTG. Nothing was taken.'
+              : 'The play pool cannot back new tickets right now: the OSTG it holds is already owed to play balances and open tickets. Nothing was taken.'
+          }, 409);
+        }
+      }
       const next = Math.round((bal - amount) * 1e6) / 1e6;
       await this.state.storage.put('bal:' + wallet, next);
-      const total = Number((await this.state.storage.get('total')) || 0) - amount;
+      const total = total0 - amount;
       await this.state.storage.put('total', Math.max(0, Math.round(total * 1e6) / 1e6));
-      return json({ ok: true, bucket, staked: amount, balance: next });
+      if (reserve > 0) await this.state.storage.put('reserved', Math.round((reserved0 + reserve) * 1e6) / 1e6);
+      return json({ ok: true, bucket, staked: amount, balance: next, reserved: reserve });
     });
   }
 
@@ -378,6 +437,10 @@ export class PlayLedger {
     // pool OSTG stays put, so the lending buffer grows by exactly this much.
     // Recording it makes that flow auditable instead of merely true.
     const fee = Math.max(0, Number(b.fee) || 0);
+    // The reserve the ticket held since its stake (0 for tickets opened before
+    // reserves existed). Released here whatever the outcome — a lost ticket
+    // settles with payout 0 and still frees its reserve.
+    const release = Number.isFinite(Number(b.release)) && Number(b.release) > 0 ? Math.round(Number(b.release) * 1e6) / 1e6 : 0;
     if (!isPubkey(wallet)) return json({ error: 'invalid_wallet' }, 400);
     if (!(payout >= 0)) return json({ error: 'invalid_amount' }, 400);
 
@@ -390,14 +453,20 @@ export class PlayLedger {
     return await this.state.blockConcurrencyWhile(async () => {
       const bal = await this.balOf(wallet);
       const next = Math.round((bal + payout) * 1e6) / 1e6;
-      await this.state.storage.put('bal:' + wallet, next);
-      const total = Number((await this.state.storage.get('total')) || 0) + payout;
-      await this.state.storage.put('total', Math.round(total * 1e6) / 1e6);
+      if (payout > 0) {
+        await this.state.storage.put('bal:' + wallet, next);
+        const total = Number((await this.state.storage.get('total')) || 0) + payout;
+        await this.state.storage.put('total', Math.round(total * 1e6) / 1e6);
+      }
+      if (release > 0) {
+        const rsv = await this.reservedOf();
+        await this.state.storage.put('reserved', Math.max(0, Math.round((rsv - release) * 1e6) / 1e6));
+      }
       if (fee > 0) {
         const acc = Number((await this.state.storage.get('houseAccrued')) || 0) + fee;
         await this.state.storage.put('houseAccrued', Math.round(acc * 1e6) / 1e6);
       }
-      return json({ ok: true, bucket, credited: payout, feeRetained: fee, balance: next });
+      return json({ ok: true, bucket, credited: payout, feeRetained: fee, released: release, balance: next });
     });
   }
   async total() { return Number((await this.state.storage.get('total')) || 0); }
@@ -519,6 +588,7 @@ export class PlayLedger {
       await this.state.storage.put('dep:' + signature, { wallet, amount: v.amount, at: Date.now() });
       await this.state.storage.put('bal:' + wallet, bal);
       await this.state.storage.put('total', total);
+      await this.dropPoolCache();   // the verified OSTG is in the pool now: re-read it
       return { credited: v.amount, balance: bal, idempotent: false };
     });
     return json(Object.assign({ ok: true, wallet }, out));
@@ -633,6 +703,7 @@ export class PlayLedger {
         await this.state.storage.put('bal:' + wallet, bal - amount);
         await this.state.storage.put('total', total - amount);
         await this.state.storage.put('cashout:' + id, { v: 2, status: 'building', wallet, amount, createdAt: Date.now() });
+        await this.lowerPoolCache(amount);   // counted as gone from the pool until a refund says otherwise
       }
 
       let sent;
@@ -651,6 +722,7 @@ export class PlayLedger {
           await this.state.storage.put('bal:' + wallet, balNow + amount);
           await this.state.storage.put('total', totalNow + amount);
           await this.state.storage.put('cashout:' + id, { v: 2, status: 'failed', wallet, amount, refunded: true, error: String((e && e.message) || e).slice(0, 200), createdAt: Date.now() });
+          await this.dropPoolCache();
           const code = (e && (e.reason || e.code)) || 'cashout_send_failed';
           const status = e.code === 'simulation_failed' ? 422 : (e.code === 'blockhash_expired' ? 409 : 503);
           return { done: true, response: json({ error: 'cashout_send_failed', code, retryable: status !== 422, refunded: true, message: 'Nothing was sent and your play balance was restored. ' + String((e && e.message) || e).slice(0, 160) }, status) };
@@ -681,6 +753,7 @@ export class PlayLedger {
         await this.state.storage.put('bal:' + wallet, balNow + rec.amount);
         await this.state.storage.put('total', totalNow + rec.amount);
         await this.state.storage.put('cashout:' + id, Object.assign({}, cur, { status: 'failed', refunded: true, txB64: undefined, error: why }));
+        await this.dropPoolCache();
         return true;
       });
     };
@@ -778,6 +851,7 @@ export class PlayLedger {
       let balance = Number((await this.state.storage.get('bal:' + wallet)) || 0);
       const openingBalance = balance;
       let total = Number((await this.state.storage.get('total')) || 0);
+      const reserved = await this.reservedOf();   // owed to open prediction tickets
       let nonce = seedRec.nonce;
       const results = [];
       let stopped = null;
@@ -790,7 +864,7 @@ export class PlayLedger {
         const r = await computeBet(game, seedRec.serverSeed, seedRec.clientSeed, nonce, params, wager);
         const net = Math.round((r.payout - wager) * 1e9) / 1e9;
         // SOLVENCY: never let a win push Σ balances above what the pool can pay.
-        if (net > 0 && bankroll != null && (total + net) > bankroll + 1e-9) { nonce -= 1; stopped = 'bankroll_cap'; break; }
+        if (net > 0 && bankroll != null && (total + reserved + net) > bankroll + 1e-9) { nonce -= 1; stopped = 'bankroll_cap'; break; }
         balance = Math.round((balance + net) * 1e9) / 1e9;
         total = Math.round((total + net) * 1e9) / 1e9;
         // Pass the FULL outcome detail (game-specific fields + the floats used) so
@@ -915,7 +989,7 @@ export class PlayLedger {
           const payout = round9(session.wager * mult);
           const balance = Number((await this.state.storage.get('bal:' + wallet)) || 0);
           const total = Number((await this.state.storage.get('total')) || 0);
-          if (bankroll != null && (total + payout) > bankroll + 1e-9) {
+          if (bankroll != null && (total + (await this.reservedOf()) + payout) > bankroll + 1e-9) {
             // Can't back the win right now: keep the session OPEN so the player can
             // cash out once the bankroll recovers, rather than voiding the win.
             session.state.ended = false; session.state.won = false;
@@ -982,7 +1056,7 @@ export class PlayLedger {
       const balance = Number((await this.state.storage.get('bal:' + wallet)) || 0);
       const total = Number((await this.state.storage.get('total')) || 0);
       // Solvency: a win raises Σ balances with no new pool OSTG.
-      if (bankroll != null && (total + payout) > bankroll + 1e-9) {
+      if (bankroll != null && (total + (await this.reservedOf()) + payout) > bankroll + 1e-9) {
         return json({ error: 'bankroll_cap', message: 'Cash-out exceeds what the pool can currently back.' }, 409);
       }
       session.state.ended = true; session.state.won = true; session.cashedOut = true;
@@ -1087,7 +1161,7 @@ export class PlayLedger {
       const balance = Number((await this.state.storage.get('bal:' + wallet)) || 0);
       const total = Number((await this.state.storage.get('total')) || 0);
       // Selling CREDITS the play balance — solvency-gate it like a game win.
-      if (bankroll != null && (total + ostOut) > bankroll + 1e-9) return json({ error: 'bankroll_cap', message: 'Pool can’t back that sell right now.' }, 409);
+      if (bankroll != null && (total + (await this.reservedOf()) + ostOut) > bankroll + 1e-9) return json({ error: 'bankroll_cap', message: 'Pool can’t back that sell right now.' }, 409);
       coin.sold = s0; coin.trades = (Number(coin.trades) || 0) + 1;
       await this.state.storage.put('meme:' + mint, coin);
       const remainTokens = round9(pos.tokens - tokens);
@@ -1167,7 +1241,7 @@ export class PlayLedger {
       payout = round9(payout - fee);
       const balance = Number((await this.state.storage.get('bal:' + wallet)) || 0);
       const total = Number((await this.state.storage.get('total')) || 0);
-      if (bankroll != null && (total + payout) > bankroll + 1e-9) return json({ error: 'bankroll_cap', message: 'Pool can’t back that close right now.' }, 409);
+      if (bankroll != null && (total + (await this.reservedOf()) + payout) > bankroll + 1e-9) return json({ error: 'bankroll_cap', message: 'Pool can’t back that close right now.' }, 409);
       fresh.open = false; fresh.exitPrice = exitPrice; fresh.closedAt = Date.now(); fresh.payout = payout; fresh.fee = fee;
       await this.state.storage.put(key, fresh);
       await this.state.storage.put('bal:' + wallet, round9(balance + payout));
@@ -1228,12 +1302,20 @@ export class PlayLedger {
     }
     const drift = Number((poolOstg - total).toFixed(9));
     const reconciled = drift + 1e-9 >= 0;
+    const reserved = await this.reservedOf();
     const out = {
       ok: reconciled,
       reconciled,
+      verdict: reconciled ? 'backed' : 'under-collateralized',
       onchainPoolOstg: poolOstg,          // slow layer: the truth
       mirrorTotal: Number(total.toFixed(9)), // fast layer: the cache
       drift,                               // >= 0 healthy; < 0 is a real problem
+      shortfallOstg: reconciled ? 0 : Number((-drift).toFixed(9)),
+      // OSTG held back for open prediction tickets (what they can still win).
+      // New tickets, game wins and closes are refused when the pool cannot
+      // cover balances + this reserve, so the drift cannot grow from wins.
+      openTicketReserveOstg: Number(reserved.toFixed(9)),
+      headroomOstg: Number((poolOstg - total - reserved).toFixed(9)),
       status: reconciled
         ? 'mirror is fully backed by on-chain OSTG'
         : 'UNDER-COLLATERALIZED: mirror exceeds on-chain pool',
@@ -1242,7 +1324,11 @@ export class PlayLedger {
     // Persist the last reconciliation so a UI can show "verified N ago" and a
     // sudden drift is visible historically, not just in the instant.
     try { await this.state.storage.put('lastReconcile', out); } catch (_) {}
-    return json(out, reconciled ? 200 : 500);
+    // A computed verdict is a successful answer either way: the body says
+    // backed or UNDER-COLLATERALIZED. (It used to be an HTTP 500, so every page
+    // that polls this status logged "Failed to load resource" every 15 s while
+    // nothing had failed.) Only a failed chain read — no verdict — is an error.
+    return json(out, 200);
   }
 
   async handleHealth() {
@@ -1260,16 +1346,18 @@ export class PlayLedger {
         note: 'Could not read pool OSTG — NOT a solvency verdict.' }, 502);
     }
     const solvent = poolOstg + 1e-9 >= total;
+    const reserved = await this.reservedOf();
     return json({
       ok: solvent,
       solvent,
       poolOstg,
       playTotal: Number(total.toFixed(9)),
       buffer: Number((poolOstg - total).toFixed(9)),
-      // The lending reserve is a FRACTION of the buffer: the rest must stay
-      // free to pay winners, so one large draw can never leave a jackpot
-      // unsettleable.
-      lendable: Number(((poolOstg - total) * Number(this.env.LENDING_RESERVE_FRACTION || 0.5)).toFixed(9)),
+      openTicketReserve: Number(reserved.toFixed(9)),
+      // The lending reserve is a FRACTION of the buffer left after open
+      // tickets' reserve: the rest must stay free to pay winners, so one large
+      // draw can never leave a jackpot unsettleable.
+      lendable: Number((Math.max(0, poolOstg - total - reserved) * Number(this.env.LENDING_RESERVE_FRACTION || 0.5)).toFixed(9)),
       // Cumulative house edge withheld from payouts. This is not a separate
       // pot - it is already inside `buffer`. A withheld fee means Σ play
       // balances rose less while pool OSTG stayed put, so the headroom grew by

@@ -169,7 +169,7 @@ export function installSocial(Hub, H) {
       const bytes = new Uint8Array(await request.arrayBuffer());
       const actor = request.headers.get('x-mesh-addr') || '';
       const auth = await this.verifyMeshAuth(request, url, '', actor, { bodyHash: await H.sha256HexBytes(bytes) });
-      if (!auth.ok) return fail(auth.error, auth.status);
+      if (!auth.ok) return fail(auth.error, auth.status, auth);
       const hit = this._limitHit([['s-write', auth.addr, WRITE_LIMIT], ['s-media', auth.addr, MEDIA_LIMIT]]);
       if (hit.wait) return hit.bucket === 's-write' ? refused(hit.wait, 'social', 'social_hourly_limit') : refused(hit.wait, 'media', 'uploading_too_fast');
       return this.sMediaPut(auth.addr, url, bytes);
@@ -188,7 +188,7 @@ export function installSocial(Hub, H) {
     if (method === 'GET' && r === 'notifs') {
       const addr = url.searchParams.get('addr');
       const auth = await this.verifyMeshAuth(request, url, '', addr);
-      if (!auth.ok) return fail(auth.error, auth.status);
+      if (!auth.ok) return fail(auth.error, auth.status, auth);
       return this.sNotifs(auth.addr);
     }
 
@@ -204,7 +204,7 @@ export function installSocial(Hub, H) {
     if (method !== 'POST') return null;
     const actorField = r === 'notifs/seen' ? 'addr' : 'from';
     const { body, auth } = await this._sBody(request, url, actorField);
-    if (!auth.ok) return fail(auth.error, auth.status);
+    if (!auth.ok) return fail(auth.error, auth.status, auth);
     const me = auth.addr;
     {
       const specs = [['s-write', me, WRITE_LIMIT]];

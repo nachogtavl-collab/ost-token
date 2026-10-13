@@ -133,6 +133,17 @@
     // Language switches rewrite link text (widths change) - refit once translations land.
     window.addEventListener('ost:langchange', function () { setTimeout(fit, 50); });
     setTimeout(fit, 1500);
+    // R1-nav-more-clipped: header widgets that land late (the total-balance badge
+    // is inserted into .nav-right at DOMContentLoaded + 900 ms, its text grows
+    // with the balance) shrink #navLinks AFTER the last timed fit, leaving only
+    // an "M" of "More ▾". Refit whenever the header row or .nav-right resizes.
+    if (window.ResizeObserver) {
+      var rt = 0;
+      var ro = new ResizeObserver(function () { clearTimeout(rt); rt = setTimeout(fit, 60); });
+      var right = document.querySelector('.nav-right');
+      if (right) ro.observe(right);
+      if (nav.parentElement) ro.observe(nav.parentElement);
+    }
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
 })();

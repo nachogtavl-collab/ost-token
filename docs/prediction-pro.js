@@ -391,9 +391,12 @@
     } catch (_) {}
     // Browsers cannot reach exchange APIs reliably (CORS / geo blocks - every direct feed
     // failed in the 2026-09 audit). The OST worker IS the relay: ask it for the round.
+    // NET-3: through the page's ONE /btc/round fetcher (in-flight de-dupe + the
+    // 4 s window the realtime round push keeps fresh) — this used to be a
+    // second, un-deduplicated /btc/round request at every round boundary.
     var base = ostApiBase();
-    return (base ? fetch(base + '/btc/round', { cache: 'no-store' }).then(function (r) { if (!r.ok) throw new Error('round ' + r.status); return r.json(); })
-        .then(function (d) { var p = Number(d && d.livePrice); if (!(p > 1000) || Date.now() - Number(d.livePriceTs || 0) > 20000) throw new Error('no fresh server price'); return { price: p, source: d.livePriceSource || 'ost-canonical' }; })
+    return (base ? fetchCanonicalRound()
+        .then(function (d) { var p = Number(d && d.livePrice); if (!d || !(p > 1000) || Date.now() - Number(d.livePriceTs || 0) > 20000) throw new Error('no fresh server price'); return { price: p, source: d.livePriceSource || 'ost-canonical' }; })
       : Promise.reject(new Error('no OST API')))
       .then(function (result) {
         btcPreferredSource = result.source && result.source.replace(/\*$/, '') || btcPreferredSource;
@@ -742,40 +745,66 @@
   // Seed the local BTC tick series with the SHARED ring from the worker the
   // first time we see a new round id, so two users opening the modal see
   // the same chart even if one of them just landed on the page.
+  // NET-3: a brand-new round has < 2 ticks for its first seconds, which made
+  // this re-fetch /btc/ticks on every poll right after each 5-minute boundary.
+  // At most one /btc/ticks per round per 10 s — for the whole PAGE: this seeder
+  // and the market modal (prediction-modal.js hydrateCanonicalBtcTicks) share
+  // one 10 s window (window.__ostBtcTicksTriedAt) and one ring per round
+  // (window.__ostBtcTicksByRound), so whichever asks first serves both (NET-3).
+  function sharedTickStore() {
+    var w = typeof window !== 'undefined' ? window : {};
+    w.__ostBtcTicksByRound = w.__ostBtcTicksByRound || {};
+    w.__ostBtcTicksTriedAt = w.__ostBtcTicksTriedAt || {};
+    return { ring: w.__ostBtcTicksByRound, tried: w.__ostBtcTicksTriedAt };
+  }
+  function seedFromCanonicalTicks(openAt, seeded) {
+    // Replace local series for this round with the canonical ring so
+    // every device renders the IDENTICAL chart line.
+    var wsTick = freshBinanceWsTick(2500);
+    btcSeries = seeded.slice(-BTC_MAX_SERIES);
+    if (wsTick) {
+      var lastSeeded = seeded[seeded.length - 1];
+      if (!lastSeeded || wsTick.ts > lastSeeded.ts || Math.abs(wsTick.price - lastSeeded.price) > 0.000001) {
+        btcSeries.push({ ts: wsTick.ts, price: wsTick.price, source: wsTick.source || 'binance-ws' });
+        if (btcSeries.length > BTC_MAX_SERIES) btcSeries = btcSeries.slice(-BTC_MAX_SERIES);
+      }
+      btcLastTick = wsTick;
+    } else {
+      var last = seeded[seeded.length - 1];
+      btcLastTick = { ts: last.ts, price: last.price, source: last.source };
+    }
+    canonicalTicksSeededFor = openAt;
+    emitBtcSpot();
+  }
   function maybeSeedTickHistory(openAt) {
     if (!openAt || (canonicalTicksSeededFor === openAt && btcSeries.length >= 2) || canonicalTicksLoadingFor === openAt) return;
+    var key = String(openAt), st = sharedTickStore();
+    if (Date.now() - (Number(st.tried[key]) || 0) < 10000) {
+      // Asked < 10 s ago (here or by the modal): use what that answer brought.
+      var have = st.ring[key];
+      if (Array.isArray(have) && have.length >= 2 && canonicalTicksSeededFor !== openAt) seedFromCanonicalTicks(openAt, have.slice());
+      return;
+    }
     var apiBase = ostApiBase();
     if (!apiBase) return;
+    // Rounds older than 10 minutes are never asked about again: keep the maps small.
+    Object.keys(st.tried).forEach(function (k) { if (Number(k) < Number(openAt) - 600000) { delete st.tried[k]; delete st.ring[k]; } });
+    st.tried[key] = Date.now();
     canonicalTicksLoadingFor = openAt;
     fetch(apiBase + '/btc/ticks?openAt=' + encodeURIComponent(openAt), { headers: { accept: 'application/json' }, cache: 'no-store' })
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (j) {
         if (!j || !Array.isArray(j.ticks) || !j.ticks.length) return;
-        // Replace local series for this round with the canonical ring so
-        // every device renders the IDENTICAL chart line.
         var seeded = j.ticks
           .filter(function (t) { return Number.isFinite(Number(t && t.p)) && Number(t.p) > 1000; })
           .map(function (t) { return { ts: Number(t.t) || Date.now(), price: Number(t.p), source: t.s || 'ost-canonical' }; });
         if (!seeded.length) return;
+        st.ring[key] = seeded.slice(-240);
         if (seeded.length < 2) {
           canonicalTicksSeededFor = 0;
           return;
         }
-        var wsTick = freshBinanceWsTick(2500);
-        btcSeries = seeded.slice(-BTC_MAX_SERIES);
-        if (wsTick) {
-          var lastSeeded = seeded[seeded.length - 1];
-          if (!lastSeeded || wsTick.ts > lastSeeded.ts || Math.abs(wsTick.price - lastSeeded.price) > 0.000001) {
-            btcSeries.push({ ts: wsTick.ts, price: wsTick.price, source: wsTick.source || 'binance-ws' });
-            if (btcSeries.length > BTC_MAX_SERIES) btcSeries = btcSeries.slice(-BTC_MAX_SERIES);
-          }
-          btcLastTick = wsTick;
-        } else {
-          var last = seeded[seeded.length - 1];
-          btcLastTick = { ts: last.ts, price: last.price, source: last.source };
-        }
-        canonicalTicksSeededFor = openAt;
-        emitBtcSpot();
+        seedFromCanonicalTicks(openAt, seeded);
       })
       .catch(function () { /* keep local series */ })
       .then(function () { if (canonicalTicksLoadingFor === openAt) canonicalTicksLoadingFor = 0; });
@@ -1689,6 +1718,10 @@
       livePrice: market.meta && market.meta.livePrice,
       quoteSource: market.meta && market.meta.priceSource,
       quotedAt: Date.now(),
+      // MK-BTC-QUOTE: the price the user agreed to and the limit the server
+      // must not fill above (app.js sends both with /play/predict/open).
+      quotedPrice: (Number(req.quotedPrice) > 0 && Number(req.quotedPrice) < 1) ? Number(req.quotedPrice) : undefined,
+      maxEntry: (Number(req.maxEntry) > 0 && Number(req.maxEntry) < 1) ? Number(req.maxEntry) : undefined,
       reference: Date.now().toString(36)
     };
   }

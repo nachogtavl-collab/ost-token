@@ -825,7 +825,24 @@
     Promise.resolve(window.OST_SEND.send({ asset: 'OST', to: address, amount: String(amount), memo: 'OST Mesh contact send', source: 'mesh-contact' }))
       .then(function (r) {
         var sig = r && r.sig ? String(r.sig) : '';
-        if (r && r.pending) setStatus(p, 'Sent ' + amount + ' OST — still confirming' + (sig ? ' (tx ' + sig.slice(0, 8) + '…)' : '') + '. Check the balance before sending again.', 'warn');
+        if (r && r.pending) {
+          // R-late: an UNKNOWN outcome is not "Sent". Say it is confirming, then
+          // follow the rail's resolution (ost:wallet-tx {resolved:true}) and
+          // replace the line with what really happened.
+          setStatus(p, 'Still confirming ' + amount + ' OST' + (sig ? ' (tx ' + sig.slice(0, 8) + '…)' : '') + ' — check the balance before sending again.', 'warn');
+          var cid = r.cosignId ? String(r.cosignId) : '';
+          if (sig || cid) {
+            var onTx = function (ev) {
+              var d = ev && ev.detail;
+              if (!d || !d.resolved || !((sig && String(d.sig) === sig) || (cid && String(d.cosignId || '') === cid))) return;
+              window.removeEventListener('ost:wallet-tx', onTx);
+              if (d.status === 'confirmed') setStatus(p, '✓ Sent ' + amount + ' OST' + (d.sig ? ' (tx ' + String(d.sig).slice(0, 8) + '…)' : '') + '.', 'ok');
+              else setStatus(p, 'Didn’t go through — ' + amount + ' OST was not sent. Nothing moved; you can try again.', 'err');
+            };
+            window.addEventListener('ost:wallet-tx', onTx);
+            setTimeout(function () { window.removeEventListener('ost:wallet-tx', onTx); }, 15 * 60000);
+          }
+        }
         else setStatus(p, 'Sent ' + amount + ' OST' + (sig ? ' (tx ' + sig.slice(0, 8) + '…)' : '') + '.', 'ok');
       })
       .catch(function (err) { setStatus(p, human(err), 'err'); });

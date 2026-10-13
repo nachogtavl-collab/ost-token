@@ -183,6 +183,110 @@
     return !!(own && wallet && String(own) === String(wallet));
   }
 
+  // ---- own echoes (NET-3 / MK-PHANTOM-RECV) ---------------------------------
+  // Every POST /wallet/events and POST /positions this browser makes comes back
+  // on the wallet channel as a 'transaction.alert'. Fanning that echo out as
+  // ost:wallet-changed + an events re-sync re-read every wallet module (~13
+  // worker + 3 RPC requests) for something this browser already knows — and a
+  // phantom balance event turned that into a once-a-minute loop. An echo whose
+  // record is already in this browser's own store is NOT news: it still
+  // reaches the live-feed listeners (ost:realtime / ost:transaction-alert), but
+  // triggers no refresh. Echoes of things done elsewhere (another device, the
+  // server) still refresh as before.
+  function readLocalJson(key) {
+    try { var v = JSON.parse(localStorage.getItem(key) || 'null'); return Array.isArray(v) ? v : []; } catch (_) { return []; }
+  }
+  // An id that carries something: not empty and not just the separators of an
+  // empty composite (':::' from a blank row must never match anything).
+  function meaningfulId(v) { return !!v && /[^:\s]/.test(String(v)); }
+  function snapshotKeys(s) {
+    if (!s) return [];
+    var out = [s.id, s.eventId, s.sig, s.signature].filter(meaningfulId).map(String);
+    // The id a POST /wallet/events gets when the snapshot had none (wallet-extras
+    // eventKey) — only for a row that has a kind and a time.
+    if (s.kind && s.ts) out.push([s.kind || '', s.ts || '', s.amount || '', s.token || s.game || s.marketId || ''].join(':'));
+    return out;
+  }
+  function isClosedRecord(r) {
+    var st = String((r && (r.status || r.outcome)) || '').toLowerCase();
+    return !!(r && (r.cashedOut || /^(sold|settled|won|lost|refunded|paid|closed)$/.test(st)));
+  }
+  function knownEcho(event) {
+    try {
+      if (!event || !isOwnWallet(event.wallet)) return false;
+      var rec = event.payload && event.payload.record;
+      if (!rec || typeof rec !== 'object') return false;
+      if (rec.kind) {
+        // A wallet activity row: the same row is already in this browser's snapshot store.
+        var ids = [rec.id, rec.eventId, rec.sig, rec.signature].filter(meaningfulId).map(String);
+        if (!ids.length) return false;
+        var snaps = readLocalJson('ost.wallet.balanceHistory.v1');
+        for (var i = snaps.length - 1; i >= 0 && i >= snaps.length - 400; i--) {
+          var ks = snapshotKeys(snaps[i]);
+          for (var j = 0; j < ids.length; j++) if (ks.indexOf(ids[j]) >= 0) return true;
+        }
+        return false;
+      }
+      if (rec.marketId) {
+        // A prediction ticket echo: known when this browser holds the same
+        // ticket in the same open/closed state (a sale made on another device
+        // is still news and refreshes).
+        var key = String(rec.signature || rec.sig || rec.id || '');
+        if (!key) return false;
+        var orders = readLocalJson('ost.prediction.orders.v1');
+        for (var k = 0; k < orders.length; k++) {
+          var o = orders[k]; if (!o) continue;
+          var ok = [o.signature, o.sig, o.id, o.serverPositionId, o.reference].filter(Boolean).map(String);
+          if (ok.indexOf(key) >= 0) return isClosedRecord(o) === isClosedRecord(rec);
+        }
+      }
+    } catch (_) {}
+    return false;
+  }
+
+  // ---- faucet claim echo (J-12 / one claim = one success notice) ----------
+  // The tab that ran the claim reports the result itself (app.js: one card,
+  // id faucet-<wallet8>, "100 OST arrived · tx …"), and the echo usually lands
+  // ~0.3 s BEFORE that result. So the echo waits 4 s and stays silent when this
+  // tab's own claim flow reported a success (its ost:wallet-tx {source:faucet},
+  // or the own-money marker app.js sets on success). Otherwise — a claim made
+  // in another tab or on another device, or this tab's claim ended "couldn't
+  // confirm yet" — it shows ONCE, in that SAME faucet card, so a claim can
+  // never stack two success cards.
+  var lastOwnFaucetTxAt = 0;
+  window.addEventListener('ost:wallet-tx', function (e) {
+    var d = e && e.detail;
+    if (d && /faucet/i.test(String(d.source || '')) && String(d.status || 'confirmed') === 'confirmed') lastOwnFaucetTxAt = Date.now();
+  });
+  function faucetEcho(event) {
+    var wallet = String(event.wallet || '');
+    var mark = Date.now();
+    // SRV-A1(b): every tab of this wallet now knows the balance rise that
+    // follows is its own claim, not an incoming transfer — the app.js receive
+    // detector used to log it as a sig-less 'recv-ost' (+100 OST twice).
+    try { if (!(Number(window.__ostLastOwnMoneyTxAt) > mark)) window.__ostLastOwnMoneyTxAt = mark; } catch (_) {}
+    // A replayed old event (fallback poll after a reconnect) is not news.
+    if (mark - (Number(event.ts) || mark) > 120000) return;
+    var msg = event.message || event.title || 'Faucet claim confirmed';
+    // The worker names the card its claim belongs to (payload.notifyId =
+    // 'faucet-<wallet8>', the same id app.js's claim flow uses). Only a faucet
+    // card id is accepted; anything else falls back to the derived one.
+    var pid = String((event.payload && event.payload.notifyId) || '');
+    var nid = /^faucet-[1-9A-HJ-NP-Za-km-z]{1,16}$/.test(pid) ? pid : 'faucet-' + wallet.slice(0, 8);
+    setTimeout(function () {
+      var now = Date.now();
+      if (now - lastOwnFaucetTxAt < 120000) return;                         // this tab reported its own success
+      if ((Number(window.__ostLastOwnMoneyTxAt) || 0) > mark) return;       // app.js success marker, set after this echo
+      try {
+        if (typeof window.OST_NOTIFY === 'function') {
+          window.OST_NOTIFY({ id: nid, kind: 'ok', title: msg, body: 'Free devnet OST is in your wallet.', sig: (event.payload && event.payload.signature) || undefined });
+          return;
+        }
+      } catch (_) {}
+      try { if (window.OST_OPTIMISTIC && typeof window.OST_OPTIMISTIC.toast === 'function') window.OST_OPTIMISTIC.toast(msg, 'success'); } catch (_) {}
+    }, 4000);
+  }
+
   function showToast(event) {
     if (!event || event.silent) return;
     if (/^(price|orderbook)\./.test(event.type || '')) return;
@@ -194,13 +298,15 @@
     // of "LIVE" cards that made the app unusable.
     if (!own) return;
     // ONE NOTIFICATION POLICY. The user's own action already produced feedback in
-    // the UI (button state + one optimistic toast). The realtime echoes of that
-    // same action — faucet.claim, wallet.event, transaction.alert — produced 3
-    // more toasts per action. Only surface things the user did NOT just do
-    // themselves (incoming transfers, top-ups, errors) plus ONE server-confirmed
-    // receipt for a faucet claim (it fires only after the on-chain payout landed).
+    // the UI (button state + one notice). The realtime echoes of that same
+    // action — faucet.claim, wallet.event, transaction.alert — produced 3 more
+    // toasts per action. Only surface things the user did NOT just do
+    // themselves (incoming transfers, top-ups, errors). A faucet claim echo is
+    // handled by faucetEcho (shown only for a claim made elsewhere, merged into
+    // the faucet card).
     var _t = String(event.type || '');
-    if (event.severity !== 'error' && !/^(faucet\.claim|topup\.|transfer\.received|payment\.received)/.test(_t)) return;
+    if (/^faucet\.claim/.test(_t)) return;
+    if (event.severity !== 'error' && !/^(topup\.|transfer\.received|payment\.received)/.test(_t)) return;
     var msg = event.message || event.title || event.type || 'OST update';
     try {
       if (window.OST_OPTIMISTIC && typeof window.OST_OPTIMISTIC.toast === 'function') {
@@ -296,12 +402,16 @@
     if (type === 'faucet.claim') {
       dispatch('ost:faucet-claim', event);
       if (event.payload && event.payload.state) dispatch('ost:faucet-state-synced', event.payload.state);
+      if (isOwnWallet(event.wallet) && !event.silent) faucetEcho(event);
     }
     if (type === 'game.result') dispatch('ost:game-result', event);
     if (/^(wallet|transaction|topup|payout)\./.test(type) || type === 'wallet.event') {
       dispatch('ost:transaction-alert', event);
-      dispatch('ost:wallet-changed', event);
-      try { if (typeof window.syncOstWalletEventsFromRemote === 'function') window.syncOstWalletEventsFromRemote(); } catch (_) {}
+      // NET-3: an echo of a record this browser already holds refreshes nothing.
+      if (!knownEcho(event)) {
+        dispatch('ost:wallet-changed', event);
+        try { if (typeof window.syncOstWalletEventsFromRemote === 'function') window.syncOstWalletEventsFromRemote(); } catch (_) {}
+      }
     }
     showToast(event);
   }

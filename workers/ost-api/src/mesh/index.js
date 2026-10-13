@@ -39,7 +39,8 @@ function cors(extra = {}) {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Range, If-None-Match, If-Range, x-ost-wallet, x-ost-ts, x-ost-nonce, x-ost-sig, x-ost-session, x-ost-internal, x-mesh-addr, x-mesh-ts, x-mesh-nonce, x-mesh-sig',
-    'Access-Control-Expose-Headers': 'Content-Range, Accept-Ranges, Content-Length, ETag, Retry-After, X-Blob-Size',
+    'Access-Control-Expose-Headers': 'Content-Range, Accept-Ranges, Content-Length, ETag, Retry-After, X-Blob-Size, x-ost-server-time, Date',
+    'x-ost-server-time': String(Date.now()),   // C11: the client can learn its clock offset from any mesh answer
     ...extra
   };
 }

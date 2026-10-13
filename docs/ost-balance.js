@@ -58,7 +58,8 @@
       // Coalesce: one trailing refresh after the gap instead of a request per caller.
       if (!state.queued) {
         state.queued = new Promise(function (res) {
-          setTimeout(function () { state.queued = null; state.at = 0; res(refresh(true)); }, FORCED_GAP_MS - age);
+          state.queuedRes = res;
+          state.queuedTimer = setTimeout(function () { state.queued = null; state.queuedRes = null; state.queuedTimer = 0; state.at = 0; res(refresh(true)); }, FORCED_GAP_MS - age);
         });
       }
       return state.queued;
@@ -79,8 +80,28 @@
         state.at = Date.now();
         return Promise.all([backfillOnchain(w), readSol(w)]).then(function () { emit(); return state.truth; });
       })
-      .then(function (t) { state.inflight = null; return t; }, function (e) { state.inflight = null; throw e; });
+      .then(function (t) { state.inflight = null; readAgainIfAsked(); return t; }, function (e) { state.inflight = null; readAgainIfAsked(); throw e; });
     return state.inflight;
+  }
+  // A settled transaction needs the POST-transaction numbers now: a read that
+  // was already in flight may have left before it landed, and the coalesce
+  // gap used to push the next read 4 s out while the screen said "✓ done".
+  function readAgainIfAsked() {
+    if (!state.again) return;
+    state.again = false;
+    state.at = 0;
+    setTimeout(function () { refresh(true); }, 0);
+  }
+  function refreshNow() {
+    state.freshUntil = Date.now() + 8000;
+    if (state.inflight) { state.again = true; return state.inflight; }
+    var res = state.queuedRes;
+    if (state.queuedTimer) clearTimeout(state.queuedTimer);
+    state.queued = null; state.queuedRes = null; state.queuedTimer = 0;
+    state.at = 0;
+    var p = refresh(true);
+    if (res) res(p);
+    return p;
   }
 
   // When /balance/truth is degraded, read the missing place client-side.
@@ -118,8 +139,65 @@
     } catch (_) { return Promise.resolve(); }
   }
 
+  var lastSeen = { wallet: '', ost: null, ostg: null };
   function emit() {
     try { window.dispatchEvent(new CustomEvent('ost:balance', { detail: snapshot() })); } catch (_) {}
+    // A rise in on-chain OST / OSTG (for the same wallet). Listeners use it to
+    // look for the incoming transaction when push updates are down; it is a
+    // hint to re-read Activity, never a "received" record by itself.
+    try {
+      var g = get();
+      if (g.wallet && g.wallet === lastSeen.wallet) {
+        [['ost', 'OST'], ['ostg', 'OSTG']].forEach(function (p) {
+          var a = lastSeen[p[0]], b = g[p[0]];
+          if (a != null && b != null && b > a + 1e-9) window.dispatchEvent(new CustomEvent('ost:balance-rise', { detail: { asset: p[1], from: a, to: b, wallet: g.wallet } }));
+        });
+      }
+      lastSeen = { wallet: g.wallet || '', ost: g.ost, ostg: g.ostg };
+    } catch (_) {}
+  }
+
+  /* ---- push fallback (RPC WebSocket refused, e.g. HTTP 429) ---------------
+   * The wallet home watches its token accounts over the RPC WebSocket. When
+   * the provider refuses the socket, an incoming transfer only showed at the
+   * 60 s poll. While the socket keeps failing — or a caller reports push is
+   * down via OST_BALANCE.pushDown(ms) — read every 15 s, only while the tab is
+   * visible, for at most 5 minutes per report. Listening to the socket's error
+   * events is read-only: this module never opens, closes or retries sockets. */
+  var PUSH_POLL_MS = 15000;
+  var pushDownUntil = 0, wsErrAt = [], hookedSock = null, pushTimer = 0;
+  function pushDown(ms) {
+    var until = Date.now() + (Number(ms) > 0 ? Math.min(Number(ms), 15 * 60000) : 5 * 60000);
+    if (until > pushDownUntil) pushDownUntil = until;
+    if (!pushTimer) {
+      pushTimer = setInterval(function () {
+        if (Date.now() > pushDownUntil) { clearInterval(pushTimer); pushTimer = 0; return; }
+        if (document.hidden || !wallet()) return;
+        if (Date.now() - state.at >= PUSH_POLL_MS - 1000) refresh(true);
+      }, PUSH_POLL_MS);
+    }
+    try { window.dispatchEvent(new CustomEvent('ost:push-down', { detail: { until: pushDownUntil } })); } catch (_) {}
+    return pushDownUntil;
+  }
+  function hookSocket() {
+    try {
+      var W = window.OST_WALLET;
+      if (!W || typeof W.getConnection !== 'function' || !wallet()) return;
+      var conn = W.getConnection();
+      var sock = conn && conn._rpcWebSocket;
+      if (!sock || sock === hookedSock || typeof sock.on !== 'function') return;
+      hookedSock = sock;
+      sock.on('error', function () {
+        var now = Date.now();
+        wsErrAt = wsErrAt.filter(function (t) { return now - t < 60000; });
+        wsErrAt.push(now);
+        if (wsErrAt.length >= 2) { wsErrAt = []; pushDown(5 * 60000); }
+      });
+    } catch (_) {}
+  }
+  function watchPushHealth() {
+    hookSocket();
+    setInterval(function () { if (!document.hidden) hookSocket(); }, 10000);
   }
 
   function place(name) {
@@ -191,6 +269,9 @@
     drift: drift,
     checkDrift: checkDrift,
     refresh: refresh,
+    refreshNow: refreshNow,      // a settled tx: read now (no coalesce delay)
+    pushDown: pushDown,          // push updates are down: poll 15 s while visible
+    pushIsDown: function () { return Date.now() < pushDownUntil; },
     snapshot: snapshot,
     // Individual getters. EVERY one returns undefined when unknown.
     onchainOstc: function () { return place('onchainOstc'); },
@@ -212,9 +293,8 @@
     window.addEventListener('ost:wallet-tx', function () {
       // Right after a transaction the worker's short reuse window could hand
       // back the pre-transaction numbers: ask for a fresh read (?fresh=1; an
-      // older worker ignores the flag).
-      state.freshUntil = Date.now() + 8000;
-      refresh(true);
+      // older worker ignores the flag) NOW — not after the coalesce gap.
+      refreshNow();
       clearTimeout(lagTimer);
       lagTimer = setTimeout(function () { refresh(true); }, 5000);
     });
@@ -227,11 +307,15 @@
         var cur = state.truth.places.onchainOstc;
         var v = Number(ch.amount);
         if (!Number.isFinite(v)) return;
-        if (cur && cur.ok && Math.abs(Number(cur.value) - v) < 1e-9) return;
+        // A 2-decimal display copy of the figure we already hold is not a new
+        // read: taking it swapped 96.184369388 for 96.18 and back every minute,
+        // and each flip looked like an incoming transfer (phantom "received").
+        if (cur && cur.ok && Math.abs(Number(cur.value) - v) < (ch.precise ? 1e-9 : 0.005 + 1e-9)) return;
         state.truth.places.onchainOstc = { value: v, ok: true, source: 'app-read', at: Date.now() };
         emit();
       } catch (_) {}
     });
+    watchPushHealth();
     // PUSH-FIRST: a play-balance event carries the server-returned balance.
     window.addEventListener('ost:play:balance', function (e) {
       var v = e && e.detail && Number(e.detail.balance);

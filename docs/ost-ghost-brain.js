@@ -46,12 +46,16 @@
     } catch (_) {}
     return '';
   }
+  // Unknown is never printed as 0 (a NaN total used to read "0.00 OST ($0.00)").
+  // The fiat figure is the fixed devnet conversion rate, and says so.
   function ost(n) {
-    var v = Number(n) || 0;
+    var v = Number(n);
+    if (!Number.isFinite(v)) return '— OST';
     var s = v.toFixed(2) + ' OST';
     var f = fiat(v);
-    return f ? s + ' (' + f + ')' : s;
+    return f ? s + ' (≈ ' + f + ' at the devnet rate)' : s;
   }
+  function plain(n) { var v = Number(n); return Number.isFinite(v) ? v.toFixed(2) + ' OST' : '— OST'; }
   function pct(n) { return (Number(n) || 0).toFixed(0) + '%'; }
 
   // ---- grounded facts ------------------------------------------------------
@@ -68,8 +72,17 @@
     } catch (_) {}
     return [];
   }
+  // RETIRED legacy credits (D1): no cash value, cannot be spent or cashed out.
+  // They are never OST, never priced in fiat and never added to a balance.
   function credits() {
-    try { return Number(window.OST_MONEY && window.OST_MONEY.get ? window.OST_MONEY.get() : 0) || 0; } catch (_) { return 0; }
+    try {
+      var v = window.OST_MONEY && window.OST_MONEY.get ? window.OST_MONEY.get() : 0;
+      return Number(v && typeof v === 'object' ? v.credits : v) || 0;
+    } catch (_) { return 0; }
+  }
+  function creditsNote(n) {
+    var c = Number(n) || 0;
+    return c > 0 ? ' You also have ' + c.toFixed(2) + ' retired legacy credits — not OST, not cashable, no value.' : '';
   }
   // ONE authority, not the rendered DOM. Ghost quoting a screen-scraped number
   // meant it could confidently tell a user they had 0 while they were funded.
@@ -82,6 +95,19 @@
     } catch (_) {}
     return undefined;              // unknown, never 0
   }
+  // The other places money lives — each its own unit, never blended (C6).
+  function otherPlaces() {
+    try {
+      var g = window.OST_BALANCE && window.OST_BALANCE.get ? window.OST_BALANCE.get() : null;
+      if (!g) return { ostg: undefined, play: undefined };
+      return { ostg: g.ostg == null ? undefined : Number(g.ostg), play: g.play == null ? undefined : Number(g.play) };
+    } catch (_) { return { ostg: undefined, play: undefined }; }
+  }
+  function hasWallet() {
+    try { var W = window.OST_WALLET; return !!(W && W.session && W.session.publicKey); } catch (_) { return false; }
+  }
+  var UNKNOWN_BALANCE = 'I can’t read your on-chain OST right now, so I won’t guess. Open your wallet (it refreshes the balance) and ask me again.';
+  var NO_WALLET = 'You don’t have a wallet connected, so you hold no OST here yet. Create a free devnet wallet (Start free) and claim 100 free devnet OST.';
   function meta() {
     try { return JSON.parse(localStorage.getItem('ost.games.meta.v1') || '{}') || {}; } catch (_) { return {}; }
   }
@@ -383,13 +409,15 @@
         var s = snapshot();
         var m = /(\d+(?:\.\d+)?)/.exec(q);
         var want = m ? Number(m[1]) : NaN;
-        var total = s.credits + s.walletOst;
-        if (!Number.isFinite(want)) return { text: 'You have ' + ost(total) + ' spendable (' + ost(s.credits) + ' credits' + (s.walletOst ? ' + ' + ost(s.walletOst) + ' on-chain' : '') + '). Tell me an amount and I\'ll check it.' };
+        // Only the OST in your wallet counts. Retired credits are not money.
+        var have = s.walletOst;
+        if (!Number.isFinite(have)) return { text: hasWallet() ? UNKNOWN_BALANCE : NO_WALLET, data: { want: want, have: null } };
+        if (!Number.isFinite(want)) return { text: 'You have ' + ost(have) + ' in your wallet. Tell me an amount and I\'ll check it.' + creditsNote(s.credits), data: { have: have } };
         return {
-          text: total + 1e-9 >= want
-            ? 'Yes — ' + ost(want) + ' is covered. You have ' + ost(total) + ', leaving ' + ost(total - want) + '.'
-            : 'No — ' + ost(want) + ' is ' + ost(want - total) + ' more than you have. You hold ' + ost(total) + '. The faucet and the arcade top you up free.',
-          data: { want: want, have: total }
+          text: have + 1e-9 >= want
+            ? 'Yes — ' + ost(want) + ' is covered. You have ' + plain(have) + ' in your wallet, leaving ' + plain(have - want) + '.'
+            : 'No — ' + ost(want) + ' is ' + plain(want - have) + ' more than the ' + plain(have) + ' in your wallet. The free daily devnet OST faucet can top you up.',
+          data: { want: want, have: have }
         };
       }
     },
@@ -398,12 +426,19 @@
       test: /\b(balance|how much (do i have|ost)|my money|credits|worth)\b/i,
       run: function () {
         var s = snapshot();
-        var total = s.credits + s.walletOst;
+        var live = s.open.length ? ' Plus ' + s.open.length + ' ticket(s) still live.' : '';
+        if (!Number.isFinite(s.walletOst)) {
+          return { text: (hasWallet() ? UNKNOWN_BALANCE : NO_WALLET) + creditsNote(s.credits) + live, data: { ost: null, retiredCredits: s.credits } };
+        }
+        // Each place in its own unit; nothing is added together (C6).
+        var o = otherPlaces();
+        var parts = [];
+        if (Number.isFinite(o.ostg) && o.ostg > 0) parts.push(o.ostg.toFixed(2) + ' OSTG in your wallet');
+        if (Number.isFinite(o.play) && o.play > 0) parts.push(o.play.toFixed(2) + ' OSTG in your play balance');
         return {
-          text: 'You hold ' + ost(total) + ' total — ' + ost(s.credits) + ' in credits' +
-            (s.walletOst ? ' and ' + ost(s.walletOst) + ' on-chain' : '') + '.' +
-            (s.open.length ? ' Plus ' + s.open.length + ' ticket(s) still live.' : ''),
-          data: { total: total }
+          text: 'You hold ' + ost(s.walletOst) + ' in your wallet (on-chain, devnet)' + (parts.length ? ', plus ' + parts.join(' and ') : '') + '.' +
+            live + creditsNote(s.credits),
+          data: { ost: s.walletOst, ostg: o.ostg, play: o.play, retiredCredits: s.credits }
         };
       }
     },

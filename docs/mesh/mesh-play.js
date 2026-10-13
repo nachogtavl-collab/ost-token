@@ -1423,8 +1423,105 @@
     renderPeerCard(walletCardNode(payload.mode === 'request' ? 'Peer payment request' : 'Peer receive address', payload));
   }
 
+  // A peer's "I paid you" is a claim. Show it as "checking", then read the
+  // transaction: "Payment received" only when it really paid THIS wallet that
+  // amount of that token AND it is proven to come from this peer — paid by
+  // the peer's LINKED wallet (signature-verified on the hub, looked up by the
+  // peer's authenticated Mesh address, never an address the peer names), or
+  // tagged by the payer's own memo as a payment from this peer to me
+  // (OST_SEND.meshPayTag). One transaction backs one receipt, across reloads
+  // and shared with the Mesh chat cards (ost.mesh.paysigs.v1).
+  var PAYSIG_KEY = 'ost.mesh.paysigs.v1';
+  var receiptSigs = Object.create(null);
+  var linkedCache = Object.create(null);   // mesh addr -> { wallet, at }
+  function paySigs() { try { var v = JSON.parse(localStorage.getItem(PAYSIG_KEY) || '{}'); return v && typeof v === 'object' ? v : {}; } catch (_) { return {}; } }
+  function savePaySigs(v) {
+    try {
+      var ks = Object.keys(v);
+      if (ks.length > 500) ks.slice(0, ks.length - 500).forEach(function (k) { delete v[k]; });
+      localStorage.setItem(PAYSIG_KEY, JSON.stringify(v));
+    } catch (_) {}
+  }
+  function shortWallet(w) { w = String(w || ''); return w.length > 10 ? w.slice(0, 4) + '…' + w.slice(-4) : w; }
+  // The peer's linked (signature-verified) wallet: '' = none linked,
+  // null = the hub could not be asked (try again later).
+  function linkedWalletOfPeer(addr) {
+    var c = linkedCache[addr];
+    if (c && Date.now() - c.at < 10 * 60000) return Promise.resolve(c.wallet);
+    var base = String(window.OST_MESH_API_BASE || window.OST_API_BASE || '').replace(/\/+$/, '');
+    if (!base || !addr) return Promise.resolve(null);
+    return fetch(base + '/mesh/v1/social/user?addr=' + encodeURIComponent(addr), { cache: 'no-store', headers: { accept: 'application/json' } }).then(function (r) {
+      if (r.status === 404) { linkedCache[addr] = { wallet: '', at: Date.now() }; return ''; }
+      if (!r.ok) return null;
+      return r.json().then(function (j) {
+        var u = j && j.user;
+        var w = u && u.wallet && u.walletVerified !== false && /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(String(u.wallet)) ? String(u.wallet) : '';
+        linkedCache[addr] = { wallet: w, at: Date.now() };
+        return w;
+      });
+    }).catch(function () { return null; });
+  }
   function renderWalletReceipt(payload) {
-    renderPeerCard(makeCard('Payment received', 'Peer sent <strong>' + escapeHtml(amountText(payload)) + '</strong><br>' + escapeHtml(payload.note || '') + '<br>' + (payload.sig ? '<code>' + escapeHtml(payload.sig) + '</code>' : '')));
+    var sig = String(payload && payload.sig || '');
+    var asset = String(payload && payload.asset || 'OST').toUpperCase();
+    var amount = Number(payload && payload.amount);
+    var card = makeCard('Payment claimed — checking on-chain…', 'Peer says they sent <strong>' + escapeHtml(amountText(payload)) + '</strong><br>' + escapeHtml(payload.note || '') + '<br>' + (sig ? '<code>' + escapeHtml(sig) + '</code>' : ''));
+    renderPeerCard(card);
+    var title = card.querySelector('h4');
+    var set = function (t) { if (title) title.textContent = t; };
+    var me = walletAddress();
+    var p = pavilion();
+    var peerAddr = p && p.peerAddr ? String(p.peerAddr) : '';
+    var myAddr = p && p.address ? String(p.address) : '';
+    if (!sig || !/^[1-9A-HJ-NP-Za-km-z]{64,100}$/.test(sig) || !(amount > 0) || !me || !peerAddr) { set('Payment not verified — no valid transaction to check'); return; }
+    var cardId = 'arena:' + peerAddr + ':' + sig;
+    if (receiptSigs[sig] && receiptSigs[sig] !== card) { set('Payment not verified — that transaction was already shown as a payment'); return; }
+    var prior = paySigs()[sig];
+    if (prior && typeof prior === 'object' && prior.id) {
+      // Already the proof of a receipt (this one before a reload, or a Mesh
+      // chat card): showing it again would count the same money twice.
+      set(prior.id === cardId ? 'Already received earlier — this is the same payment, not a new one' : 'Payment not verified — that transaction already backs another payment');
+      return;
+    }
+    receiptSigs[sig] = card;
+    var tries = 0;
+    var again = function (label) {
+      if (tries++ < 8) { set(label || 'Payment claimed — not confirmed yet…'); setTimeout(check, Math.min(30000, 3000 * tries)); }
+      else set('Payment not confirmed — check your wallet balance');
+    };
+    function check() {
+      var V = window.OST_SEND && window.OST_SEND.verifyPayment;
+      if (typeof V !== 'function') { if (tries++ < 10) setTimeout(check, 3000); else set('Payment not verified yet — open your wallet to check'); return; }
+      linkedWalletOfPeer(peerAddr).then(function (linked) {
+        if (linked === null) return again('Payment claimed — checking who sent it…');
+        // Any non-pool payer that really paid me; whether it is THIS peer is decided below.
+        return V({ sig: sig, asset: asset, amount: amount, to: [me], from: [] }).then(function (r) {
+          var st = r && r.state;
+          if (st === 'failed') { set('Payment failed on chain — nothing arrived'); return; }
+          if (st === 'unverified') { set('Payment not verified — this transaction doesn’t pay you ' + amountText(payload)); return; }
+          if (st !== 'confirmed') return again();
+          var bound = Promise.resolve(false);
+          try { if (myAddr && typeof window.OST_SEND.meshPayBound === 'function') bound = window.OST_SEND.meshPayBound(r.memos, peerAddr, myAddr); } catch (_) {}
+          return bound.catch(function () { return false; }).then(function (isBound) {
+            var byLinked = !!linked && r.payer === linked;
+            if (!byLinked && !isBound) {
+              set(linked
+                ? 'Payment not verified — it came from wallet ' + shortWallet(r.payer) + ', not this peer’s linked wallet'
+                : 'A payment from wallet ' + shortWallet(r.payer) + ' reached you — not proven to be from this peer (no linked wallet, no payment tag)');
+              return;
+            }
+            var sigs = paySigs();
+            var own = sigs[sig];
+            if (own && typeof own === 'object' && own.id && own.id !== cardId) { set('Payment not verified — that transaction already backs another payment'); return; }
+            sigs[sig] = { id: cardId, a: peerAddr, at: Date.now() };
+            savePaySigs(sigs);
+            set('Payment received ✓ confirmed on-chain · from wallet ' + shortWallet(r.payer));
+            refreshUnifiedBalances();
+          });
+        });
+      }).catch(function () { again(); });
+    }
+    check();
   }
 
   function sendOstToKnownPeer() {
@@ -1477,18 +1574,34 @@
     if (!w || !w.session || !w.session.publicKey) throw Object.assign(new Error('Connect a wallet first.'), { code: 'no_wallet' });
     setArenaStatus('Sending ' + asset + ' directly inside Mesh…');
     var sig = '', pending = false;
+    // Tag the payment as FROM me TO the connected peer (S20): their receipt
+    // can then prove who paid, and nobody else can cite this transfer as theirs.
+    var memo = note ? String(note) : '';
+    try {
+      var pv = pavilion();
+      if (pv && pv.peerAddr && pv.address && window.OST_SEND && typeof window.OST_SEND.meshPayTag === 'function') {
+        var tag = await window.OST_SEND.meshPayTag(String(pv.address), String(pv.peerAddr));
+        if (tag) memo = (tag + (memo ? ' ' + memo : '')).slice(0, 120);
+      }
+    } catch (_) {}
     if (window.OST_SEND && typeof window.OST_SEND.send === 'function') {
-      var r = await window.OST_SEND.send({ asset: asset, to: String(toAddress), amount: String(amount), memo: note ? String(note) : '', source: 'mesh-play' });
+      var r = await window.OST_SEND.send({ asset: asset, to: String(toAddress), amount: String(amount), memo: memo, source: 'mesh-play' });
       sig = String(r.sig); pending = !!r.pending;
     } else if (asset === 'OST' && window.OST_RESCUE && typeof window.OST_RESCUE.sendPeerOst === 'function') {
-      var sigObj = await window.OST_RESCUE.sendPeerOst(String(toAddress), amount, note ? String(note) : '');
+      var sigObj = await window.OST_RESCUE.sendPeerOst(String(toAddress), amount, memo);
       sig = String(sigObj); pending = !!(sigObj && sigObj.pending);
     } else {
       throw Object.assign(new Error('The send rail is still loading.'), { code: 'bad_response' });
     }
     if (typeof window.recordOstSnapshot === 'function') window.recordOstSnapshot({ ts: Date.now(), kind: asset === 'OST' ? 'send' : 'send-' + asset.toLowerCase(), asset: asset, amount: amount, sig: sig, to: toAddress, pending: pending });
-    await sendPayload('wallet.paid', { mode: 'paid', amount: amount, asset: asset, note: note, address: walletAddress(), sig: sig }).catch(function () {});
-    renderLocalCard(makeCard(pending ? asset + ' still confirming' : asset + ' sent', '<strong>' + escapeHtml(formatAmount(amount)) + ' ' + escapeHtml(asset) + '</strong> ' + (pending ? 'on its way to' : 'sent to') + ' <code>' + escapeHtml(short(toAddress)) + '</code><br><code>' + escapeHtml(sig) + '</code>'));
+    // The peer is told "paid" only once the transfer is CONFIRMED. An unknown
+    // outcome could still end as "never sent — nothing moved", which would
+    // leave the peer holding a receipt for money that never arrived.
+    var tellPeer = function () {
+      return sendPayload('wallet.paid', { mode: 'paid', amount: amount, asset: asset, note: note, address: walletAddress(), to: String(toAddress), sig: sig }).catch(function () {});
+    };
+    var card = makeCard(pending ? asset + ' still confirming' : asset + ' sent', '<strong>' + escapeHtml(formatAmount(amount)) + ' ' + escapeHtml(asset) + '</strong> ' + (pending ? 'on its way to' : 'sent to') + ' <code>' + escapeHtml(short(toAddress)) + '</code><br><code>' + escapeHtml(sig) + '</code>');
+    renderLocalCard(card);
     refreshUnifiedBalances();
     if (pending) {
       setArenaStatus('Still confirming ' + formatAmount(amount) + ' ' + asset + ' to ' + short(toAddress) + ' — check your balance before retrying.');
@@ -1497,11 +1610,18 @@
         var d = ev && ev.detail;
         if (!d || !d.resolved || String(d.sig) !== sig) return;
         window.removeEventListener('ost:wallet-tx', onTx);
-        setArenaStatus(d.status === 'confirmed' ? asset + ' sent directly to peer wallet.' : 'Didn’t go through — ' + formatAmount(amount) + ' ' + asset + ' was not sent. Nothing moved; you can try again.');
+        var ok = d.status === 'confirmed';
+        setArenaStatus(ok ? asset + ' sent directly to peer wallet.' : 'Didn’t go through — ' + formatAmount(amount) + ' ' + asset + ' was not sent. Nothing moved; you can try again.');
+        try {
+          var t = card.querySelector('h4');
+          if (t && t.textContent && /still confirming/i.test(t.textContent)) t.textContent = ok ? asset + ' sent' : asset + ' not sent — nothing moved';
+        } catch (_) {}
+        if (ok) tellPeer();
         refreshUnifiedBalances();
       };
       window.addEventListener('ost:wallet-tx', onTx);
     } else {
+      await tellPeer();
       setArenaStatus(asset + ' sent directly to peer wallet.');
     }
     return sig;

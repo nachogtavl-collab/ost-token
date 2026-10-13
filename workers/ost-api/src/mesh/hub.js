@@ -111,12 +111,15 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Range, If-None-Match, If-Range, x-ost-wallet, x-ost-ts, x-ost-nonce, x-ost-sig, x-ost-session, x-ost-internal, x-mesh-addr, x-mesh-ts, x-mesh-nonce, x-mesh-sig',
-  'Access-Control-Expose-Headers': 'Content-Range, Accept-Ranges, Content-Length, ETag, Retry-After, X-Blob-Size',
+  'Access-Control-Expose-Headers': 'Content-Range, Accept-Ranges, Content-Length, ETag, Retry-After, X-Blob-Size, x-ost-server-time, Date',
   'Access-Control-Max-Age': '86400'
 };
 
+// Contract C11 (M11): every mesh response tells the client the server's clock,
+// so a device whose clock is off can correct and re-sign — even when its first
+// signed call ran before ost-auth.js had learned the offset.
 function cors(extra = {}) {
-  return { ...CORS_HEADERS, ...extra };
+  return { ...CORS_HEADERS, 'x-ost-server-time': String(Date.now()), ...extra };
 }
 
 function json(data, status = 200, headers = {}) {
@@ -126,7 +129,18 @@ function json(data, status = 200, headers = {}) {
   });
 }
 
-function fail(error, status = 400) {
+function meshClockMessage(skewMs) {
+  const mins = Math.max(1, Math.round(Math.abs(Number(skewMs) || 0) / 60000));
+  return 'Your device clock is about ' + mins + ' minute' + (mins === 1 ? '' : 's') + ' off. Turn on automatic date & time, then try again.';
+}
+
+// `info` is the failed verifyMeshAuth result (optional). A stale-clock refusal
+// carries serverTime, skewMs and a readable message (C11), never a bare code.
+function fail(error, status = 400, info = null) {
+  if (error === 'mesh_auth_stale') {
+    const skewMs = info && Number.isFinite(Number(info.skewMs)) ? Number(info.skewMs) : null;
+    return json({ ok: false, error, serverTime: Date.now(), skewMs, message: meshClockMessage(skewMs) }, status);
+  }
   return json({ ok: false, error }, status);
 }
 
@@ -265,7 +279,7 @@ export class MeshHub {
       const addr = h('x-mesh-addr'), ts = Number(h('x-mesh-ts')), nonce = h('x-mesh-nonce'), sig = h('x-mesh-sig');
       if (!addr || !sig || !nonce || !Number.isFinite(ts)) return { ok: false, error: 'mesh_auth_required', status: 401 };
       if (!validAddr(addr) || addr !== actor) return { ok: false, error: 'mesh_auth_wrong_actor', status: 403 };
-      if (Math.abs(Date.now() - ts) > MESH_AUTH_WINDOW_MS) return { ok: false, error: 'mesh_auth_stale', status: 401 };
+      if (Math.abs(Date.now() - ts) > MESH_AUTH_WINDOW_MS) return { ok: false, error: 'mesh_auth_stale', status: 401, skewMs: ts - Date.now() };
       if (!/^[0-9a-f]{16,64}$/i.test(nonce)) return { ok: false, error: 'mesh_auth_bad_nonce', status: 401 };
       let rec = this.ids.get(addr);
       if (!rec) rec = await this.state.storage.get(ID_PREFIX + addr).catch(() => null);
@@ -316,7 +330,7 @@ export class MeshHub {
         if ((request.headers.get('Upgrade') || '').toLowerCase() !== 'websocket') return fail('expected websocket upgrade', 426);
         const actor = url.searchParams.get('maddr') || '';
         const auth = await this.verifyMeshAuth(request, url, '', actor, { fromQuery: true });
-        if (!auth.ok) return fail(auth.error, auth.status);
+        if (!auth.ok) return fail(auth.error, auth.status, auth);
         const pair = new WebSocketPair();
         const client = pair[0], server = pair[1];
         this.state.acceptWebSocket(server, [auth.addr]);
@@ -334,7 +348,7 @@ export class MeshHub {
         if (bytes.length > BLOB_MAX_BYTES) return fail('blob_too_large', 413);
         const actor = request.headers.get('x-mesh-addr') || '';
         const auth = await this.verifyMeshAuth(request, url, '', actor, { bodyHash: await sha256HexBytes(bytes) });
-        if (!auth.ok) return fail(auth.error, auth.status);
+        if (!auth.ok) return fail(auth.error, auth.status, auth);
         return this.blobPut(auth.addr, url, bytes);
       }
       if (method === 'GET' && path.startsWith('/mesh/v1/blob/')) {
@@ -344,7 +358,7 @@ export class MeshHub {
         const bodyText = await request.text();
         let body = {}; try { body = JSON.parse(bodyText) || {}; } catch (_) {}
         const auth = await this.verifyMeshAuth(request, url, bodyText, body && body.to);
-        if (!auth.ok) return fail(auth.error, auth.status);
+        if (!auth.ok) return fail(auth.error, auth.status, auth);
         return this.msgAck(auth.addr, body.items);
       }
 
@@ -392,11 +406,11 @@ export class MeshHub {
         const bodyText = await request.text();
         let body = {}; try { body = JSON.parse(bodyText) || {}; } catch (_) {}
         const auth = await this.verifyMeshAuth(request, url, bodyText, body && body.from);
-        if (!auth.ok) return fail(auth.error, auth.status);
+        if (!auth.ok) return fail(auth.error, auth.status, auth);
         return this.msgSend(body);
       }
       if (method === 'GET' && path === '/mesh/v1/msg/inbox') {
-        { const auth = await this.verifyMeshAuth(request, url, '', url.searchParams.get('to')); if (!auth.ok) return fail(auth.error, auth.status); }
+        { const auth = await this.verifyMeshAuth(request, url, '', url.searchParams.get('to')); if (!auth.ok) return fail(auth.error, auth.status, auth); }
         return this.msgInbox(url.searchParams.get('to'), url.searchParams.get('drain'), url.searchParams.get('order'));
       }
       // ── Friend graph (contact WITHOUT P2P) ──────────────────────────────
@@ -404,7 +418,7 @@ export class MeshHub {
         const bodyText = await request.text();
         let body = {}; try { body = JSON.parse(bodyText) || {}; } catch (_) {}
         const auth = await this.verifyMeshAuth(request, url, bodyText, body && body.from);
-        if (!auth.ok) return fail(auth.error, auth.status);
+        if (!auth.ok) return fail(auth.error, auth.status, auth);
         const wait = this._limit('friend-request', auth.addr, RL.friendRequest);
         if (wait) return refused(wait, 'friend-request', 'friend_requests_too_fast');
         return this.friendRequest(body);
@@ -413,13 +427,13 @@ export class MeshHub {
         const bodyText = await request.text();
         let body = {}; try { body = JSON.parse(bodyText) || {}; } catch (_) {}
         const auth = await this.verifyMeshAuth(request, url, bodyText, body && body.wallet);
-        if (!auth.ok) return fail(auth.error, auth.status);
+        if (!auth.ok) return fail(auth.error, auth.status, auth);
         const wait = this._limit('friend-respond', auth.addr, RL.friendRespond);
         if (wait) return refused(wait, 'friend-respond', 'friend_responses_too_fast');
         return this.friendRespond(body);
       }
       if (method === 'GET' && path === '/mesh/v1/friend/list') {
-        { const auth = await this.verifyMeshAuth(request, url, '', url.searchParams.get('wallet')); if (!auth.ok) return fail(auth.error, auth.status); }
+        { const auth = await this.verifyMeshAuth(request, url, '', url.searchParams.get('wallet')); if (!auth.ok) return fail(auth.error, auth.status, auth); }
         return this.friendList(url.searchParams.get('wallet'));
       }
       if (method === 'POST' && path === '/mesh/v1/presence') {

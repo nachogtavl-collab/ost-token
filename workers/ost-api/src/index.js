@@ -24,7 +24,10 @@ async function walletAuthGuard(request, env, path, method) {
   const result = await verifyWalletAuth(request, env, bodyText, path, method);
   // POSITIONS_AUTH_MODE (optional var) can relax ONLY /positions to 'log' while
   // clients that sign it roll out; unset = the global WALLET_AUTH_MODE.
-  const pathMode = (path === '/positions' && env && env.POSITIONS_AUTH_MODE) ? env.POSITIONS_AUTH_MODE : '';
+  // WALLET_EVENTS_AUTH_MODE does the same for POST /wallet/events (a rollback
+  // knob only: the live client has signed that path since 2026-10-01).
+  const pathMode = (path === '/positions' && env && env.POSITIONS_AUTH_MODE) ? env.POSITIONS_AUTH_MODE
+    : (path === '/wallet/events' && env && env.WALLET_EVENTS_AUTH_MODE) ? env.WALLET_EVENTS_AUTH_MODE : '';
   const mode = String(pathMode || (env && env.WALLET_AUTH_MODE) || 'log');
   const fwd = new Request(request.url, { method, headers: request.headers, body: bodyText || undefined });
   if (!result.ok && mode === 'enforce') {
@@ -706,9 +709,10 @@ const MEM = new Map();                       // isolate-local, fastest, free
 const MEM_MAX = 500;
 const BREAKER = Object.create(null);          // tier -> retry-after timestamp
 const BREAK_MS = 60_000;
+let D1_TROUBLE_AT = 0;                               // last time this isolate tripped the D1 breaker
 
 function tierDown(tier) { return (BREAKER[tier] || 0) > Date.now(); }
-function tripTier(tier) { BREAKER[tier] = Date.now() + BREAK_MS; }
+function tripTier(tier) { BREAKER[tier] = Date.now() + BREAK_MS; if (tier === 'd1') D1_TROUBLE_AT = Date.now(); }
 function healTier(tier) { BREAKER[tier] = 0; }
 
 function memGet(key) {
@@ -717,9 +721,16 @@ function memGet(key) {
   if (e.exp && Date.now() > e.exp) { MEM.delete(key); return undefined; }
   return e.v;
 }
+// MK-RECORD-SERVER: an isolate's memory copy is never unbounded. kvPut used to
+// store it with NO expiry when the key had no KV TTL, so that isolate served
+// (and built its next read-modify-write on) its own old version for as long as
+// it lived. Every memory copy now expires within MEM_TTL_MAX_S, whatever the
+// key's durable TTL; per-wallet record buckets skip this tier entirely.
+const MEM_TTL_MAX_S = 60;
 function memPut(key, value, ttlS) {
   if (MEM.size >= MEM_MAX) MEM.delete(MEM.keys().next().value);   // simple LRU-ish
-  MEM.set(key, { v: value, exp: ttlS ? Date.now() + ttlS * 1000 : 0 });
+  const ttl = Number(ttlS) > 0 ? Math.min(Number(ttlS), MEM_TTL_MAX_S) : MEM_TTL_MAX_S;
+  MEM.set(key, { v: value, exp: Date.now() + ttl * 1000 });
 }
 
 const CACHE_ORIGIN = 'https://ost-store.internal/';
@@ -826,6 +837,8 @@ async function kvNativePut(env, key, value, ttlS) {
 
 // Same signatures as before, so every existing call site gets failover for free.
 async function kvGet(env, key, fallback = null) {
+  // Per-wallet record buckets never come from a memory or edge copy.
+  if (isRecordBucketKey(key)) return recordBucketGet(env, key, fallback);
   const m = memGet(key);
   if (m !== undefined) return m;
 
@@ -873,6 +886,9 @@ function hotThrottled(key) {
 }
 
 async function kvPut(env, key, value, expirationTtl = null) {
+  // A per-wallet record bucket is only ever written through its revisioned path
+  // (every call site uses recordBucketUpdate; this is the safety net).
+  if (isRecordBucketKey(key)) return !!(await recordBucketUpdate(env, key, () => ({ value }))).stored;
   const ttlS = Number.isFinite(Number(expirationTtl)) && Number(expirationTtl) > 0 ? Number(expirationTtl) : null;
   memPut(key, value, ttlS);
   await cachePut(key, value, ttlS);
@@ -889,6 +905,417 @@ async function kvPut(env, key, value, expirationTtl = null) {
     r2Put(env, key, value)
   ]);
   return kv || d1 || r2;
+}
+
+// ── Per-wallet record buckets: ONE source of truth (MK-RECORD-SERVER, SRV-A1) ─
+//
+// positions:<wallet> and wallet:events:<wallet> are read-modify-written by
+// several isolates (POST /positions, POST /wallet/events, the FaucetGate, the
+// stock / launchpad writers, the bot API). Through the tiers above that LOST
+// data: an isolate kept its own memory copy (no expiry) and a 300 s edge copy,
+// served it, built its next write on it, and that write erased what other
+// isolates had stored — in KV and D1 alike. Sold tickets read 'open' again and
+// activity rows vanished for good.
+//
+// These keys never touch the memory or Cache API tiers. D1 (one primary,
+// strongly consistent) is the source of truth, and every write is a
+// compare-and-swap on the row's revision (updated_at), re-run on a conflict, so
+// two writers can never overwrite each other. KV keeps a backup copy with the
+// same revision in its metadata: a write made while D1 was unreachable (KV
+// only) carries a newer revision, so the next D1 write starts from it instead
+// of dropping it. Values stay plain arrays (unchanged format for any reader).
+// The per-wallet payout audit log and stock-order list have the same
+// read-modify-write shape, so they get the same guarantee; the global feeds
+// (positions:recent, payouts:tail, stocks:orders:recent) stay on the tiers.
+const RECORD_BUCKET_RE = /^(?:positions:(?!recent$)|wallet:events:|payouts:(?!tail$)|stocks:orders:(?!recent$))/;
+function isRecordBucketKey(key) { return RECORD_BUCKET_RE.test(String(key == null ? '' : key)); }
+const RECORD_BUCKET_ATTEMPTS = 8;
+
+// A record bucket does not give up on D1 after ONE error. That used to trip
+// the isolate-wide breaker, and for the next 60 s every record write in the
+// isolate went to KV only — where no read looked for it once D1 was back. A
+// call is retried (3 tries when D1 looks healthy; 1 when the breaker is
+// already tripped, so a real outage is not hammered) before the KV fallback.
+// → { ok: true, v } | { ok: false }
+async function d1RecordCall(env, fn) {
+  if (!env.DB) return { ok: false };
+  const tries = tierDown('d1') ? 1 : 3;
+  for (let i = 0; i < tries; i++) {
+    try {
+      if (!(await d1Ensure(env))) throw new Error('d1 schema unavailable');
+      const v = await fn();
+      healTier('d1');
+      return { ok: true, v };
+    } catch (_) {
+      if (i < tries - 1) await new Promise(resolve => setTimeout(resolve, 40 * (i + 1) + Math.floor(Math.random() * 40)));
+    }
+  }
+  tripTier('d1');
+  return { ok: false };
+}
+
+// undefined = D1 unavailable · null = no row · { v, rev } (v undefined if expired/unreadable)
+async function d1Row(env, key) {
+  const r = await d1RecordCall(env, () => env.DB.prepare('SELECT v, exp, updated_at FROM kv WHERE k = ?').bind(key).first());
+  if (!r.ok) return undefined;
+  const row = r.v;
+  if (!row) return null;
+  let v;
+  if (!(row.exp && Date.now() > Number(row.exp))) { try { v = JSON.parse(row.v); } catch (_) { v = undefined; } }
+  return { v, rev: Number(row.updated_at) || 0 };
+}
+
+// true = swapped · false = another writer got there first (or a retried call
+// whose first try already applied — the caller re-reads and re-runs its pure
+// mutation, so nothing is lost or doubled) · undefined = D1 unavailable
+async function d1Swap(env, key, value, expectRev, nextRev) {
+  const text = JSON.stringify(value);
+  const r = await d1RecordCall(env, () => (expectRev == null
+    ? env.DB.prepare('INSERT INTO kv (k, v, exp, updated_at) VALUES (?, ?, NULL, ?) ON CONFLICT(k) DO NOTHING').bind(key, text, nextRev).run()
+    : env.DB.prepare('UPDATE kv SET v = ?, exp = NULL, updated_at = ? WHERE k = ? AND IFNULL(updated_at, 0) = ?').bind(text, nextRev, key, expectRev).run()));
+  if (!r.ok) return undefined;
+  return Number(r.v && r.v.meta && r.v.meta.changes) === 1;
+}
+
+// undefined = KV unavailable · null = no value · { v, rev } (rev 0 = written before revisions)
+async function kvNativeGetRev(env, key) {
+  if (!env.OST_KV || tierDown('kv')) return undefined;
+  try {
+    let value = null, rev = 0;
+    if (typeof env.OST_KV.getWithMetadata === 'function') {
+      const r = await env.OST_KV.getWithMetadata(key, { type: 'json' });
+      value = r ? r.value : null;
+      rev = Number(r && r.metadata && r.metadata.rev) || 0;
+    } else {
+      value = await env.OST_KV.get(key, { type: 'json' });
+    }
+    healTier('kv');
+    return value == null ? null : { v: value, rev };
+  } catch (_) { tripTier('kv'); return undefined; }
+}
+async function kvNativePutRev(env, key, value, rev) {
+  if (!env.OST_KV || tierDown('kv')) return false;
+  try {
+    await env.OST_KV.put(key, JSON.stringify(value), { metadata: { rev } });
+    healTier('kv');
+    return true;
+  } catch (_) { tripTier('kv'); return false; }
+}
+
+// Union of two copies of one record bucket (newest first). A record present in
+// both keeps its more recent version; records only one copy has are kept.
+function recordBucketKey(x) {
+  if (!x || typeof x !== 'object') return '';
+  return walletEventIdentity(x) || String(x.id || '');
+}
+function recordBucketAt(x) {
+  if (!x || typeof x !== 'object') return 0;
+  return Math.max(Number(x.syncedAt) || 0, Number(x.cashoutAt) || 0, Number(x.resolvedAt) || 0, Number(x.ts) || 0, Number(x.createdAt) || 0);
+}
+// Should version `a` of one record replace version `b`? The more recent one
+// wins; on a tie (same timestamps — e.g. a re-post that only changed the
+// status), a closed ticket beats an open one (a ticket never re-opens) and a
+// paid one (cash-out signature) beats an unpaid one.
+function recordVersionWins(a, b) {
+  const ta = recordBucketAt(a), tb = recordBucketAt(b);
+  if (ta !== tb) return ta > tb;
+  const ca = positionIsClosed(a), cb = positionIsClosed(b);
+  if (ca !== cb) return ca;
+  return !!(a && a.cashoutSig) && !(b && b.cashoutSig);
+}
+// The most records one bucket keeps (its writers' own caps: wallet events 300;
+// tickets 100 via POST /positions and 200 via the bot API; payouts and stock
+// orders 200).
+function recordBucketCap(key) {
+  return String(key == null ? '' : key).indexOf('wallet:events:') === 0 ? 300 : 200;
+}
+function unionRecordBuckets(primary, secondary, cap = 0) {
+  if (!Array.isArray(primary) || !Array.isArray(secondary)) return Array.isArray(primary) ? primary : secondary;
+  const out = primary.slice();
+  const index = new Map();
+  out.forEach((x, i) => { const key = recordBucketKey(x); if (key && !index.has(key)) index.set(key, i); });
+  for (const x of secondary) {
+    const key = recordBucketKey(x);
+    if (!key) continue;
+    if (!index.has(key)) { index.set(key, out.length); out.push(x); continue; }
+    const i = index.get(key);
+    if (recordVersionWins(x, out[i])) out[i] = x;
+  }
+  // Capped at the bucket's own cap (never shorter than either copy), oldest
+  // records dropped first. Capping at the longer copy's LENGTH lost records:
+  // D1 [b, a] + a KV-only [c, a] is [c, b, a], not [c, b].
+  return out
+    .map((x, i) => ({ x, i, at: recordBucketAt(x) }))
+    .sort((a, b) => (b.at - a.at) || (a.i - b.i))
+    .map(e => e.x)
+    .slice(0, Math.max(Number(cap) || 0, primary.length, secondary.length));
+}
+
+// Does the KV copy hold a record the D1 copy lacks, or a newer version of one?
+function kvAddsRecords(kvList, d1List) {
+  if (!Array.isArray(kvList) || !Array.isArray(d1List)) return false;
+  const seen = new Map();
+  for (const x of d1List) { const key = recordBucketKey(x); if (key && !seen.has(key)) seen.set(key, x); }
+  for (const x of kvList) {
+    const key = recordBucketKey(x);
+    if (!key) continue;
+    if (!seen.has(key) || recordVersionWins(x, seen.get(key))) return true;
+  }
+  return false;
+}
+// D1 is the source of truth, but the KV copy wins records back when it may
+// hold writes D1 never got:
+//  · its revision is NEWER than D1's — written while D1 was unreachable;
+//  · it has NO revision — written by the pre-revision store, whose kvPut
+//    skipped D1 whenever that isolate's D1 breaker was tripped (and whose
+//    reads served KV first, so that copy is what users saw).
+// A KV copy at the same or an older revision is just the backup of a D1 write.
+// → { value, adds }
+function mergeKvIntoBucket(d1Value, d1Rev, k, cap = 0) {
+  if (!k || k.v == null || !Array.isArray(k.v) || !Array.isArray(d1Value)) return { value: d1Value, adds: false };
+  if (k.rev > 0 && k.rev <= d1Rev) return { value: d1Value, adds: false };
+  if (!kvAddsRecords(k.v, d1Value)) return { value: d1Value, adds: false };
+  const value = unionRecordBuckets(k.v, d1Value, cap);
+  // KV records the cap drops again (older than everything a full D1 bucket
+  // keeps) add nothing: no heal write for them, on this read or any later one.
+  if (!kvAddsRecords(value, d1Value)) return { value: d1Value, adds: false };
+  return { value, adds: true };
+}
+
+// This isolate checked the KV copy of `key` against D1 revision `rev` at `at`.
+// A read re-checks KV when D1's revision moved, on the first read of a bucket
+// in this isolate (a pre-revision copy is merged then), and otherwise at most
+// once a minute while D1 has had trouble in the last 15 minutes in this
+// isolate (a KV-only write shows up within about a minute of D1 coming back,
+// not only after the next write) — every 10 minutes when D1 has been healthy
+// (another isolate's outage write still shows up; KV reads stay well inside
+// the free plan's daily read quota on buckets that are polled every few s).
+const RECORD_KV_CHECKED = new Map();
+const RECORD_KV_RECHECK_MS = 60_000;
+const RECORD_KV_RECHECK_CALM_MS = 10 * 60_000;
+const D1_TROUBLE_WINDOW_MS = 15 * 60_000;
+function kvCheckFresh(key, rev) {
+  const m = RECORD_KV_CHECKED.get(key);
+  const every = Date.now() - D1_TROUBLE_AT < D1_TROUBLE_WINDOW_MS ? RECORD_KV_RECHECK_MS : RECORD_KV_RECHECK_CALM_MS;
+  return !!(m && m.rev === rev && Date.now() - m.at < every);
+}
+function kvCheckMark(key, rev) {
+  RECORD_KV_CHECKED.delete(key);
+  if (RECORD_KV_CHECKED.size >= 2000) RECORD_KV_CHECKED.delete(RECORD_KV_CHECKED.keys().next().value);
+  RECORD_KV_CHECKED.set(key, { rev, at: Date.now() });
+}
+
+async function recordBucketGet(env, key, fallback = []) {
+  const row = await d1Row(env, key);
+  if (row && row.v !== undefined && row.v !== null) {
+    if (kvCheckFresh(key, row.rev)) return row.v;
+    const k = await kvNativeGetRev(env, key);
+    const m = mergeKvIntoBucket(row.v, row.rev, k, recordBucketCap(key));
+    if (!m.adds) { if (k !== undefined) kvCheckMark(key, row.rev); return row.v; }
+    // KV holds records D1 lacks: serve them now and write the union back to
+    // D1 (compare-and-swap, so it can never erase a concurrent write).
+    const healed = await recordBucketUpdate(env, key, bucket => ({ value: bucket }), fallback).catch(() => null);
+    // At most one heal per bucket per minute in this isolate, even when the KV
+    // backup cannot be rewritten (e.g. KV quota): a GET is not a write loop.
+    if (healed && healed.stored && healed.rev) kvCheckMark(key, healed.rev);
+    return healed && healed.stored && Array.isArray(healed.value) ? healed.value : m.value;
+  }
+  // No D1 copy (a bucket last written before D1 held it, or D1 is down): the
+  // durable backups — never a memory or edge copy.
+  const k = await kvNativeGetRev(env, key);
+  if (k && k.v != null) return k.v;
+  const r = await r2Get(env, key);
+  return r !== undefined && r !== null ? r : fallback;
+}
+
+// mutate(bucket) returns { value, ...extra } to write `value`, or
+// { write: false, ...extra } to leave the bucket as it is. It can run more than
+// once (a lost compare-and-swap re-runs it on the fresh bucket), so it must be
+// pure: it gets its own copy and returns the new value. Resolves to
+// { stored, rev, ...extra }; { stored: false, busy: true } after repeated
+// conflicts (the caller answers 503, retryable — nothing half-written).
+// Same-key writes inside ONE isolate take turns (a burst from one device never
+// races itself); across isolates the compare-and-swap decides. Each writer does
+// its own I/O in its own request — only a plain promise is shared — and a
+// writer never waits more than RECORD_BUCKET_LOCK_WAIT_MS for the one before it
+// (correctness never depends on the lock, only contention does).
+const RECORD_BUCKET_LOCKS = new Map();
+const RECORD_BUCKET_LOCK_WAIT_MS = 4000;
+async function recordBucketUpdate(env, key, mutate, fallback = []) {
+  const prev = RECORD_BUCKET_LOCKS.get(key) || Promise.resolve();
+  let release;
+  const mine = new Promise(resolve => { release = resolve; });
+  const tail = prev.then(() => mine);
+  RECORD_BUCKET_LOCKS.set(key, tail);
+  try {
+    let timer;
+    await Promise.race([prev, new Promise(resolve => { timer = setTimeout(resolve, RECORD_BUCKET_LOCK_WAIT_MS); })]);
+    clearTimeout(timer);
+    return await recordBucketUpdateOnce(env, key, mutate, fallback);
+  } finally {
+    release();
+    if (RECORD_BUCKET_LOCKS.get(key) === tail) RECORD_BUCKET_LOCKS.delete(key);
+  }
+}
+async function recordBucketUpdateOnce(env, key, mutate, fallback) {
+  const run = (base) => mutate(clonePlain(base === undefined || base === null ? fallback : base)) || { write: false };
+  let contended = false;
+  for (let attempt = 0; attempt < RECORD_BUCKET_ATTEMPTS; attempt++) {
+    const row = await d1Row(env, key);
+    if (row === undefined) { contended = false; break; }            // D1 unreachable → KV path below
+    const k = await kvNativeGetRev(env, key);
+    const rowRev = row ? row.rev : 0;
+    const kvRev = k ? k.rev : 0;
+    let base = row ? row.v : undefined;
+    // A KV copy that may hold writes D1 never got (newer revision: written
+    // while D1 was unreachable; no revision: the pre-revision store) is merged
+    // in record by record — D1 may also hold records that copy missed (KV
+    // writes can fail, e.g. on quota), so it is never swapped in wholesale.
+    if (k && k.v != null && (base === undefined || base === null)) base = k.v;
+    else if (k && k.v != null) base = mergeKvIntoBucket(base, rowRev, k, recordBucketCap(key)).value;
+    if (base === undefined || base === null) { const r = await r2Get(env, key); if (r !== undefined && r !== null) base = r; }
+    const out = run(base);
+    if (out.write === false) return Object.assign({ stored: false }, out);
+    const rev = Math.max(Date.now(), rowRev + 1, kvRev + 1);
+    const swapped = await d1Swap(env, key, out.value, row ? row.rev : null, rev);
+    if (swapped === undefined) { contended = false; break; }
+    if (swapped === false) {
+      // Another isolate wrote first: back off (exponential, jittered) and
+      // re-run the mutation on the bucket it left.
+      contended = true;
+      const cap = Math.min(400, 20 * Math.pow(2, attempt));
+      await new Promise(resolve => setTimeout(resolve, Math.floor(cap / 2 + Math.random() * cap)));
+      continue;
+    }
+    const [kvSaved] = await Promise.all([kvNativePutRev(env, key, out.value, rev), r2Put(env, key, out.value)]);
+    if (kvSaved) kvCheckMark(key, rev);   // KV now holds this same revision
+    MEM.delete(key);
+    return Object.assign({ stored: true, rev }, out);
+  }
+  if (contended) return { stored: false, busy: true };
+  // D1 unavailable: read-modify-write the durable KV copy directly (never a
+  // cached one). Its revision lets the next D1 write pick this change up.
+  const k = await kvNativeGetRev(env, key);
+  let base = k && k.v != null ? k.v : undefined;
+  if (base === undefined) { const r = await r2Get(env, key); if (r !== undefined && r !== null) base = r; }
+  const out = run(base);
+  if (out.write === false) return Object.assign({ stored: false }, out);
+  const rev = Math.max(Date.now(), (k ? k.rev : 0) + 1);
+  const [kv, r2] = await Promise.all([kvNativePutRev(env, key, out.value, rev), r2Put(env, key, out.value)]);
+  MEM.delete(key);
+  return Object.assign({ stored: !!(kv || r2), rev, degraded: true }, out);
+}
+
+// One wallet-activity event = one (kind, signature) pair; an event without a
+// signature is identified by its id. So the FaucetGate's and the client's copy
+// of the same claim are ONE event (SRV-A1), while a loss-making sell's
+// 'prediction-sell' and 'vault-retained-loss' — two facts that share one
+// payout signature (and, from today's client, one id) — stay two events.
+function walletEventIdentity(e) {
+  if (!e || typeof e !== 'object') return '';
+  const sig = String(e.sig || e.signature || '');
+  if (sig) return 'sig:' + String(e.kind || '') + '|' + sig;
+  return e.id ? 'id:' + String(e.id) : '';
+}
+function sameWalletEvent(a, b) {
+  if (!a || !b || typeof a !== 'object' || typeof b !== 'object') return false;
+  const ia = walletEventIdentity(a);
+  if (ia && ia === walletEventIdentity(b)) return true;
+  // The same event re-posted once its signature became known (same id + kind).
+  const aSig = a.sig || a.signature, bSig = b.sig || b.signature;
+  return !!(a.id && a.id === b.id && String(a.kind || '') === String(b.kind || '') && (!aSig || !bSig));
+}
+function definedFields(obj) {
+  const out = {};
+  for (const k of Object.keys(obj || {})) {
+    const v = obj[k];
+    if (v === undefined || v === null || v === '') continue;
+    out[k] = v;
+  }
+  return out;
+}
+// A balance going up with no transaction signature is a guess, not activity:
+// the client's balance-diff detector logged rounding noise and its own claims /
+// conversions as 'recv-ost' / 'recv-sol' (SRV-A1 b, MK-PHANTOM-RECV), and the
+// realtime echo of each one refreshed every wallet module (MK-NET3).
+function isUnsignedReceive(e) {
+  return !!(e && /^recv-/i.test(String(e.kind || '')) && !(e.sig || e.signature));
+}
+// Newest first, one row per event; a re-post fills gaps but never blanks a field.
+function mergeWalletEvent(bucket, record, limit = 300) {
+  const current = Array.isArray(bucket) ? bucket : [];
+  const same = current.filter(item => sameWalletEvent(item, record));
+  const rest = current.filter(item => !sameWalletEvent(item, record));
+  const merged = Object.assign({}, ...same.slice().reverse().map(definedFields), definedFields(record));
+  rest.unshift(merged);
+  return rest.slice(0, limit);
+}
+// What GET /wallet/events serves: no unsigned receives, faucet claims under
+// their signature (they used to be keyed by the reservation id, so a device
+// held the same claim twice), and one row per event.
+// O(n): runs on every GET of a bucket of up to 300 rows. The first version
+// compared every row with every earlier row (findIndex + sameWalletEvent, which
+// rebuilt two 88-character identity strings per comparison): ~45k comparisons
+// and 4–20 ms of CPU per GET on a full bucket, against a 10 ms request budget.
+// The same three sameWalletEvent rules, as lookups:
+//   (kind, sig)            both signed, same kind + signature
+//   id                     both unsigned, same id
+//   (kind, id)             same id + kind, at least one of them unsigned
+// The earliest matching row absorbs the new one (as findIndex did).
+function publicWalletEvents(events) {
+  const out = [];
+  const bySig = new Map();        // kind|sig -> index of a signed row
+  const byUnsignedId = new Map(); // id -> index of an unsigned row
+  const byKindId = new Map();     // kind|id -> { any, unsigned } indexes
+  const setMin = (map, key, i) => { const cur = map.get(key); if (cur === undefined || i < cur) map.set(key, i); };
+  const register = (row, i) => {
+    const kind = String(row.kind || '');
+    const sig = String(row.sig || row.signature || '');
+    const id = row.id ? String(row.id) : '';
+    if (sig) setMin(bySig, kind + '|' + sig, i);
+    else if (id) setMin(byUnsignedId, id, i);
+    if (id) {
+      const k = kind + '|' + id;
+      const cur = byKindId.get(k) || { any: Infinity, unsigned: Infinity };
+      cur.any = Math.min(cur.any, i);
+      if (!sig) cur.unsigned = Math.min(cur.unsigned, i);
+      byKindId.set(k, cur);
+    }
+  };
+  for (const raw of Array.isArray(events) ? events : []) {
+    if (!raw || typeof raw !== 'object' || !raw.kind || isUnsignedReceive(raw)) continue;
+    let e = raw;
+    if (e.source === 'faucet-gate' && e.sig && e.id !== e.sig) e = Object.assign({}, e, { id: e.sig, reservationId: e.reservationId || e.id });
+    const kind = String(e.kind || '');
+    const sig = String(e.sig || e.signature || '');
+    const id = e.id ? String(e.id) : '';
+    let dup = Infinity;
+    if (sig) { const i = bySig.get(kind + '|' + sig); if (i !== undefined) dup = Math.min(dup, i); }
+    else if (id) { const i = byUnsignedId.get(id); if (i !== undefined) dup = Math.min(dup, i); }
+    if (id) {
+      const m = byKindId.get(kind + '|' + id);
+      if (m) dup = Math.min(dup, sig ? m.unsigned : m.any);
+    }
+    if (dup !== Infinity) {
+      const wasSigned = !!(out[dup].sig || out[dup].signature);
+      out[dup] = Object.assign({}, definedFields(e), definedFields(out[dup]));
+      // A row that just gained its signature is no longer an unsigned row
+      // (rules 2/3 stop matching it as one). At most one unsigned row per id
+      // exists — unsigned rows with the same id always merge — so the entry
+      // to drop is the one pointing at this row.
+      if (!wasSigned && (out[dup].sig || out[dup].signature) && out[dup].id) {
+        const id0 = String(out[dup].id);
+        if (byUnsignedId.get(id0) === dup) byUnsignedId.delete(id0);
+        const m0 = byKindId.get(String(out[dup].kind || '') + '|' + id0);
+        if (m0 && m0.unsigned === dup) m0.unsigned = Infinity;
+      }
+      register(out[dup], dup);   // a merged row may have gained a signature or an id
+      continue;
+    }
+    register(e, out.length);
+    out.push(e);
+  }
+  return out;
 }
 
 function storeHealth(env) {
@@ -1007,6 +1434,14 @@ function publishPositionRealtime(env, record, marketState, flowRecord) {
   const channels = ['all', 'prediction', 'orderbook'];
   if (marketChannel) channels.push(marketChannel);
   if (walletChannel) channels.push(walletChannel);
+  // A resolution is reported as what it is (won / lost / settled), never as a
+  // "cash-out settled for 0 OST".
+  const resolution = closed && positionIsResolution(record)
+    ? String(record.status || record.outcome || '').toLowerCase() : '';
+  const resolutionText = resolution === 'lost' ? 'Ticket lost'
+    : resolution === 'won' ? 'Ticket won · ' + amount + ' OST'
+    : resolution === 'refunded' ? 'Ticket refunded · ' + amount + ' OST'
+    : 'Ticket settled' + (amount > 0 ? ' · ' + amount + ' OST' : '');
   publishRealtimeEvent(env, {
     type: closed ? 'prediction.cashout' : 'prediction.order',
     public: true,
@@ -1015,8 +1450,8 @@ function publishPositionRealtime(env, record, marketState, flowRecord) {
     marketId: record.marketId || '',
     amount,
     token: 'OST',
-    title: closed ? 'Prediction cash-out' : 'Prediction order live',
-    message: closed
+    title: resolution ? 'Prediction settled' : closed ? 'Prediction cash-out' : 'Prediction order live',
+    message: resolution ? resolutionText : closed
       ? 'Prediction cash-out settled for ' + amount + ' OST'
       : String(record.side || 'YES').toUpperCase() + ' order opened for ' + amount + ' OST',
     payload: { record, marketState: marketState || null, flowRecord: flowRecord || null }
@@ -1042,8 +1477,8 @@ function publishPositionRealtime(env, record, marketState, flowRecord) {
       marketId: record.marketId || '',
       amount,
       token: 'OST',
-      title: closed ? 'Cash-out confirmed' : 'Prediction order confirmed',
-      message: closed ? '+' + amount + ' OST cash-out' : '-' + amount + ' OST stake locked',
+      title: resolution ? 'Prediction settled' : closed ? 'Cash-out confirmed' : 'Prediction order confirmed',
+      message: resolution ? resolutionText : closed ? '+' + amount + ' OST cash-out' : '-' + amount + ' OST stake locked',
       payload: { record, marketState: marketState || null }
     }).catch(() => {});
   }
@@ -1252,6 +1687,14 @@ function publicRecentPositionRecord(record) {
   const fallbackSignature = cashoutSig || cleanText(copy.relatedPositionId || copy.id || copy.signature || copy.sig || copy.txid || copy.txHash || [copy.wallet, copy.marketId, copy.side, copy.createdAt, copy.ts].join(':'), 128);
   if (!copy.signature && fallbackSignature) copy.signature = fallbackSignature;
   if (!copy.sig && fallbackSignature) copy.sig = fallbackSignature;
+  // Feed rows stored before the fix carry sellValue/stake/amount 0 next to
+  // the real paid amount in cashoutOst (MK-LABELS-MINOR): show what was paid.
+  const paidOst = cleanNumber(copy.cashoutOst, 0) || 0;
+  if (paidOst > 0 && String(copy.flowAction || copy.action || '') === 'sell' && !(cleanNumber(copy.sellValue, 0) > 0)) {
+    copy.sellValue = paidOst;
+    if (!(cleanNumber(copy.stake, 0) > 0)) copy.stake = paidOst;
+    if (!(cleanNumber(copy.amount, 0) > 0)) copy.amount = paidOst;
+  }
   if (positionIsSellCashout(copy)) {
     const cashoutPending = !cashoutSig && (copy.cashoutPending === true || cleanNumber(copy.cashoutOst, 0) > 0 || cleanNumber(copy.sellValue, 0) > 0);
     copy.cashoutSig = cashoutSig;
@@ -1485,6 +1928,16 @@ function nativeTradePriceFromState(state, side, action) {
   }
   const price = cleanProbability(value);
   return price == null ? null : Math.max(0.01, Math.min(0.99, price));
+}
+
+// Closed by the market's outcome (not sold): won / lost / settled / resolved /
+// refunded, with no sell or cash-out marker.
+function positionIsResolution(positionRecord) {
+  if (!positionRecord || !positionIsClosed(positionRecord)) return false;
+  const status = String(positionRecord.status || positionRecord.outcome || '').toLowerCase();
+  if (['won', 'lost', 'settled', 'resolved', 'refunded'].indexOf(status) < 0) return false;
+  const kind = String(positionRecord.cashoutKind || positionRecord.flowAction || positionRecord.tradeAction || positionRecord.action || '').toLowerCase();
+  return kind.indexOf('sell') < 0;
 }
 
 function positionIsSellCashout(positionRecord) {
@@ -2164,8 +2617,15 @@ export class NativeMarketHub {
   }
 }
 
+// The public trade feed row for a ticket write: the ticket itself while it is
+// open (a buy), a 'sell' row when it was sold / cashed out — and NOTHING (null)
+// when it closed by RESOLUTION (won / lost / settled / refunded). A resolution
+// is not a trade: it used to be published as a 'sell' with status 'sold', so
+// the Live trades rail showed every lost ticket as a 0-size sell (and, keyed
+// by the ticket's own signature, it replaced the ticket's real buy row).
 function recentFlowRecordForPosition(record) {
   if (!record || !positionIsClosed(record)) return record;
+  if (positionIsResolution(record)) return null;
   const positionKey = nativePositionKey(record);
   const closedAt = cleanNumber(record.cashoutAt, 0) || cleanNumber(record.resolvedAt, 0) || cleanNumber(record.syncedAt, 0) || Date.now();
   const side = String(record.side || '').toUpperCase() === 'NO' ? 'NO' : 'YES';
@@ -2182,7 +2642,15 @@ function recentFlowRecordForPosition(record) {
     }
   }
   const selectedPrice = side === 'NO' ? noPrice : yesPrice;
-  const sellValue = cleanNumber(record.sellValue, null) ?? cleanNumber(record.cashoutOst, null) ?? cleanNumber(record.potentialReturn, null) ?? cleanNumber(record.stake, 0);
+  // A native sell used to post sellValue 0 next to the real payout in
+  // cashoutOst: 0 is "missing" when another field holds the paid amount
+  // (MK-LABELS-MINOR). A lost ticket (both 0) stays 0, never its stake.
+  const positiveOrNull = v => { const n = cleanNumber(v, null); return n != null && n > 0 ? n : null; };
+  const lostTicket = String(record.status || record.outcome || '').toLowerCase() === 'lost';
+  const sellValue = positiveOrNull(record.sellValue) ?? positiveOrNull(record.cashoutOst)
+    ?? (lostTicket ? 0 : null)
+    ?? cleanNumber(record.sellValue, null) ?? cleanNumber(record.cashoutOst, null)
+    ?? cleanNumber(record.potentialReturn, null) ?? cleanNumber(record.stake, 0);
   const cashoutSig = cleanText(record.cashoutSig || '', 128);
   const relatedPositionId = cleanText(record.id || record.signature || record.sig || positionKey, 128);
   const flowSignature = cashoutSig || relatedPositionId;
@@ -2432,9 +2900,7 @@ async function recordStockWalletEvent(env, order) {
     ts: order.createdAt,
     syncedAt: Date.now()
   };
-  const key = `wallet:events:${record.wallet}`;
-  const bucket = await kvGet(env, key, []);
-  await kvPut(env, key, mergeNewest(bucket, record, 300));
+  await recordBucketUpdate(env, `wallet:events:${record.wallet}`, bucket => ({ value: mergeWalletEvent(bucket, record, 300) }));
 }
 
 function normalizeFaucetWallet(value) {
@@ -2490,21 +2956,24 @@ function faucetWalletKey(wallet) {
 
 async function recordFaucetWalletEvent(env, event) {
   if (!env.OST_KV || !event || !event.wallet) return;
+  // SRV-A1: the claim's identity is its SIGNATURE — the same key the client
+  // records it under — so the FaucetGate's copy and the client's copy are one
+  // row on every device. The reservation id is kept as its own field.
+  const sig = cleanText(event.sig || event.signature || '', 128);
   const record = {
-    id: cleanText(event.id || event.sig || crypto.randomUUID(), 160),
+    id: cleanText(sig || event.id || crypto.randomUUID(), 160),
     wallet: cleanText(event.wallet, 64),
     kind: cleanText(event.kind || 'faucet-claim', 48),
     amount: cleanNumber(event.amount, 0) || 0,
-    sig: cleanText(event.sig || event.signature || '', 128),
+    sig,
+    reservationId: cleanText(event.reservationId || (sig ? event.id : '') || '', 80),
     source: 'faucet-gate',
     label: cleanText(event.label || 'OST faucet claim', 200),
     token: 'OST',
     ts: cleanNumber(event.ts, Date.now()) || Date.now(),
     syncedAt: Date.now()
   };
-  const key = `wallet:events:${record.wallet}`;
-  const bucket = await kvGet(env, key, []);
-  await kvPut(env, key, mergeNewest(bucket, record, 300));
+  await recordBucketUpdate(env, `wallet:events:${record.wallet}`, bucket => ({ value: mergeWalletEvent(bucket, record, 300) }));
 }
 
 // ── SRV-1: the faucet can never report failure after paying, and a claim
@@ -2724,24 +3193,34 @@ export class FaucetGate {
     }
     if (paidEvent) {
       const { record, fin } = paidEvent;
+      // The activity row is written AFTER the answer (the claiming tab records
+      // the same claim itself, under the same signature): its store round
+      // trips (D1 read + compare-and-swap, KV + R2 copies) no longer sit
+      // between the paid transfer and "100 OST arrived".
       try {
-        await recordFaucetWalletEvent(this.env, {
-          id: pending.id, wallet,
+        const write = recordFaucetWalletEvent(this.env, {
+          id: res.sig || pending.id, reservationId: pending.id, wallet,
           kind: pending.kind === 'welcome' ? 'faucet-welcome' : 'faucet-daily',
           amount: pending.amount, sig: res.sig,
           label: pending.kind === 'welcome' ? '100 OST head start' : 'Daily 1 OST faucet',
           ts: fin
-        });
+        }).catch(() => {});
+        if (this.state && typeof this.state.waitUntil === 'function') this.state.waitUntil(write);
       } catch (_) {}
       try {
         const state = publicFaucetState(record, fin);
+        // One claim = one notice. The claiming tab already shows "<n> OST
+        // arrived" under the notice id 'faucet-<wallet[0..8]>'; this echo uses
+        // the same wording (so the receipt de-dupe matches it) and carries that
+        // id + the signature, so a tab can update its own notice instead of
+        // stacking a second one.
         publishRealtimeEvent(this.env, {
           type: 'faucet.claim', public: true,
           channels: ['all', 'faucet', walletChannelForRealtime(wallet)],
           wallet, amount: pending.amount, token: 'OST',
           title: 'Faucet claim confirmed',
-          message: '+' + pending.amount + ' OST ' + (pending.kind === 'welcome' ? 'head start' : 'daily claim'),
-          payload: { state, reservationId: pending.id, signature: res.sig, kind: pending.kind }
+          message: pending.amount + ' OST arrived — ' + (pending.kind === 'welcome' ? 'free devnet head start' : 'daily devnet claim'),
+          payload: { state, reservationId: pending.id, signature: res.sig, kind: pending.kind, notifyId: 'faucet-' + String(wallet).slice(0, 8) }
         }).catch(() => {});
       } catch (_) {}
     }
@@ -3317,6 +3796,47 @@ async function solanaRpc(env, method, params, options = {}) {
   throw new Error(lastError);
 }
 
+// Raw token units -> decimal string, exact (no float rounding on 1e17 values).
+function rawUnitsToDecimalString(raw, decimals) {
+  const neg = raw < 0n;
+  const digits = (neg ? -raw : raw).toString().padStart(decimals + 1, '0');
+  const whole = digits.slice(0, digits.length - decimals);
+  const frac = decimals > 0 ? digits.slice(digits.length - decimals).replace(/0+$/, '') : '';
+  return (neg ? '-' : '') + whole + (frac ? '.' + frac : '');
+}
+
+// The OSTG mint and the bridge vault read in ONE request, so both numbers come
+// from the same slot; compared as exact integers. minContextSlot makes a
+// re-read never go back in time.
+async function readBridgePegAtOneSlot(env, mint, vault, minContextSlot) {
+  const cfg = { encoding: 'jsonParsed', commitment: 'confirmed' };
+  if (Number(minContextSlot) > 0) cfg.minContextSlot = Number(minContextSlot);
+  const res = await solanaRpc(env, 'getMultipleAccounts', [[mint, vault], cfg], { cluster: 'devnet' });
+  const slot = Number(res && res.context && res.context.slot) || 0;
+  const values = (res && Array.isArray(res.value)) ? res.value : [];
+  const mi = values[0] && values[0].data && values[0].data.parsed && values[0].data.parsed.info;
+  const vi = values[1] && values[1].data && values[1].data.parsed && values[1].data.parsed.info;
+  const ta = vi && vi.tokenAmount;
+  if (!slot || !mi || mi.supply == null || mi.decimals == null || !ta || ta.amount == null || ta.decimals == null) return { ok: false, slot };
+  let supplyRaw, vaultRaw;
+  try { supplyRaw = BigInt(String(mi.supply)); vaultRaw = BigInt(String(ta.amount)); } catch (_) { return { ok: false, slot }; }
+  const sd = Number(mi.decimals), vd = Number(ta.decimals);
+  if (!Number.isInteger(sd) || !Number.isInteger(vd) || sd < 0 || vd < 0 || sd > 18 || vd > 18) return { ok: false, slot };
+  const d = Math.max(sd, vd);
+  const driftRaw = supplyRaw * (10n ** BigInt(d - sd)) - vaultRaw * (10n ** BigInt(d - vd));
+  return {
+    ok: true,
+    slot,
+    holds: driftRaw === 0n,
+    ostgSupply: Number(rawUnitsToDecimalString(supplyRaw, sd)),
+    vaultOstc: Number(rawUnitsToDecimalString(vaultRaw, vd)),
+    drift: Number(rawUnitsToDecimalString(driftRaw, d)),
+    supplyRaw: supplyRaw.toString(),
+    vaultRaw: vaultRaw.toString(),
+    vaultMint: cleanText(vi.mint || '', 64)
+  };
+}
+
 function accountKeyAt(tx, index) {
   const keys = tx?.transaction?.message?.accountKeys || [];
   const key = keys[index];
@@ -3577,37 +4097,59 @@ const OST_ROUTER = {
     if (path === '/health/peg' && method === 'GET') {
       const OSTG_MINT = 'DfgxMbdN49AX2Za9LuvsyixF1jgVh45RbgWYSGonxQos';
       const VAULT = '8X6pL7QtYqGd8pzkVA3nkWu36rRw9YQsUGh79V6XRYak';
+      const noStore = { 'cache-control': 'no-store' };
       try {
-        // Real network reads, in parallel. No cache — a stale peg is a lie.
-        const [supplyRes, vaultRes] = await Promise.all([
-          solanaRpc(env, 'getTokenSupply', [OSTG_MINT], { cluster: 'devnet' }),
-          solanaRpc(env, 'getTokenAccountBalance', [VAULT], { cluster: 'devnet' }),
-        ]);
-        const ostgSupply = supplyRes?.value?.uiAmount;
-        const vaultOstc = vaultRes?.value?.uiAmount;
-        // undefined means the read FAILED — do not report a fake 0/0 "it's fine".
-        // (This is the masking anti-pattern; a peg checker that lies is worse than
-        // none.) Say the read failed instead.
-        if (ostgSupply == null || vaultOstc == null) {
-          return json({ ok: false, error: 'rpc_read_failed', ostgSupply, vaultOstc,
-            note: 'Could not read supply and/or vault — this is NOT a peg verdict.' }, 502);
+        // Both numbers come from ONE getMultipleAccounts read, i.e. the same
+        // slot. The old check made two separate requests (getTokenSupply +
+        // getTokenAccountBalance) that could land on different slots; a bridge
+        // deposit between them read as "PEG BROKEN … minted money it should not
+        // have" with an HTTP 500 — a false money claim (bridge-sol peg alarm).
+        // No cache — a stale peg is a lie.
+        const first = await readBridgePegAtOneSlot(env, OSTG_MINT, VAULT, 0);
+        // undefined/partial data means the read FAILED — never a fake 0/0 "it's
+        // fine" and never a verdict.
+        if (!first.ok) {
+          return json({ ok: false, pegHolds: null, error: 'rpc_read_failed', slot: first.slot || null,
+            note: 'Could not read supply and/or vault — this is NOT a peg verdict.' }, 502, noStore);
         }
-        const drift = Number((ostgSupply - vaultOstc).toFixed(9));
-        const pegHolds = Math.abs(drift) < 1e-9;
+        let reading = first;
+        let recheck = null;
+        if (!first.holds) {
+          // A disagreement is re-read at the same or a later slot before anything
+          // is claimed. Only a drift that persists on two consecutive single-slot
+          // reads is reported as a broken peg.
+          await new Promise(resolve => setTimeout(resolve, 1200));
+          const second = await readBridgePegAtOneSlot(env, OSTG_MINT, VAULT, first.slot).catch(() => ({ ok: false, slot: 0 }));
+          recheck = { firstSlot: first.slot, firstDrift: first.drift, recheckSlot: second.ok ? second.slot : null };
+          if (!second.ok) {
+            return json({ ok: false, pegHolds: null, error: 'peg_recheck_failed', slot: first.slot, recheck,
+              note: 'One read disagreed and the confirming re-read failed — this is NOT a peg verdict. Try again in a moment.' }, 503, noStore);
+          }
+          reading = second;
+        }
+        const pegHolds = reading.holds;
         return json({
           ok: pegHolds,
           pegHolds,
-          ostgSupply,
-          vaultOstc,
-          drift,
+          ostgSupply: reading.ostgSupply,
+          vaultOstc: reading.vaultOstc,
+          drift: reading.drift,
+          slot: reading.slot,
+          ostgSupplyRaw: reading.supplyRaw,
+          vaultOstcRaw: reading.vaultRaw,
           ostgMint: OSTG_MINT,
           vault: VAULT,
+          vaultMint: reading.vaultMint || null,
+          recheck,
           note: pegHolds
-            ? 'supply(OSTG) == vault(OSTC): every OSTG is backed 1:1 by escrowed OSTC.'
-            : 'PEG BROKEN — OSTG supply and vault OSTC disagree. The bridge minted or released money it should not have.'
-        }, pegHolds ? 200 : 500);
+            ? (recheck
+              ? 'supply(OSTG) == vault(OSTC) at slot ' + reading.slot + ' (a first read disagreed; the re-read at one slot agrees): every OSTG is backed 1:1 by escrowed OSTC.'
+              : 'supply(OSTG) == vault(OSTC) at slot ' + reading.slot + ': every OSTG is backed 1:1 by escrowed OSTC.')
+            : 'PEG BROKEN — OSTG supply and vault OSTC disagree on two consecutive single-slot reads (slots ' + first.slot + ' and ' + reading.slot + '). The bridge minted or released money it should not have.'
+        }, pegHolds ? 200 : 500, noStore);
       } catch (e) {
-        return json({ ok: false, error: 'peg_check_threw', detail: String(e && e.message).slice(0, 160) }, 502);
+        return json({ ok: false, pegHolds: null, error: 'peg_check_threw', detail: String(e && e.message).slice(0, 160),
+          note: 'The peg could not be read — this is NOT a peg verdict.' }, 502, noStore);
       }
     }
 
@@ -3835,11 +4377,14 @@ const OST_ROUTER = {
             // the whole buffer while the server lends only a fraction, the UI
             // promises money the draw will refuse.
             const reserveFraction = Number(env.LENDING_RESERVE_FRACTION || 0.5);
-            const buffer = Math.max(0, Number(h.buffer) || 0) * reserveFraction;
+            // The draw lends from the buffer LEFT after open prediction tickets'
+            // reserve (play-ledger handleLoanDraw), so the summary does too.
+            const freeBuffer = Math.max(0, (Number(h.buffer) || 0) - (Number(h.openTicketReserve) || 0));
+            const buffer = freeBuffer * reserveFraction;
             const rate = Number(url.searchParams.get('usdPerOstg')) || 0.0118;
             data.capacity = {
               lendableOstg: buffer,
-              poolBufferOstg: Math.max(0, Number(h.buffer) || 0),
+              poolBufferOstg: freeBuffer,
               reserveFraction,
               lendableUsd: Math.round(buffer * rate * 100) / 100,
               usdPerOstg: rate,
@@ -4220,7 +4765,9 @@ const OST_ROUTER = {
         return json({ rpc: browserRpc, fallbacks: [], source: 'browser-key' }, 200, { 'cache-control': 'public, max-age=300' });
       }
       const fallbacks = [env.SOLANA_DEVNET_RPC_2, env.SOLANA_DEVNET_RPC_3, env.SOLANA_DEVNET_RPC_4].filter(function (u) { return u && /^https:\/\//.test(u); });
-      return json({ rpc: env.SOLANA_DEVNET_RPC || null, fallbacks: fallbacks }, 200, { 'cache-control': 'public, max-age=300' });
+      // `source` says which case this is, so a check can see the ops step is
+      // still pending without reading (or printing) any key.
+      return json({ rpc: env.SOLANA_DEVNET_RPC || null, fallbacks: fallbacks, source: 'server-keys' }, 200, { 'cache-control': 'public, max-age=300' });
     }
 
     // ── SERVER-SIDE RPC PROXY ─ the resilience floor. When a browser's own RPC is
@@ -4773,7 +5320,11 @@ const OST_ROUTER = {
       const hubMarketFilter = marketIdFilter === 'ost-btc5m' ? '' : marketIdFilter;
       const hubRows = await getNativeRecentPositionsFromHub(env, hubMarketFilter, limit);
       const recent = await kvGet(env, 'positions:recent', []);
-      const rows = mergeRecentPositionRows((Array.isArray(hubRows) ? hubRows : []).concat(recent));
+      // PRD-7 / MK-LABELS-MINOR: legacy rows synced under pseudo-wallets
+      // ('credits', 'ostg', …) are not a wallet anyone traded from — the public
+      // feed only shows rows from a real base58 wallet.
+      const rows = mergeRecentPositionRows((Array.isArray(hubRows) ? hubRows : []).concat(recent))
+        .filter(record => record && isLikelySolanaAddress(String(record.wallet || '')));
       const filteredRows = marketIdFilter
         ? rows.filter(record => recentPositionMatchesMarket(record, marketIdFilter))
         : rows;
@@ -4831,8 +5382,8 @@ const OST_ROUTER = {
     if (posMatch && method === 'GET') {
       const wallet = decodeURIComponent(posMatch[1]);
       if (!env.OST_KV) return json({ positions: [], note: 'KV not configured — positions are local-only', wallet });
-      const positions = await kvGet(env, `positions:${wallet}`, []);
-      return json({ positions, wallet, ts: new Date().toISOString() });
+      const positions = await recordBucketGet(env, `positions:${wallet}`, []);
+      return json({ positions: Array.isArray(positions) ? positions : [], wallet, ts: new Date().toISOString() }, 200, { 'cache-control': 'no-store' });
     }
 
     // ── POST /positions ───────────────────────────────────────────────────────
@@ -4860,13 +5411,18 @@ const OST_ROUTER = {
       const createdAt = toMs(body.createdAt || ts);
       const incomingId = cleanText(body.id || signature || '', 128);
       const walletKey = `positions:${wallet}`;
-      const walletBucket = await kvGet(env, walletKey, []);
-      const prior = incomingId && Array.isArray(walletBucket)
-        ? walletBucket.find(item => item && (item.id === incomingId || (signature && item.signature === signature)))
-        : null;
+      const findPrior = bucket => (incomingId && Array.isArray(bucket)
+        ? bucket.find(item => item && (item.id === incomingId || (signature && item.signature === signature)))
+        : null) || null;
+      // A ticket that is already sold / cashed / resolved never goes back to
+      // 'open' because a stale tab or device re-posts its old copy.
+      const staleReopen = (prior, next) => !!(prior && positionIsClosed(prior) && !positionIsClosed(next));
       const fp = positionFingerprint(body);
-      if (prior && prior.fp === fp) {
-        return withAuthTag(json({ ok: true, stored: true, unchanged: true, record: prior, marketState: null, flowRecord: null }), g.authTag);
+      // Cheap pre-check (one read, no write, no publish) for the common
+      // unchanged re-post; the write below re-checks against the fresh bucket.
+      const seen = findPrior(await recordBucketGet(env, walletKey, []));
+      if (seen && (seen.fp === fp || staleReopen(seen, body))) {
+        return withAuthTag(json({ ok: true, stored: true, unchanged: true, record: seen, marketState: null, flowRecord: null }), g.authTag);
       }
       // The server re-prices only markets IT quotes (the BTC 5-min desk and
       // native-*). ETH/SOL fast markets and server-ledger tickets (p_…) keep
@@ -4885,11 +5441,16 @@ const OST_ROUTER = {
         : nativeSellPosition
           ? nativeTradePriceFromState(nativeMarketStateBefore, sideUp, 'sell')
         : price;
+      // MK-RECORD-SERVER: a client-quoted ticket records the price it was
+      // actually FILLED at (fillPrice = stake / shares), not the quote mid the
+      // client also sends as `price`; the mid stays on the record as quoteMid.
+      const fillNum = Number(body.fillPrice);
+      const clientFill = !serverQuoted && Number.isFinite(fillNum) && fillNum > 0 && fillNum < 1 ? fillNum : null;
       const inferredPrices = nativeOpenPosition
         ? inferBinaryPrices(side, nativeQuotePrice, nativeMarketStateBefore.yesPriceNumber, nativeMarketStateBefore.noPriceNumber)
         : nativeSellPosition
           ? inferBinaryPrices(side, nativeQuotePrice, null, null)
-          : inferBinaryPrices(side, price, body.yesPrice, body.noPrice);
+          : inferBinaryPrices(side, clientFill != null ? clientFill : price, body.yesPrice, body.noPrice);
       let inferredShares = nativeOpenPosition
         ? (inferredPrices.price > 0 ? Number(stake) / inferredPrices.price : cleanNumber(body.shares))
         : cleanNumber(body.shares);
@@ -4910,7 +5471,7 @@ const OST_ROUTER = {
       const nativeQuoteAction = nativeSellPosition ? 'sell-bid' : nativeOpenPosition ? 'buy-ask' : '';
       const nativeSelectedBid = nativeVaultTrade ? nativeTradePriceFromState(nativeMarketStateBefore, sideUp, 'sell') : null;
       const nativeSelectedAsk = nativeVaultTrade ? nativeTradePriceFromState(nativeMarketStateBefore, sideUp, 'buy') : null;
-      const record = {
+      const baseRecord = {
         id: incomingId || crypto.randomUUID(),
         wallet: String(wallet).slice(0, 64),
         walletShort: String(wallet).slice(0, 4) + '…' + String(wallet).slice(-4),
@@ -4961,35 +5522,56 @@ const OST_ROUTER = {
         vaultGrossOutOst: nativeSellPosition && safeSellValue != null ? safeSellValue : 0,
         sharesCreated: nativeOpenPosition ? inferredShares : 0,
         sharesRedeemed: nativeSellPosition ? inferredShares : 0,
+        fillPrice: clientFill,
+        quoteMid: clientFill != null ? cleanProbability(price) : null,
         fp,
         syncedAt: Date.now()
       };
-      if (prior) {
-        // First write wins for the ENTRY fill: a later re-post (status change,
-        // another tab) never re-prices what the user already bought.
-        for (const k of ['price', 'yesPrice', 'noPrice', 'shares', 'potentialReturn', 'askPrice', 'quotePrice', 'sharesCreated', 'vaultGrossInOst']) {
-          if (prior[k] != null && Number.isFinite(Number(prior[k])) && Number(prior[k]) > 0) record[k] = prior[k];
+      // Per-wallet bucket (keep last 100, newest first). A compare-and-swap
+      // update: the prior-dependent rules below run on the FRESH bucket, and a
+      // concurrent write from another isolate is never overwritten.
+      const upd = await recordBucketUpdate(env, walletKey, bucket => {
+        const prior = findPrior(bucket);
+        if (prior && (prior.fp === fp || staleReopen(prior, baseRecord))) return { write: false, unchanged: true, record: prior };
+        const record = clonePlain(baseRecord);
+        if (prior) {
+          // First write wins for the ENTRY fill: a later re-post (status change,
+          // another tab) never re-prices what the user already bought.
+          for (const k of ['price', 'yesPrice', 'noPrice', 'shares', 'potentialReturn', 'askPrice', 'quotePrice', 'sharesCreated', 'vaultGrossInOst', 'fillPrice', 'quoteMid']) {
+            if (prior[k] != null && Number.isFinite(Number(prior[k])) && Number(prior[k]) > 0) record[k] = prior[k];
+          }
+          // A cash-out that was already paid keeps the amount it was paid at.
+          if (prior.cashoutSig && Number.isFinite(Number(prior.cashoutOst)) && (!record.cashoutSig || record.cashoutSig === prior.cashoutSig)) {
+            record.cashoutSig = prior.cashoutSig;
+            record.cashoutOst = prior.cashoutOst;
+            if (prior.sellValue != null) record.sellValue = prior.sellValue;
+          }
         }
-        // A cash-out that was already paid keeps the amount it was paid at.
-        if (prior.cashoutSig && Number.isFinite(Number(prior.cashoutOst)) && (!record.cashoutSig || record.cashoutSig === prior.cashoutSig)) {
-          record.cashoutSig = prior.cashoutSig;
-          record.cashoutOst = prior.cashoutOst;
-          if (prior.sellValue != null) record.sellValue = prior.sellValue;
+        if (paidCashout && !(prior && prior.cashoutSig)) {
+          // The payout already happened (it has a signature): record what was
+          // actually paid, never a server re-quote taken later. A sell value of
+          // 0 next to a paid amount is a missing value, not a free sell.
+          const paid = cleanNumber(body.cashoutOst, null) ?? cleanNumber(body.sellValue, null);
+          const sv = cleanNumber(body.sellValue, null);
+          if (paid != null && paid >= 0) { record.cashoutOst = paid; record.sellValue = sv != null && sv > 0 ? sv : paid; }
         }
+        return { value: mergeNewest(bucket, record, 100), record };
+      });
+      if (upd.write === false) {
+        return withAuthTag(json({ ok: true, stored: true, unchanged: true, record: upd.record, marketState: null, flowRecord: null }), g.authTag);
       }
-      if (paidCashout && !(prior && prior.cashoutSig)) {
-        // The payout already happened (it has a signature): record what was
-        // actually paid, never a server re-quote taken later.
-        const paid = cleanNumber(body.cashoutOst, null) ?? cleanNumber(body.sellValue, null);
-        if (paid != null && paid >= 0) { record.cashoutOst = paid; record.sellValue = cleanNumber(body.sellValue, paid); }
+      if (!upd.stored) {
+        return withAuthTag(json({ ok: false, stored: false, error: 'store_busy', code: 'store_busy', retryable: true, message: 'Could not save this ticket record right now — it is safe to retry.' }, 503), g.authTag);
       }
-      // Per-wallet bucket (keep last 100, newest first)
-      await kvPut(env, walletKey, mergeNewest(walletBucket, record, 100));
-      // Global recent feed (keep last 100)
-      const recent = await kvGet(env, 'positions:recent', []);
+      const record = upd.record;
+      // Global recent feed (keep last 100). A resolution (won / lost / settled)
+      // is not a trade and leaves the feed as it is (flowRecord null).
       const flowRecord = recentFlowRecordForPosition(record);
-      rememberRecentPositionHot(flowRecord);
-      await kvPut(env, 'positions:recent', mergeNewest(recent, flowRecord, 100), 60 * 60 * 24 * 7);
+      if (flowRecord) {
+        const recent = await kvGet(env, 'positions:recent', []);
+        rememberRecentPositionHot(flowRecord);
+        await kvPut(env, 'positions:recent', mergeNewest(recent, flowRecord, 100), 60 * 60 * 24 * 7);
+      }
       const marketState = await applyNativePositionToMarketState(env, record, nativeMarketStateBefore ? nativeMarketStateBefore.baseYesPrice : null);
       publishPositionRealtime(env, record, marketState, flowRecord);
       return withAuthTag(json({ ok: true, stored: true, record, marketState, flowRecord: flowRecord !== record ? flowRecord : null }), g.authTag);
@@ -5001,21 +5583,32 @@ const OST_ROUTER = {
       const wallet = decodeURIComponent(walletEventsMatch[1]);
       const limit = Math.min(300, Number(url.searchParams.get('limit') || 200));
       if (!env.OST_KV) return json({ events: [], note: 'KV not configured', wallet });
-      const events = await kvGet(env, `wallet:events:${wallet}`, []);
+      const events = publicWalletEvents(await recordBucketGet(env, `wallet:events:${wallet}`, []));
       return json({ events: events.slice(0, limit), wallet, ts: new Date().toISOString() }, 200, { 'cache-control': 'no-store' });
     }
 
     // ── POST /wallet/events ─────────────────────────────────────────────────
     if (path === '/wallet/events' && method === 'POST') {
+      // Wallet-signed (isProtectedPath): this log is shown on every device of
+      // the wallet and its rows raise toasts there, so only the wallet itself
+      // may write to it. It was listed as protected but never checked — an
+      // unsigned POST could add a fake "won 1000" row to any wallet or rewrite
+      // an existing row's amount by re-posting its kind + signature.
+      const g = await walletAuthGuard(request, env, path, method);
+      if (g.response) return g.response;
+      request = g.request;
       let body;
       try { body = await request.json(); } catch (_) { return json({ error: 'invalid_json' }, 400); }
       const wallet = cleanText(body?.wallet || '', 64);
       const kind = cleanText(body?.kind || '', 48);
       if (!wallet || !kind) return json({ error: 'missing_fields', required: ['wallet', 'kind'] }, 400);
       // SECURITY: this log is rendered on every client's wallet page. Only a real
-      // wallet address, a token-like kind, and signature-shaped sigs are accepted
-      // (the route is also wallet-signed now, see isProtectedPath).
+      // wallet address, a token-like kind, and signature-shaped sigs are accepted.
       if (!/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(wallet)) return json({ error: 'invalid_wallet' }, 400);
+      // A verified signer may only write ITS OWN activity log.
+      if (String(g.authTag || '').indexOf('ok:') === 0 && wallet !== String(request.headers.get('x-ost-wallet') || '')) {
+        return json({ ok: false, error: 'wallet_auth_required', code: 'wallet_auth_required', reason: 'wallet_mismatch', serverTime: Date.now(), message: 'You can only record activity for the wallet that signed this request.' }, 401);
+      }
       if (!/^[a-z0-9][a-z0-9:_.-]{0,47}$/i.test(kind)) return json({ error: 'invalid_kind' }, 400);
       const sigIn = cleanText(body.sig || body.signature || '', 128);
       if (sigIn && !/^[1-9A-HJ-NP-Za-km-z]{43,90}$/.test(sigIn)) return json({ error: 'invalid_signature_format' }, 400);
@@ -5052,9 +5645,16 @@ const OST_ROUTER = {
         ts: eventTs,
         syncedAt: Date.now()
       };
-      const key = `wallet:events:${wallet}`;
-      const bucket = await kvGet(env, key, []);
-      await kvPut(env, key, mergeNewest(bucket, record, 300));
+      // A "receive" without a transaction signature is a balance-diff guess,
+      // not activity: it is neither stored nor echoed to the wallet's devices
+      // (each echo used to refresh every wallet module — MK-PHANTOM-RECV/NET-3).
+      if (isUnsignedReceive(record)) {
+        return json({ ok: true, stored: false, ignored: 'unsigned_receive', note: 'A balance change without a transaction signature is not recorded as wallet activity.' });
+      }
+      const saved = await recordBucketUpdate(env, `wallet:events:${wallet}`, bucket => ({ value: mergeWalletEvent(bucket, record, 300) }));
+      if (!saved.stored) {
+        return json({ ok: false, stored: false, error: 'store_busy', code: 'store_busy', retryable: true, message: 'Could not save this activity right now — it is safe to retry.' }, 503);
+      }
       publishWalletRealtime(env, record, {
         type: 'transaction.alert',
         title: record.label || record.kind || 'Wallet activity',
@@ -5205,9 +5805,7 @@ const OST_ROUTER = {
           price: cleanNumber(c.mcap, 0),
           ts: Date.now()
         };
-        const walletKey = `wallet:events:${traderWallet}`;
-        const walletEvents = await kvGet(env, walletKey, []);
-        await kvPut(env, walletKey, mergeNewest(walletEvents, event, 300));
+        await recordBucketUpdate(env, `wallet:events:${traderWallet}`, bucket => ({ value: mergeWalletEvent(bucket, event, 300) }));
         publishWalletRealtime(env, event, { type: 'transaction.alert' });
       }
       publishRealtimeEvent(env, {
@@ -5324,9 +5922,7 @@ const OST_ROUTER = {
         createdAt: toMs(body && (body.createdAt || body.ts)),
         syncedAt: Date.now()
       };
-      const walletKey = `stocks:orders:${wallet}`;
-      const walletOrders = await kvGet(env, walletKey, []);
-      await kvPut(env, walletKey, mergeNewest(walletOrders, order, 200));
+      await recordBucketUpdate(env, `stocks:orders:${wallet}`, bucket => ({ value: mergeNewest(bucket, order, 200) }));
       const recent = await kvGet(env, 'stocks:orders:recent', []);
       await kvPut(env, 'stocks:orders:recent', mergeNewest(recent, order, 200), 60 * 60 * 24 * 14);
       await recordStockWalletEvent(env, order);
@@ -5737,17 +6333,18 @@ const OST_ROUTER = {
         ts: Date.now()
       };
       const walletKey = `payouts:${wallet}`;
-      const bucket = await kvGet(env, walletKey, []);
-      // Replace prior entry with same id (intent → result) instead of duplicating
-      const existingIdx = bucket.findIndex(e => e && e.id === id);
-      if (existingIdx >= 0) {
-        bucket[existingIdx] = Object.assign({}, bucket[existingIdx], record, { history: (bucket[existingIdx].history || []).concat([{ stage: bucket[existingIdx].stage, ts: bucket[existingIdx].ts }]).slice(-5) });
-      } else {
-        bucket.unshift(record);
-      }
-      // Cap per-wallet history at 200 entries.
-      if (bucket.length > 200) bucket.length = 200;
-      await kvPut(env, walletKey, bucket, 60 * 60 * 24 * 30);
+      await recordBucketUpdate(env, walletKey, bucket => {
+        // Replace prior entry with same id (intent → result) instead of duplicating
+        const existingIdx = bucket.findIndex(e => e && e.id === id);
+        if (existingIdx >= 0) {
+          bucket[existingIdx] = Object.assign({}, bucket[existingIdx], record, { history: (bucket[existingIdx].history || []).concat([{ stage: bucket[existingIdx].stage, ts: bucket[existingIdx].ts }]).slice(-5) });
+        } else {
+          bucket.unshift(record);
+        }
+        // Cap per-wallet history at 200 entries.
+        if (bucket.length > 200) bucket.length = 200;
+        return { value: bucket };
+      });
       // Global tail (newest 500) for support dashboards
       const tail = await kvGet(env, 'payouts:tail', []);
       tail.unshift({ wallet, walletShort: record.walletShort, kind: record.kind, stage, ostAmount: record.ostAmount, sig: record.sig, error: record.error, ts: record.ts, id });
@@ -5915,7 +6512,8 @@ const OST_ROUTER = {
       if (botPosMatch && method === 'GET') {
         const wallet = decodeURIComponent(botPosMatch[1]);
         if (!env.OST_KV) return json({ positions: [], note: 'KV not configured', wallet });
-        const positions = await kvGet(env, `positions:${wallet}`, []);
+        const got = await recordBucketGet(env, `positions:${wallet}`, []);
+        const positions = Array.isArray(got) ? got : [];
         return json({ positions, wallet, count: positions.length, ts: new Date().toISOString() }, 200, { 'cache-control': 'no-store' });
       }
 
@@ -5997,9 +6595,7 @@ const OST_ROUTER = {
           syncedAt: createdAt
         };
         if (env.OST_KV) {
-          const walletKey = `positions:${wallet}`;
-          const walletBucket = await kvGet(env, walletKey, []);
-          await kvPut(env, walletKey, mergeNewest(walletBucket, record, 200));
+          await recordBucketUpdate(env, `positions:${wallet}`, bucket => ({ value: mergeNewest(bucket, record, 200) }));
           const recent = await kvGet(env, 'positions:recent', []);
           await kvPut(env, 'positions:recent', mergeNewest(recent, record, 100), 60 * 60 * 24 * 7);
         }
@@ -6016,9 +6612,11 @@ const OST_ROUTER = {
         if (!wallet || !orderId) return json({ error: 'missing_fields', required: ['wallet', 'orderId'] }, 400);
         if (!env.OST_KV) return json({ error: 'kv_not_configured' }, 503);
         const walletKey = `positions:${wallet}`;
-        const walletBucket = await kvGet(env, walletKey, []);
-        const idx = walletBucket.findIndex(p => p && (p.id === orderId || p.signature === orderId));
+        const findOrder = bucket => (Array.isArray(bucket) ? bucket.findIndex(p => p && (p.id === orderId || p.signature === orderId)) : -1);
+        const walletBucket = await recordBucketGet(env, walletKey, []);
+        const idx = findOrder(walletBucket);
         if (idx < 0) return json({ error: 'order_not_found', orderId }, 404);
+        const before = clonePlain(walletBucket[idx]);
         const order = walletBucket[idx];
         const side = String(order.side || body.side || 'YES').toUpperCase() === 'NO' ? 'NO' : 'YES';
         const nativeStateBefore = isOstNativeMarketId(order.marketId, order.source)
@@ -6060,12 +6658,25 @@ const OST_ROUTER = {
           order.sharesCreated = 0;
           order.sharesRedeemed = shares;
         }
-        walletBucket[idx] = order;
-        await kvPut(env, walletKey, walletBucket);
+        // Apply only the fields this cash-out changed, onto the FRESH bucket
+        // (compare-and-swap), so a concurrent write is never overwritten.
+        const patch = {};
+        for (const k of Object.keys(order)) if (JSON.stringify(order[k]) !== JSON.stringify(before[k])) patch[k] = order[k];
+        const saved = await recordBucketUpdate(env, walletKey, bucket => {
+          const i = findOrder(bucket);
+          if (i < 0) return { write: false, notFound: true };
+          bucket[i] = Object.assign({}, bucket[i], patch);
+          return { value: bucket, order: bucket[i] };
+        });
+        if (saved.notFound) return json({ error: 'order_not_found', orderId }, 404);
+        if (!saved.stored) return json({ ok: false, error: 'store_busy', code: 'store_busy', retryable: true }, 503);
+        Object.assign(order, saved.order || {});
         const marketState = await applyNativePositionToMarketState(env, order, order.yesPrice);
-        const recent = await kvGet(env, 'positions:recent', []);
         const flowRecord = recentFlowRecordForPosition(order);
-        await kvPut(env, 'positions:recent', mergeNewest(recent, flowRecord, 100), 60 * 60 * 24 * 7);
+        if (flowRecord) {
+          const recent = await kvGet(env, 'positions:recent', []);
+          await kvPut(env, 'positions:recent', mergeNewest(recent, flowRecord, 100), 60 * 60 * 24 * 7);
+        }
         publishPositionRealtime(env, order, marketState, flowRecord);
         return json({ ok: true, order, marketState, flowRecord: flowRecord !== order ? flowRecord : null }, 200, { 'cache-control': 'no-store' });
       }

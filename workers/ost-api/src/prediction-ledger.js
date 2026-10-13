@@ -135,11 +135,36 @@ export class PredictionLedger {
     const entry = this.entryOdds(side, oddsYes);
     const shares = r6(stake / entry);
 
+    // MK-BTC-QUOTE: an optional limit. The client may send the most it agreed
+    // to pay per share (its quote + a tolerance). If the server's fresh price is
+    // above it, NOTHING is charged and the new price comes back, so the user is
+    // never filled at a price they were not shown. No maxEntry = old behaviour.
+    const maxEntry = Number(body.maxEntry);
+    if (Number.isFinite(maxEntry) && maxEntry > 0 && maxEntry < 1 && entry > maxEntry + 1e-9) {
+      return json({
+        ok: false, error: 'price_moved', code: 'price_moved', side, entry, maxEntry, livePrice: clampOdds(oddsYes),
+        message: 'The price moved to ' + (entry * 100).toFixed(1) + '¢, above the ' + (maxEntry * 100).toFixed(1) + '¢ you accepted. Nothing was charged — review the new price.'
+      }, 409);
+    }
+
     // Debit the stake FIRST via PlayLedger (internal-keyed). Only if that
     // succeeds do we record the position.
-    const deb = await this.play('stake', { wallet, amount: stake, bucket });
+    //
+    // SOLVENCY (play/reconcile UNDER-COLLATERALIZED): a ticket can pay back at
+    // most `shares` OSTG (one per winning share). That amount is RESERVED in
+    // PlayLedger with the stake, and the stake is refused when the pool's OSTG
+    // could not pay it on top of every balance and every other open ticket's
+    // reserve. Winnings used to be credited with no such bound, so the play
+    // balances grew past the OSTG the pool actually holds.
+    const deb = await this.play('stake', { wallet, amount: stake, bucket, reserve: shares });
     if (!deb || deb.ok === false) {
-      return json({ ok: false, error: (deb && deb.error) || 'stake_failed' }, 409);
+      const err = (deb && deb.error) || 'stake_failed';
+      const out = { ok: false, error: err, code: err };
+      if (deb && deb.message) { out.message = deb.message; out.note = deb.message; }
+      if (deb && deb.maxStake != null) out.maxStake = deb.maxStake;
+      if (deb && deb.availableOstg != null) out.availableOstg = deb.availableOstg;
+      if (deb && deb.retryable != null) out.retryable = deb.retryable;
+      return json(out, err === 'bankroll_unreadable' ? 503 : 409);
     }
 
     // The line the outcome is judged against is the price-to-beat the desk
@@ -154,6 +179,9 @@ export class PredictionLedger {
     const pos = {
       id, wallet, marketId, side, stake, entry, shares, bucket,
       openPrice: openPrice, priceToBeat, openAt: round.openAt, closeAt: round.closeAt,
+      // What PlayLedger reserved for this ticket (released when it closes).
+      // Positions opened before the reserve existed carry none (release 0).
+      reserve: Number(deb.reserved) > 0 ? r6(deb.reserved) : 0,
       status: 'open', createdAt: Date.now()
     };
     await this.state.storage.put(POS_PREFIX + id, pos);
@@ -227,9 +255,12 @@ export class PredictionLedger {
 
       // Credit the SERVER-computed payout back to the SAME bucket (keeps
       // loan-funded winnings locked). settle is internal-keyed in PlayLedger.
+      // The ticket's reserve is released in the same call — also for a lost
+      // ticket (payout 0), or the pool's capacity would leak away.
       let newBalance = null;
-      if (payout > 0) {
-        const cr = await this.play('settle', { wallet: pos.wallet, payout, bucket: pos.bucket, fee });
+      const release = Number(pos.reserve) > 0 ? r6(pos.reserve) : 0;
+      if (payout > 0 || release > 0) {
+        const cr = await this.play('settle', { wallet: pos.wallet, payout, bucket: pos.bucket, fee, release });
         if (!cr || cr.ok === false) {
           return json({ ok: false, error: 'payout_failed', detail: cr && cr.error }, 502);
         }
@@ -281,8 +312,23 @@ export class PredictionLedger {
       const fee = r6(profit * 0.02);          // house edge on profit only, matching resolve()
       const payout = r6(gross - fee);
 
-      if (payout > 0) {
-        const cr = await this.play('settle', { wallet: pos.wallet, payout, bucket: pos.bucket, fee });
+      // MK-BTC-QUOTE sell floor: the client sends the least it agreed to be paid
+      // (the sell button's net minus a tolerance). A server price that pays less
+      // sells NOTHING: the ticket stays open and the new amount comes back, so a
+      // sale never pays well under the number the user tapped. No minPayout =
+      // the old behaviour.
+      const minPayout = Number(body.minPayout);
+      if (Number.isFinite(minPayout) && minPayout > 0 && payout < minPayout - 1e-9) {
+        return json({
+          ok: false, error: 'price_moved', code: 'price_moved', payout, sellPrice: cur, minPayout: r6(minPayout),
+          shares: pos.shares, livePrice: clampOdds(oddsYes),
+          message: 'The price moved: selling now pays ' + payout.toFixed(2) + ' OSTG, below the ' + minPayout.toFixed(2) + ' OSTG you accepted. Nothing was sold — review the new amount.'
+        }, 409);
+      }
+
+      const release = Number(pos.reserve) > 0 ? r6(pos.reserve) : 0;
+      if (payout > 0 || release > 0) {
+        const cr = await this.play('settle', { wallet: pos.wallet, payout, bucket: pos.bucket, fee, release });
         if (!cr || cr.ok === false) return json({ ok: false, error: 'cashout_failed', detail: cr && cr.error }, 502);
       }
 

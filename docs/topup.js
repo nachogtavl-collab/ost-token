@@ -146,7 +146,19 @@
     return { state: 'failed', title: 'That didn’t go through', body: 'Try again in a moment.' };
   }
   function escHtml(t) { return String(t == null ? '' : t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
-  const GET_SOL_BTN = '<button type="button" class="converter-btn secondary" data-ost-get-sol="10" style="margin-top:8px;">Get SOL: cash out 10 OST → SOL</button>';
+  // "Need SOL" always comes with the way to get it (C8), and the button names
+  // the OST amount that covers the real shortfall (a fixed 10 OST adds only
+  // ~0.001 SOL, so people repeated the cash-out several times).
+  function getSolBtn(errOrNeed, haveSol) {
+    let html = '';
+    try {
+      const G = window.OST_GET_SOL;
+      if (G && typeof errOrNeed === 'number' && typeof G.buttonHtml === 'function') html = G.buttonHtml(errOrNeed, haveSol);
+      else if (G && errOrNeed && typeof G.buttonHtmlForError === 'function') html = G.buttonHtmlForError(errOrNeed);
+    } catch (_) { html = ''; }
+    if (html) return html.replace('class="btn btn-outline btn-sm"', 'class="converter-btn secondary"').replace('margin-top:6px;', 'margin-top:8px;');
+    return '<button type="button" class="converter-btn secondary" data-ost-get-sol="10" style="margin-top:8px;">Get SOL: cash out OST → SOL</button>';
+  }
 
   function shortWallet(wallet) {
     return wallet ? wallet.slice(0, 5) + '...' + wallet.slice(-5) : 'Connect wallet';
@@ -665,7 +677,9 @@
       } else {
         if (!rs || typeof rs.swap !== 'function') throw Object.assign(new Error('rail'), { code: 'bad_response' });
         setStatus('converterSwapStatus', 'info', 'Converting ' + fmtSol(amount) + ' → OST…');
-        const memo = JSON.stringify({ k: 'converter-sol-to-ost', sol: amount, t: Date.now() });
+        // k 'sol-to-ost' is the conversion kind Activity knows ("Converted SOL → OST");
+        // 'via' keeps where it came from.
+        const memo = JSON.stringify({ k: 'sol-to-ost', via: 'hub', sol: amount, t: Date.now() });
         result = await rs.swap(amount, { memo });
         if (result.pending) setStatus('converterSwapStatus', 'info', 'Still confirming — check your balance before retrying.');
         else setStatus('converterSwapStatus', 'ok', 'Converted ' + fmtSol(amount) + ' into ' + fmtOst(result.ost) + '. ' + txLink(result.sig));
@@ -675,7 +689,7 @@
     } catch (error) {
       const h = humanOf(error);
       let msg = escHtml(h.title + (h.body ? ' — ' + h.body : ''));
-      if (error && (error.code === 'insufficient_sol' || error.getSol)) msg += '<br>' + GET_SOL_BTN;
+      if (error && (error.code === 'insufficient_sol' || error.getSol)) msg += '<br>' + getSolBtn(error);
       if (error && error.code === 'below_rent_minimum' && error.message) msg = escHtml('Amount too small for a new Solana account — ' + error.message);
       setStatus('converterSwapStatus', h.state === 'pending' ? 'info' : 'error', msg);
     } finally {
@@ -1083,7 +1097,7 @@
         }
       } catch (_) {}
       if (haveSol != null && haveSol + 1e-12 < needSol) {
-        setStatus('topupCryptoStatus', 'warn', escHtml('Need ' + needSol.toFixed(6) + ' devnet SOL — you have ' + Number(haveSol).toFixed(6) + '.') + '<br>' + GET_SOL_BTN);
+        setStatus('topupCryptoStatus', 'warn', escHtml('Need ' + needSol.toFixed(6) + ' devnet SOL — you have ' + Number(haveSol).toFixed(6) + '.') + '<br>' + getSolBtn(needSol, Number(haveSol)));
         return;
       }
       if (!window.OST_TOPUP || typeof window.OST_TOPUP.createIntent !== 'function' || typeof window.OST_TOPUP.settleIntent !== 'function') throw Object.assign(new Error('rail'), { code: 'bad_response' });
@@ -1103,7 +1117,7 @@
     } catch (e) {
       const h = humanOf(e);
       let msg = escHtml(h.title + (h.body ? ' — ' + h.body : ''));
-      if (e && (e.code === 'insufficient_sol' || e.getSol)) msg += '<br>' + GET_SOL_BTN;
+      if (e && (e.code === 'insufficient_sol' || e.getSol)) msg += '<br>' + getSolBtn(e);
       if (e && e.code === 'payment_pending') msg += '<br>' + REFRESH_BTN;
       setStatus('topupCryptoStatus', h.state === 'pending' || (e && e.code === 'payment_pending') ? 'info' : 'error', msg);
     } finally {

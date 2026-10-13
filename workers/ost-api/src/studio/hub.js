@@ -145,10 +145,11 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET,POST,PUT,PATCH,DELETE,OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-mesh-addr, x-mesh-ts, x-mesh-nonce, x-mesh-sig, If-None-Match',
-  'Access-Control-Expose-Headers': 'ETag, Content-Length',
+  'Access-Control-Expose-Headers': 'ETag, Content-Length, x-ost-server-time, Date',
   'Access-Control-Max-Age': '86400'
 };
-function cors(extra = {}) { return { ...CORS_HEADERS, ...extra }; }
+// C11 (M11): every answer carries the server clock so a skewed device can correct.
+function cors(extra = {}) { return { ...CORS_HEADERS, 'x-ost-server-time': String(Date.now()), ...extra }; }
 function json(data, status = 200, extra = {}) {
   return new Response(JSON.stringify(data), { status, headers: cors({ 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', ...extra }) });
 }
@@ -436,11 +437,19 @@ function meshHeaders(request) {
   const addr = h('x-mesh-addr'), ts = Number(h('x-mesh-ts')), nonce = h('x-mesh-nonce'), sig = h('x-mesh-sig');
   if (!addr || !sig || !nonce || !Number.isFinite(ts)) return { ok: false, error: 'auth_required', status: 401 };
   if (!validAddr(addr)) return { ok: false, error: 'mesh_auth_bad_addr', status: 401 };
-  if (Math.abs(Date.now() - ts) > MESH_AUTH_WINDOW_MS) return { ok: false, error: 'mesh_auth_stale', status: 401 };
+  if (Math.abs(Date.now() - ts) > MESH_AUTH_WINDOW_MS) {
+    // C11: a stale-clock refusal says so, with the server clock (never a bare code).
+    const skewMs = ts - Date.now();
+    const mins = Math.max(1, Math.round(Math.abs(skewMs) / 60000));
+    return { ok: false, error: 'mesh_auth_stale', status: 401, skewMs, message: 'Your device clock is about ' + mins + ' minute' + (mins === 1 ? '' : 's') + ' off. Turn on automatic date & time, then try again.' };
+  }
   if (!/^[0-9a-f]{16,64}$/i.test(nonce)) return { ok: false, error: 'mesh_auth_bad_nonce', status: 401 };
   return { ok: true, addr, ts, nonce, sig };
 }
-function denied(a) { return fail(a.error, a.status || 401, a.need ? { need: a.need } : a.retryAfter ? { retryAfter: a.retryAfter } : (a.message ? { message: a.message } : {})); }
+function denied(a) {
+  if (a && a.error === 'mesh_auth_stale') return fail(a.error, a.status || 401, { serverTime: Date.now(), skewMs: a.skewMs, message: a.message });
+  return fail(a.error, a.status || 401, a.need ? { need: a.need } : a.retryAfter ? { retryAfter: a.retryAfter } : (a.message ? { message: a.message } : {}));
+}
 
 /** Token scope a body-carrying route needs (checked before its body is read); '' = no such route. */
 function scopeFor(method, seg) {

@@ -414,6 +414,15 @@
     gap: 14px;
     text-align: left !important;
   }
+  /* J-27: on desktop the CTA row now sits above #nxLive (index.html). Phones keep
+     the order they had: Nexus card + command center first, then the CTA row
+     (phones already show "Start free" above the fold in .hero-mobile-start). */
+  .hero-content > #nxLive,
+  .hero-content > #ostMobileHome { order: 1; }
+  .hero-content > .hero-try-line,
+  .hero-content > .hero-actions,
+  .hero-content > .hero-devnet-note { order: 2; }
+  .hero-content > #ostMobileHome ~ * { order: 3; }
 
   .hero-badge-row,
   .hero-actions,
@@ -1123,6 +1132,22 @@
   body.ost-mobile-shell #wallet:has(#wallet-panel-predict.is-active) > .container,
   body.ost-mobile-shell #wallet:has(#wallet-panel-predict.is-active) .wallet-command-shell,
   body.ost-mobile-shell #wallet-panel-predict.is-active { padding-left: 0 !important; padding-right: 0 !important; border-left: 0 !important; border-right: 0 !important; border-radius: 0 !important; }
+  /* J-16 / S21: the wallet home had the same problem — FOUR nested gutters
+     (#wallet, .container, .wallet-command-shell, #wallet-panel-access) made the
+     card 292 px of a 390 px screen and the five action tiles 49 px wide
+     ("Receiv", "I…", "Activi ty"). While the wallet home is open, the outer
+     wrappers go flush and ONE 16 px gutter remains. */
+  body.ost-mobile-shell #wallet:has(#wallet-panel-access.is-active #ostWalletHome) { padding-left: 0 !important; padding-right: 0 !important; }
+  body.ost-mobile-shell #wallet:has(#wallet-panel-access.is-active #ostWalletHome) > .container,
+  body.ost-mobile-shell #wallet:has(#wallet-panel-access.is-active #ostWalletHome) .wallet-command-shell { padding-left: 0 !important; padding-right: 0 !important; }
+  body.ost-mobile-shell #wallet-panel-access.is-active:has(#ostWalletHome) { padding-left: max(16px, env(safe-area-inset-left)) !important; padding-right: max(16px, env(safe-area-inset-right)) !important; border-left: 0 !important; border-right: 0 !important; border-radius: 0 !important; }
+  /* Convert at 360 px: the same four gutters left the terminal 264 px wide
+     ("OST → SOL (cash out" cut, the amount field 186 px). Same treatment:
+     the outer wrappers go flush and one 16 px gutter remains. */
+  body.ost-mobile-shell #wallet:has(#wallet-panel-convert.is-active) { padding-left: 0 !important; padding-right: 0 !important; }
+  body.ost-mobile-shell #wallet:has(#wallet-panel-convert.is-active) > .container,
+  body.ost-mobile-shell #wallet:has(#wallet-panel-convert.is-active) .wallet-command-shell { padding-left: 0 !important; padding-right: 0 !important; }
+  body.ost-mobile-shell #wallet-panel-convert.is-active { padding-left: max(16px, env(safe-area-inset-left)) !important; padding-right: max(16px, env(safe-area-inset-right)) !important; border-left: 0 !important; border-right: 0 !important; border-radius: 0 !important; }
   /* Unsolicited pop-ups covered the market cards / question on phones. The Ghost panel
      still opens on request; achievements are not worth covering a trade for. */
   body.ost-mobile-shell .og-bubble,

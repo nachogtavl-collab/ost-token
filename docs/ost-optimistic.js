@@ -49,7 +49,7 @@
     st.textContent = [
       '#ost-optimistic-toasts{position:fixed;left:50%;transform:translateX(-50%);z-index:2147483000;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none;width:max-content;max-width:min(560px,92vw);bottom:calc(84px + env(safe-area-inset-bottom,0px))}',
       '@media (min-width:821px){#ost-optimistic-toasts{bottom:auto;top:84px}}',
-      '.ostn{pointer-events:auto;display:flex;gap:10px;align-items:flex-start;color:#f8fafc;font:600 13.5px/1.35 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;padding:11px 14px;border-radius:14px;box-shadow:0 12px 32px -12px rgba(0,0,0,.7);border:1px solid rgba(255,255,255,.12);max-width:min(560px,92vw);text-align:left;opacity:0;transform:translateY(8px) scale(.98);transition:opacity .16s ease,transform .16s cubic-bezier(.2,.8,.3,1);overflow-wrap:normal;word-break:normal}',
+      '.ostn{box-sizing:border-box;pointer-events:auto;display:flex;gap:10px;align-items:flex-start;color:#f8fafc;font:600 13.5px/1.35 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;padding:11px 14px;border-radius:14px;box-shadow:0 12px 32px -12px rgba(0,0,0,.7);border:1px solid rgba(255,255,255,.12);max-width:min(560px,92vw);text-align:left;opacity:0;transform:translateY(8px) scale(.98);transition:opacity .16s ease,transform .16s cubic-bezier(.2,.8,.3,1);overflow-wrap:normal;word-break:normal}',
       '.ostn.in{opacity:1;transform:none}',
       '.ostn-ok{background:linear-gradient(180deg,#065f46,#064e3b)}',
       '.ostn-info{background:linear-gradient(180deg,#1e3a5f,#152943)}',
@@ -64,7 +64,11 @@
       '.ostn-body{font-weight:500;opacity:.88;margin-top:2px}',
       '.ostn-sig{display:inline-block;margin-top:4px;color:#93c5fd;font-weight:600;text-decoration:underline}',
       '.ostn-act{flex:0 0 auto;align-self:center;background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.25);border-radius:10px;padding:6px 10px;font:700 12.5px system-ui,sans-serif;cursor:pointer}',
-      '.ostn-x{flex:0 0 auto;background:none;border:0;color:rgba(255,255,255,.6);font-size:16px;line-height:1;cursor:pointer;padding:0 0 0 4px}'
+      '.ostn-x{flex:0 0 auto;background:none;border:0;color:rgba(255,255,255,.6);font-size:16px;line-height:1;cursor:pointer;padding:0 0 0 4px}',
+      // phone-notice-layout: on phones a long action label ("Get SOL: cash out
+      // 86 OST") squeezed the text into a 50 px column, one word per line, and
+      // the card took 40% of the screen. The action drops to its own row.
+      '@media (max-width:820px){.ostn{flex-wrap:wrap;width:min(560px,92vw)}.ostn-main{flex:1 1 0}.ostn-x{order:1}.ostn-act{order:2;flex:1 1 100%;margin:2px 0 0 25px;padding:8px 10px!important;min-height:36px!important;font-size:12.5px!important;white-space:normal;text-align:center}}'
     ].join('\n');
     (document.head || document.documentElement).appendChild(st);
   }
@@ -78,6 +82,13 @@
       host.setAttribute('aria-live', 'polite');
       host.setAttribute('role', 'status');
       document.body.appendChild(host);
+      // The swap banner is created lazily (appended to <body>): notice it even
+      // when it appears after a notice is already on screen.
+      try {
+        new MutationObserver(function (ms) {
+          for (var i = 0; i < ms.length; i++) for (var j = 0; j < ms[i].addedNodes.length; j++) if (ms[i].addedNodes[j].id === 'ostSwapStatusBanner') { place(); return; }
+        }).observe(document.body, { childList: true });
+      } catch (_) {}
     }
     return host;
   }
@@ -102,7 +113,39 @@
 
   var live = Object.create(null);   // id -> { el, timer }
   var lastAt = Object.create(null); // dedupe key -> ts
+  var akEl = Object.create(null);   // receipt amount key -> { el, at }
+  var sigSeen = Object.create(null);// tx signature -> { id, el, at }
   var seq = 0;
+
+  // phone-notice-layout: on phones notices sit at the bottom — the same spot as
+  // the Convert tab's status banner (#ostSwapStatusBanner), which they covered
+  // completely. Exactly ONE of the two moves, or they chase each other up the
+  // screen (each lifting itself above the other): the banner keeps its one
+  // fixed slot (swap-resilient.js no longer places it), and this host stacks
+  // directly above it while it shows, then drops back when it goes. The host's
+  // lift depends only on the banner's box, never the other way round.
+  var placeObs = null;
+  function place() {
+    try {
+      if (!host) return;
+      var b = document.getElementById('ostSwapStatusBanner');
+      if (b && !placeObs && typeof MutationObserver === 'function') {
+        placeObs = new MutationObserver(function () { place(); });
+        placeObs.observe(b, { attributes: true, attributeFilter: ['style', 'class', 'hidden'], childList: true, characterData: true, subtree: true });
+      }
+      var shown = b && window.innerWidth <= 820 && getComputedStyle(b).display !== 'none';
+      var r = shown ? b.getBoundingClientRect() : null;
+      // No banner (desktop puts notices at the top), or an unusually tall one:
+      // the host keeps its own bottom spot.
+      if (!r || r.height <= 0 || r.top <= window.innerHeight * 0.4) {
+        if (host.style.bottom) host.style.bottom = '';
+        return;
+      }
+      var lift = Math.round(window.innerHeight - r.top + 8) + 'px';
+      if (host.style.bottom !== lift) host.style.bottom = lift;
+    } catch (_) {}
+  }
+  window.addEventListener('resize', function () { place(); });
   var LIFE = { ok: 4500, info: 4000, warn: 6000, error: 7000, pending: 60000 };
 
   function fill(el, n) {
@@ -168,13 +211,29 @@
       var ak = '';
       if (n.kind === 'ok' || n.kind === 'info') {
         var am = /([+\-]?\d[\d,]*(?:\.\d+)?)\s*(OSTG|OSTC|OST|SOL)\b/i.exec(n.title + ' ' + n.body);
-        if (am && /\b(received|arrived|incoming)\b/i.test(n.title)) ak = 'amt-in:' + am[1].replace(/[+,]/g, '') + am[2].toUpperCase().replace('OSTC', 'OST');
+        // J-12: the faucet's realtime echo reads "+100 OST head start" /
+        // "+1 OST daily claim" — the same receipt as "100 OST arrived".
+        if (am && /\b(received|arrived|incoming|head start|daily claim)\b/i.test(n.title)) ak = 'amt-in:' + am[1].replace(/[+,]/g, '') + am[2].toUpperCase().replace('OSTC', 'OST');
+      }
+      // De-dupe by signature: a SUCCESS for a tx whose success card is still on
+      // screen is the same event from a second module — keep the first card.
+      if (n.sig && (n.kind === 'ok' || n.kind === 'info')) {
+        var sr = sigSeen[n.sig];
+        if (sr && sr.id !== id && now - sr.at < 10000 && sr.el && h.contains(sr.el) && /ostn-(ok|info)/.test(sr.el.className)) return sr.id;
       }
       // In-place update of a live notice with the same id.
       if (id && live[id] && live[id].el && h.contains(live[id].el)) {
         fill(live[id].el, n);
         arm(id, live[id].el, n.kind, opts.durationMs);
-        if (ak) lastAt[ak] = now;
+        if (ak) {
+          // The echo can arrive FIRST (realtime beat the claim's own result):
+          // when this card turns into the same receipt, the earlier stand-alone
+          // echo card goes — one claim, one success notice.
+          var prevEcho = akEl[ak];
+          if (prevEcho && prevEcho.el !== live[id].el && now - prevEcho.at < 10000) dismiss(prevEcho.el);
+          lastAt[ak] = now; akEl[ak] = { el: live[id].el, at: now };
+        }
+        if (n.sig) sigSeen[n.sig] = { id: id, el: live[id].el, at: now };
         return id;
       }
       if (!id) {
@@ -197,6 +256,9 @@
       h.appendChild(el);
       requestAnimationFrame(function () { el.classList.add('in'); });
       arm(id, el, n.kind, opts.durationMs);
+      if (ak) akEl[ak] = { el: el, at: now };
+      if (n.sig) sigSeen[n.sig] = { id: id, el: el, at: now };
+      place();
       return id;
     } catch (_) { return null; }
   }

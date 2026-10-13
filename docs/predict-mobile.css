@@ -262,6 +262,16 @@
 #ostPredictMobile .opm-tact .opm-tbadge { white-space: nowrap; }
 #ostPredictMobile .opm-pfnote { font-size: 10px; color: var(--opm-ink3, #8fa6b8); margin: 6px 2px 0; }
 
+/* MK-LABELS-MINOR: on narrow phones the browse header's rail line ("devnet
+   OST & OSTG (no cash value)") was squeezed into a ~76 px column, five lines
+   tall. Below 400 px the title block takes the first row; Portfolio and the
+   balance chip share the second. */
+@media (max-width: 400px) {
+  #ostPredictMobile:not(.opm-desk) #opmBrowse > .opm-tb { flex-wrap: wrap; row-gap: 8px; }
+  #ostPredictMobile:not(.opm-desk) #opmBrowse > .opm-tb > div:first-child { flex: 1 1 100%; }
+  #ostPredictMobile:not(.opm-desk) #opmBrowse .opm-hsub { overflow-wrap: normal !important; word-break: normal !important; }
+}
+
 /* PRD-2: the balance chip shows wallet OST next to OSTG. */
 #ostPredictMobile .opm-bal .v b { font-weight: 700; }
 #ostPredictMobile .opm-bal .v .opm-balost { color: var(--opm-ink, #e8f1f7); }

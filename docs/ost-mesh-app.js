@@ -566,7 +566,9 @@ if (!window.OST_MESH_APP) {
     switch (inner.k) {
       case 'file': return { ...base, kind: 'file', name: String(inner.name || 'file').slice(0, 120), mime: String(inner.mime || '').slice(0, 80), size: Number(inner.size) || 0, blob: String(inner.blob || ''), thumb: typeof inner.thumb === 'string' && inner.thumb.length < 12000 && /^data:image\//.test(inner.thumb) ? inner.thumb : '' };
       case 'loc': { const lat = num(inner.lat, -90, 90), lng = num(inner.lng, -180, 180); if (lat == null || lng == null) return null; return { ...base, kind: 'loc', lat, lng, acc: num(inner.acc, 0, 1e6) || 0, lid: inner.lid ? String(inner.lid).slice(0, 40) : '', live: !!inner.live, until: Number(inner.until) || 0, ended: !!inner.ended, upd: base.ts }; }
-      case 'pay': { const amount = num(inner.amount, 0, 1e12); if (!amount || !/^[1-9A-HJ-NP-Za-km-z]{64,100}$/.test(String(inner.sig || ''))) return null; return { ...base, kind: 'pay', ccy: ['OST', 'OSTG', 'SOL'].includes(inner.ccy) ? inner.ccy : 'OST', amount, sig: String(inner.sig), note: String(inner.note || '').slice(0, 140) }; }
+      // A pay card is the sender's CLAIM (amount, unit, signature, wallets).
+      // verifyPay() reads the transaction before it is ever shown as received.
+      case 'pay': { const amount = num(inner.amount, 0, 1e12); if (!amount || !/^[1-9A-HJ-NP-Za-km-z]{64,100}$/.test(String(inner.sig || ''))) return null; const wa = (v) => (/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(String(v || '')) ? String(v) : ''); return { ...base, kind: 'pay', ccy: ['OST', 'OSTG', 'SOL'].includes(inner.ccy) ? inner.ccy : 'OST', amount, sig: String(inner.sig), note: String(inner.note || '').slice(0, 140), from: wa(inner.from), to: wa(inner.to), verified: '' }; }
       case 'call': { const cst = ['missed', 'declined', 'ended', 'busy'].includes(inner.status) ? inner.status : 'ended'; return { ...base, kind: 'call', status: cst, cst, video: !!inner.video, dur: num(inner.dur, 0, 86400) || 0 }; }
       case 'text': case undefined: case null: case '': return { ...base, kind: 'text', text: String(inner.text || '').slice(0, 8000) };
       default: return { ...base, kind: 'unsupported', k: String(inner.k).slice(0, 24) };   // a newer OST sent something this build cannot show
@@ -765,15 +767,151 @@ if (!window.OST_MESH_APP) {
     for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) tiles += `<img alt="" loading="lazy" src="https://tile.openstreetmap.org/${z}/${tx + dx}/${ty + dy}.png" style="left:${(dx + 1) * 256}px;top:${(dy + 1) * 256}px">`;
     return `<div class="omx-map"><div class="omx-tiles" style="left:${left}px;top:${top}px">${tiles}</div><b class="omx-pin">📍</b><small>© OpenStreetMap</small></div>`;
   }
-  async function verifyPay(a, m) {
-    if (m.verified || !m.sig || !window.OST_WALLET || !OST_WALLET.rpcCall) return;
-    m.verified = 'checking';
+  /* ---------- pay-card proof (S20) ----------
+   * A pay card is only "confirmed" when the transaction itself shows it:
+   * received — at least `amount` of that token (SOL: lamports) arrived in MY
+   * wallet AND it is proven to come from THIS contact: paid by their linked
+   * (signature-verified) wallet, or bound to them by the memo the payer
+   * signed ("ost-mesh-pay|<tag of their Mesh address → mine>", OST_SEND.
+   * meshPayTag). A real payment that is neither (an unlinked contact citing
+   * someone else's transfer to me) is shown as "a payment from wallet X —
+   * not proven to be from <name>", never "You received", and never takes the
+   * signature's one-card slot;
+   * sent — at least `amount` left one of MY wallets. A signature backs one
+   * received card only. Anything else is "not verified", never "confirmed". */
+  const PAY_FINAL = ['confirmed', 'failed', 'unverified'];
+  // Cards checked by an older rule set are checked again: v1 (no `vv`) only
+  // asked "does this signature exist"; v2 accepted any payer for a contact
+  // with no linked wallet.
+  const PAY_V = 3;
+  const payFinal = (m) => m.vv === PAY_V && PAY_FINAL.includes(m.verified);
+  const PAYSIG_KEY = 'ost.mesh.paysigs.v1';
+  const VERIFYING = new Set();
+  const peerWallets = {};   // mesh addr -> { wallet, at }
+  function myWallets() {
+    const out = [];
+    try { const s = window.OST_WALLET && OST_WALLET.session; if (s && s.publicKey) out.push(s.publicKey.toBase58 ? s.publicKey.toBase58() : String(s.publicKey)); } catch (_) {}
+    if (S.profile && S.profile.wallet) out.push(String(S.profile.wallet));
+    return out.filter((v, i, l) => v && l.indexOf(v) === i);
+  }
+  // The contact's linked (signature-verified) wallet from the hub; '' = none
+  // linked; null = the hub could not be asked (try again later).
+  async function linkedWalletOf(a) {
+    const c = peerWallets[a];
+    if (c && Date.now() - c.at < 10 * 60000) return c.wallet;
     try {
-      const r = await OST_WALLET.rpcCall((c) => c.getSignatureStatuses([m.sig], { searchTransactionHistory: true }));
-      const st = r && r.value && r.value[0];
-      updateMsg(a, m.id, { verified: st ? (st.err ? 'failed' : 'confirmed') : 'pending' });
-    } catch (_) { updateMsg(a, m.id, { verified: '' }); }
+      const r = await fetch(API + '/mesh/v1/social/user?addr=' + encodeURIComponent(a), { cache: 'no-store', headers: { accept: 'application/json' } });
+      if (r.status === 404) { peerWallets[a] = { wallet: '', at: Date.now() }; return ''; }
+      if (!r.ok) return null;
+      const j = await r.json().catch(() => null);
+      const u = j && j.user;
+      const w = u && u.wallet && u.walletVerified !== false && /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(String(u.wallet)) ? String(u.wallet) : '';
+      peerWallets[a] = { wallet: w, at: Date.now() };
+      return w;
+    } catch (_) { return null; }
+  }
+  async function verifyPay(a, m) {
+    if (!m || !m.sig || payFinal(m) || VERIFYING.has(m.id)) return;
+    const V = window.OST_SEND && window.OST_SEND.verifyPayment;
+    if (typeof V !== 'function' || !window.OST_WALLET || !OST_WALLET.rpcCall) return;     // shown as "checking" until it can be read
+    VERIFYING.add(m.id);
+    let patch = null;
+    try {
+      const mine = myWallets();
+      if (m.dir === 'me') {
+        // No wallet of mine known yet (an extension wallet still reconnecting)
+        // and the card names none: nothing to check against — look again
+        // later, never settle it as "not a valid payment".
+        if (!mine.length && !m.from) patch = { verified: '' };
+        else {
+          const r = await V({ sig: m.sig, asset: m.ccy, amount: m.amount, from: mine.concat(m.from ? [m.from] : []), out: true });
+          patch = r.state === 'unknown' || (r.state === 'unverified' && r.reason === 'bad_claim' && !mine.length) ? { verified: '' } : { verified: r.state, vReason: r.reason || '' };
+        }
+      } else {
+        if (!mine.length) patch = { verified: '' };
+        else {
+          const linked = await linkedWalletOf(a);
+          if (linked === null) patch = { verified: '' };
+          else {
+            // Any non-pool payer that really paid me; who it is PROVEN to be
+            // is decided below (linked wallet, or the payer-signed memo tag).
+            const r = await V({ sig: m.sig, asset: m.ccy, amount: m.amount, to: mine, from: [] });
+            if (r.state === 'unknown') patch = { verified: '' };
+            else if (r.state === 'pending' && !r.seen && Date.now() - (Number(m.ts) || Date.now()) > 15 * 60000) patch = { verified: 'unverified', vReason: 'not_found' };
+            else if (r.state !== 'confirmed') patch = { verified: r.state, vReason: r.reason || '', vFrom: r.payer || '', vLinked: !!linked, vCredited: Number(r.credited) || 0 };
+            else {
+              let bound = false;
+              try { if (typeof OST_SEND.meshPayBound === 'function' && S.address) bound = await OST_SEND.meshPayBound(r.memos, a, S.address); } catch (_) { bound = false; }
+              const byLinked = !!linked && r.payer === linked;
+              const base = { vFrom: r.payer || '', vLinked: !!linked, vBound: bound, vCredited: Number(r.credited) || 0 };
+              if (!byLinked && !bound) {
+                // Real money to me, but nothing ties it to this contact: their
+                // linked wallet did not pay it and the payer did not bind it to
+                // them. Named as what it is; never "You received"; the
+                // signature's slot stays free for the card of whoever really paid.
+                patch = Object.assign({ verified: 'unverified', vReason: linked ? 'other_sender' : 'not_linked' }, base);
+              } else {
+                patch = Object.assign({ verified: 'confirmed', vReason: '' }, base);
+                // One signature backs ONE received card. In this chat the earliest
+                // card it really pays owns it (a still-unchecked earlier card makes
+                // this one wait); across chats (and the Arena) the first proven
+                // card owns it. Read after the await: another card may have
+                // claimed it meanwhile. Entries are { id, a, at }; plain-string
+                // entries were written under the v2 rules and are not trusted.
+                const list = msgsOf(a);
+                const idx = list.findIndex((x) => x.id === m.id);
+                const inChat = (id) => list.some((x) => x.id === id);
+                const prior = list.slice(0, idx < 0 ? list.length : idx).filter((x) => x.kind === 'pay' && x.dir !== 'me' && x.sig === m.sig);
+                const sigs = lsGet(PAYSIG_KEY, {});
+                const own = sigs[m.sig];
+                const ownerId = own && typeof own === 'object' ? String(own.id || '') : '';
+                if (prior.some((x) => x.vv === PAY_V && x.verified === 'confirmed') || (ownerId && ownerId !== m.id && !inChat(ownerId))) patch = { verified: 'unverified', vReason: 'reused' };
+                else if (prior.some((x) => !payFinal(x))) { patch = { verified: '' }; setTimeout(() => { const p = findMsg(a, prior[0].id); if (p && !payFinal(p)) verifyPay(a, p); }, 0); }
+                else { sigs[m.sig] = { id: m.id, a, at: Date.now() }; const ks = Object.keys(sigs); if (ks.length > 500) ks.slice(0, ks.length - 500).forEach((k) => delete sigs[k]); lsSet(PAYSIG_KEY, sigs); }
+              }
+            }
+          }
+        }
+      }
+    } catch (_) { patch = { verified: '' }; }
+    VERIFYING.delete(m.id);
+    patch.vAt = Date.now(); patch.vv = PAY_V;
+    updateMsg(a, m.id, patch);
     if (S.view === 'chat' && S.peer === a) paintMsgs();
+    // Not final: look again while this chat is open, backing off (8 s … 2 min).
+    if (!PAY_FINAL.includes(patch.verified)) {
+      const n = (VTRIES[m.id] = (VTRIES[m.id] || 0) + 1);
+      setTimeout(() => { if (S.view === 'chat' && S.peer === a) { const cur = findMsg(a, m.id); if (cur && !payFinal(cur)) verifyPay(a, cur); } }, Math.min(120000, 8000 * Math.pow(2, Math.min(4, n - 1))));
+    } else delete VTRIES[m.id];
+  }
+  const VTRIES = {};
+  // Not final yet ("" = could not check, "pending" = not landed): look again
+  // after a short wait whenever the card is on screen.
+  const payNeedsCheck = (m) => !payFinal(m) && (m.vv !== PAY_V || Date.now() - (Number(m.vAt) || 0) > (m.verified === 'pending' ? 8000 : 15000));
+  function payStatusHtml(m, peer) {
+    const amt = esc(m.amount) + ' ' + esc(m.ccy);
+    if (m.vv !== PAY_V) return '…checking chain';
+    const wal = m.vFrom ? esc(String(m.vFrom).slice(0, 4) + '…' + String(m.vFrom).slice(-4)) : '';
+    // Proven by the payer's memo tag: name the wallet that paid.
+    if (m.verified === 'confirmed') return m.dir !== 'me' && wal && m.vBound ? '✅ confirmed on-chain · from wallet ' + wal : '✅ confirmed on-chain';
+    if (m.verified === 'failed') return '❌ transaction failed — nothing moved';
+    if (m.verified === 'pending') return '⏳ not confirmed yet';
+    // Real money to me that nothing ties to this contact (see verifyPay).
+    if (m.verified === 'unverified' && m.vReason === 'not_linked') return '⚠ Not proven to be from ' + esc(nameOf(peer || '')) + ' — wallet ' + (wal || '?') + ' paid you ' + amt + ', but it isn’t linked to them and the payment isn’t tagged as theirs';
+    if (m.verified === 'unverified') {
+      const why = {
+        not_to_you: 'this transaction doesn’t pay you ' + amt,
+        amount_short: 'it paid you ' + esc(m.vCredited || 0) + ' ' + esc(m.ccy) + ', not ' + amt,
+        other_sender: 'it came from a different wallet than ' + esc(nameOf(peer || '')) + '’s',
+        not_a_payment: 'it is an OST pool payout, not a payment to you',
+        reused: 'this transaction already backs another payment card',
+        not_found: 'the transaction was never found on chain',
+        not_from_you: 'this transaction didn’t send ' + amt + ' from your wallet',
+        bad_claim: 'the card is not a valid payment'
+      }[m.vReason] || 'this transaction doesn’t show this payment';
+      return '⚠ Not verified — ' + why;
+    }
+    return '…checking chain';
   }
 
   /* ---------- outgoing ---------- */
@@ -1392,9 +1530,11 @@ if (!window.OST_MESH_APP) {
       const live = m.live && !m.ended && (!m.until || m.until > Date.now());
       inner = `<a class="omx-locc" href="https://www.openstreetmap.org/?mlat=${m.lat}&mlon=${m.lng}#map=16/${m.lat}/${m.lng}" target="_blank" rel="noopener">${mapHtml(m.lat, m.lng)}</a><div class="omx-loct"><b>${m.live ? (live ? '📡 Live location' : '📡 Live location ended') : '📍 Location'}</b><span>±${m.acc || '?'} m${m.live && m.upd ? ' · updated ' + agoText(m.upd) : ''}${live && m.until ? ' · until ' + tTime(m.until) : ''}</span><a href="https://www.google.com/maps/search/?api=1&query=${m.lat},${m.lng}" target="_blank" rel="noopener">Open in Maps ↗</a></div>`;
     } else if (m.kind === 'pay') {
-      if (!m.verified) setTimeout(() => verifyPay(from, m), 0);
+      if (payNeedsCheck(m)) setTimeout(() => verifyPay(from, m), 0);
       const cl = (window.OST_CONFIG && OST_CONFIG.network) || 'devnet';
-      inner = `<div class="omx-payc"><b>💸 ${esc(m.amount)} ${esc(m.ccy)}</b><span>${m.dir === 'me' ? 'You sent' : 'You received'} · devnet${m.note ? ' · ' + esc(m.note) : ''}</span><span>${m.verified === 'confirmed' ? '✅ confirmed on-chain' : m.verified === 'failed' ? '❌ transaction failed' : m.verified === 'pending' ? '⏳ not confirmed yet' : '…checking chain'}</span><a href="https://explorer.solana.com/tx/${esc(m.sig)}${cl === 'mainnet-beta' ? '' : '?cluster=' + esc(cl)}" target="_blank" rel="noopener">View transaction ↗</a></div>`;
+      // "You received" only once the chain shows it; until then it is the sender's claim.
+      const who = m.dir === 'me' ? 'You sent' : (m.verified === 'confirmed' && m.vv === PAY_V ? 'You received' : 'Payment claim');
+      inner = `<div class="omx-payc"><b>💸 ${esc(m.amount)} ${esc(m.ccy)}</b><span>${who} · devnet${m.note ? ' · ' + esc(m.note) : ''}</span><span>${payStatusHtml(m, from)}</span><a href="https://explorer.solana.com/tx/${esc(m.sig)}${cl === 'mainnet-beta' ? '' : '?cluster=' + esc(cl)}" target="_blank" rel="noopener">View transaction ↗</a></div>`;
     } else if (m.kind === 'call') {
       const cs = callSt(m);
       const lbl = cs === 'missed' ? (m.dir === 'me' ? 'No answer' : 'Missed call') : cs === 'declined' ? 'Declined' : cs === 'busy' ? 'Busy' : 'Call';

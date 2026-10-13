@@ -18,7 +18,8 @@
  *               written on every successful RPC read via reportChain().
  *               This is a DISPLAY CACHE of pool #1 — NOT a new spendable pool:
  *               spending is still gated by the actual on-chain transfer.
- *  - credits(): the canonical off-chain pool (ost.faucet.hub.v2, via OST_MONEY).
+ *  - credits(): retired legacy credits (ost.faucet.hub.v2, via OST_MONEY) —
+ *               no cash value (D1); reported, never added to total/spendable.
  *  - vault():   offline/survival OST (backed portion), reported by
  *               offline-vault.js via OST_TREE.reportVault(). Shown as locked.
  *
@@ -63,9 +64,26 @@
     return { amount: n, stale: el.getAttribute('data-ost-stale') === '1' };
   }
 
+  // The exact figure behind the 2-decimal text on screen. Re-reading the DOM
+  // returned 96.18 for 96.184369388, OST_BALANCE took that as a new chain
+  // read, the next real read restored the 9 decimals, and the difference was
+  // logged as "received 0.0044 OST" every minute (MK-PHANTOM-RECV).
+  var lastLive = null;   // { addr, amount }
+  function sameWallet(addr) {
+    try {
+      var s = window.OST_WALLET && window.OST_WALLET.session;
+      var cur = s && s.publicKey && s.publicKey.toBase58 ? s.publicKey.toBase58() : '';
+      return !cur || !addr || cur === addr;
+    } catch (_) { return true; }
+  }
   function chain() {
     var dom = liveDomChain();
-    if (dom && !dom.stale) return { amount: dom.amount, stale: false, source: 'live' };
+    if (dom && !dom.stale) {
+      if (lastLive && Number.isFinite(lastLive.amount) && lastLive.amount.toFixed(2) === dom.amount.toFixed(2) && sameWallet(lastLive.addr)) {
+        return { amount: lastLive.amount, stale: false, source: 'live', precise: true, addr: lastLive.addr };
+      }
+      return { amount: dom.amount, stale: false, source: 'live', precise: false };
+    }
     var c = readCache();
     if (c) return { amount: c.amount, stale: true, source: 'cache', ts: c.ts, addr: c.addr };
     if (dom) return { amount: dom.amount, stale: true, source: 'dom' };
@@ -78,10 +96,13 @@
     var ch = chain(), cr = credits(), va = vault();
     return {
       chain: ch,
+      // Retired legacy credits (D1): no cash value, not spendable, never OST.
+      // Reported for display only and never added into a total.
       credits: cr,
+      retiredCredits: cr,
       vault: va,
-      spendable: ch.amount + cr,          // vault OST is locked until redeemed
-      total: ch.amount + cr + va.amount
+      spendable: ch.amount,               // vault OST is locked until redeemed
+      total: ch.amount + va.amount
     };
   }
 
@@ -94,6 +115,7 @@
   function reportChain(addr, amount) {
     var n = Number(amount);
     if (!Number.isFinite(n) || n < 0) return;
+    lastLive = { addr: String(addr || ''), amount: n };
     writeCache(addr, n);
     var el = document.getElementById('wdOstBal');
     if (el) el.removeAttribute('data-ost-stale'); // fresh read is now on screen

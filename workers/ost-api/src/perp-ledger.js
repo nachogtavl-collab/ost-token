@@ -256,7 +256,7 @@ export function installPerps(PlayLedger) {
       const s = settleAt(fresh, q.price, now, 'close');
       const balance = Number((await this.state.storage.get('bal:' + wallet)) || 0);
       const total = Number((await this.state.storage.get('total')) || 0);
-      if (s.payout > 0 && (total + s.payout) > bankroll + 1e-9) return json({ error: 'bankroll_cap', message: 'Pool can’t back that close right now.' }, 409);
+      if (s.payout > 0 && (total + (await this.reservedOf()) + s.payout) > bankroll + 1e-9) return json({ error: 'bankroll_cap', message: 'Pool can’t back that close right now.' }, 409);
       Object.assign(fresh, { open: false, status: s.status, exitPrice: q.price, closedAt: now, pnl: s.pnl, funding: s.funding, closeFee: s.closeFee, edgeFee: s.edgeFee, payout: s.payout, roe: s.roe, closedBy: 'user' });
       await this.state.storage.put(key, fresh);
       if (s.payout > 0) { await this.state.storage.put('bal:' + wallet, r9(balance + s.payout)); await this.state.storage.put('total', r9(total + s.payout)); }
